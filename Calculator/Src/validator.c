@@ -4,77 +4,112 @@
 #include "validator.h"
 #include <stdlib.h>
 
+typedef enum
+{
+    EXPECT_OPERAND,
+    AFTER_OPERAND
+} ParserState;
+
 int validateExpression(char expression[])
 {
+    ParserState state = EXPECT_OPERAND;
+
     int i = 0;
-    int dotCourt = 0;
-    int expectiongOperand = 1;
+    int balance = 0;
 
     while (expression[i] != '\0')
     {
         char c = expression[i];
-        if (c == ' ')
+
+        if (isspace(c))
         {
             i++;
             continue;
         }
-        // Numer
-        if (isdigit(c))
+
+        switch (state)
         {
-            dotCourt = 0;
-            while (isdigit(expression[i]) || expression[i] == '.')
+        case EXPECT_OPERAND:
+
+            if (isdigit(c) || c == '.')
             {
-                if (expression[i] == '.')
+                int dot = 0;
+
+                while (isdigit(expression[i]) || expression[i] == '.')
                 {
-                    dotCourt++;
-                    if (dotCourt > 1)
+                    if (expression[i] == '.')
+                        dot++;
+
+                    if (dot > 1)
                     {
-                        printf("Error: Invalid number formate.\n");
+                        printf("Error: Invalid number.\n");
                         return 0;
                     }
-                }
-                i++;
-            }
-            expectiongOperand = 0;
-            continue;
-        }
 
-        // Decimal beginning with '.'
-        if (c == '.')
-        {
-            printf("Error: Number cannot start with '.'\n");
+                    i++;
+                }
+
+                state = AFTER_OPERAND;
+                continue;
+            }
+
+            if (c == '-')
+            {
+                i++;
+                continue;
+            }
+
+            if (c == '(')
+            {
+                balance++;
+                i++;
+                continue;
+            }
+
+            printf("Error: Operand expected.\n");
+            return 0;
+
+        case AFTER_OPERAND:
+
+            if (c == ')')
+            {
+                balance--;
+
+                if (balance < 0)
+                {
+                    printf("Error: Too many ')'\n");
+                    return 0;
+                }
+
+                i++;
+                continue;
+            }
+
+            if (c == '+' || c == '-' ||
+                c == '*' || c == '/' ||
+                c == '%')
+            {
+                state = EXPECT_OPERAND;
+                i++;
+                continue;
+            }
+
+            printf("Error: Operator expected.\n");
             return 0;
         }
+    }
 
-        // Operators
-        if (c == '+' || c == '*' || c == '/' || c == '%')
-        {
-            if (expectiongOperand)
-            {
-                printf("Error: Missing operand.\n");
-                return 0;
-            }
-            expectiongOperand = 1;
-            i++;
-            continue;
-        }
-
-        // Minus
-        if (c == '-')
-        {
-            i++;
-            continue;
-        }
-
-        // Parentheses
-        if (c == '(' || c == ')')
-        {
-            i++;
-            continue;
-        }
-
-        printf("Error: Invalid character '%c'\n", c);
+    if (balance != 0)
+    {
+        printf("Error: Mismatched parentheses.\n");
         return 0;
     }
+
+    if (state == EXPECT_OPERAND)
+    {
+        printf("Error: Expression cannot end with an operator.\n");
+        return 0;
+    }
+
     return 1;
 }
