@@ -20,7 +20,8 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/evaluate.c\
        $(SRC_DIR)/parser.c\
        $(SRC_DIR)/validator.c\
-       $(SRC_DIR)/history.c
+       $(SRC_DIR)/history.c\
+       $(SRC_DIR)/memory.c
 
 # Object files
 OBJS = $(OBJ_DIR)/main.o \
@@ -30,7 +31,8 @@ OBJS = $(OBJ_DIR)/main.o \
        $(OBJ_DIR)/evaluate.o\
 	$(OBJ_DIR)/parser.o\
        $(OBJ_DIR)/validator.o\
-       $(OBJ_DIR)/history.o
+       $(OBJ_DIR)/history.o\
+       $(SRC_DIR)/memory.o
 
 # Header files
 HEADERS = $(INC_DIR)/stack.h $(INC_DIR)/calculator.h

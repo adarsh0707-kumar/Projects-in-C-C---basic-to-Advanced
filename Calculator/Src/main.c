@@ -2,6 +2,7 @@
 #include <string.h>
 #include "calculator.h"
 #include "history.h"
+#include "memory.h"
 
 int main(void)
 {
@@ -9,6 +10,7 @@ int main(void)
     char postfix[256];
 
     int choice;
+    double lastResult = 0.0;
 
     while (1)
     {
@@ -16,7 +18,8 @@ int main(void)
         printf("1. New Calculation\n");
         printf("2. View History\n");
         printf("3. Clear History\n");
-        printf("4. Exit\n");
+        printf("4. Memory Function\n");
+        printf("5. Exit\n");
         printf("Choice: ");
 
         scanf("%d", &choice);
@@ -55,10 +58,10 @@ int main(void)
             printf("Postfix Expression : %s\n", postfix);
 
             /* Evaluate postfix */
-            double result = evaluatePostfix(postfix);
+            lastResult = evaluatePostfix(postfix);
 
-            printf("Result             : %g\n", result);
-            addHistory(infix, result);
+            printf("Result             : %g\n", lastResult);
+            addHistory(infix, lastResult);
             break;
 
         case 2:
@@ -70,6 +73,61 @@ int main(void)
             break;
 
         case 4:
+        {
+            int memChoice;
+            double value;
+
+            while (1)
+            {
+                printf("\n===== MEMORY =====\n");
+                printf("1. MS (Store Last Result)\n");
+                printf("2. MR (Recall Memory)\n");
+                printf("3. M+ (Add to Memory)\n");
+                printf("4. M- (Subtract from Memory)\n");
+                printf("5. MC (Clear Memory)\n");
+                printf("6. Back\n");
+                printf("Choice: ");
+
+                scanf("%d", &memChoice);
+
+                switch (memChoice)
+                {
+                case 1:
+                    memoryStore(lastResult);
+                    break;
+
+                case 2:
+                    printf("Memory = %g\n", memoryRecall());
+                    break;
+
+                case 3:
+                    printf("Enter value: ");
+                    scanf("%lf", &value);
+                    memoryAdd(value);
+                    break;
+
+                case 4:
+                    printf("Enter value: ");
+                    scanf("%lf", &value);
+                    memorySubtract(value);
+                    break;
+
+                case 5:
+                    memoryClear();
+                    break;
+
+                case 6:
+                    goto exitMemoryMenu;
+
+                default:
+                    printf("Invalid choice!\n");
+                }
+            }
+
+            exitMemoryMenu:
+            break;
+        }
+        case 5:
             return 0;
 
         default:
