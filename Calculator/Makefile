@@ -25,7 +25,8 @@ OBJS = $(OBJ_DIR)/main.o \
        $(OBJ_DIR)/stack.o \
        $(OBJ_DIR)/tokenizer.o \
        $(OBJ_DIR)/postfix.o \
-       $(OBJ_DIR)/evaluate.o
+       $(OBJ_DIR)/evaluate.o\
+	   $(OBJ_DIR)/parser.o
 
 # Header files
 HEADERS = $(INC_DIR)/stack.h $(INC_DIR)/calculator.h

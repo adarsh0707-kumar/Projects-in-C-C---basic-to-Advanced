@@ -4,62 +4,34 @@
 
 int main(void)
 {
-    int firstNumber;
-    int nextNumber;
-    char op;
-
-    char infix[256] = "";
+    char infix[256];
     char postfix[256];
 
-    printf("Enter first number: ");
+    printf("Enter expression: ");
 
-    if (scanf("%d", &firstNumber) != 1)
+    if (fgets(infix, sizeof(infix), stdin) == NULL)
     {
-        printf("Invalid input!\n");
+        printf("Error reading input.\n");
         return 1;
     }
 
-    snprintf(infix, sizeof(infix), "%d ", firstNumber);
+    /* Remove trailing newline */
+    infix[strcspn(infix, "\n")] = '\0';
 
-    while (1)
-    {
-        printf("Operator (+, -, *, /, %%, =): ");
-
-        if (scanf(" %c", &op) != 1)
-        {
-            printf("Invalid input!\n");
-            return 1;
-        }
-
-        if (op == '=')
-            break;
-
-        printf("Next number: ");
-
-        if (scanf("%d", &nextNumber) != 1)
-        {
-            printf("Invalid input!\n");
-            return 1;
-        }
-
-        char temp[50];
-        snprintf(temp, sizeof(temp), "%c %d ", op, nextNumber);
-
-        strcat(infix, temp);
-    }
-
+    /* Validate parentheses */
     if (!validateParentheses(infix))
     {
-        printf("\nError: Mismatched parentheses.\n");
+        printf("Error: Mismatched parentheses.\n");
         return 1;
     }
 
-    printf("\nInfix Expression   : %s\n", infix);
-
+    /* Convert infix to postfix */
     infixToPostfix(infix, postfix);
 
+    printf("\nInfix Expression   : %s\n", infix);
     printf("Postfix Expression : %s\n", postfix);
 
+    /* Evaluate postfix */
     int result = evaluatePostfix(postfix);
 
     printf("Result             : %d\n", result);
