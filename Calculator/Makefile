@@ -1,28 +1,54 @@
+# Compiler
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c11
 
+# Compiler flags
+CFLAGS = -Wall -Wextra -std=c11 -IInc
+
+# Directories
+SRC_DIR = Src
+OBJ_DIR = Obj
+INC_DIR = Inc
+
+# Target executable
 TARGET = calculator
 
-SRCS = main.c \
-       stack.c \
-       tokenizer.c \
-       postfix.c \
-       evaluate.c
+# Source files
+SRCS = $(SRC_DIR)/main.c \
+       $(SRC_DIR)/stack.c \
+       $(SRC_DIR)/tokenizer.c \
+       $(SRC_DIR)/postfix.c \
+       $(SRC_DIR)/evaluate.c
 
-OBJS = $(SRCS:.c=.o)
+# Object files
+OBJS = $(OBJ_DIR)/main.o \
+       $(OBJ_DIR)/stack.o \
+       $(OBJ_DIR)/tokenizer.o \
+       $(OBJ_DIR)/postfix.o \
+       $(OBJ_DIR)/evaluate.o
 
+# Header files
+HEADERS = $(INC_DIR)/stack.h $(INC_DIR)/calculator.h
+
+# Default target
 all: $(TARGET)
 
+# Link object files
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $(OBJS)
 
-%.o: %.c stack.h calculator.h
-	$(CC) $(CFLAGS) -c $<
+# Compile source files
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(HEADERS)
+	$(CC) $(CFLAGS) -c $< -o $@
 
-clean:
-	rm -f $(OBJS) $(TARGET)
-
+# Run program
 run: $(TARGET)
 	./$(TARGET)
 
-.PHONY: all clean run
+# Clean build files
+clean:
+	rm -f $(OBJ_DIR)/*.o $(TARGET)
+
+# Rebuild everything
+rebuild: clean all
+
+.PHONY: all clean run rebuild
