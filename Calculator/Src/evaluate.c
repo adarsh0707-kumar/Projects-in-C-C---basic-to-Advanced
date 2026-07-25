@@ -2,8 +2,9 @@
 #include <ctype.h>
 #include "calculator.h"
 #include "stack.h"
+#include <stdlib.h>
 
-int applyOperation(int a, int b, char op)
+double applyOperation(double a, double b, char op)
 {
     switch (op)
     {
@@ -17,31 +18,28 @@ int applyOperation(int a, int b, char op)
         return a * b;
 
     case '/':
-        if (b == 0)
+        if (b == 0.0)
         {
             printf("Error: Division by zero!\n");
-            return 0;
+            exit(EXIT_FAILURE);
         }
         return a / b;
 
     case '%':
-        if (b == 0)
-        {
-            printf("Error: Modulus by zero!\n");
-            return 0;
-        }
-        return a % b;
+
+        printf("Error: Modulus is supported only for integers.\n");
+        exit(EXIT_FAILURE);
 
     default:
         printf("Error: Invalid operator '%c'\n", op);
-        return 0;
+        exit(EXIT_FAILURE);
     }
 }
 
-int evaluatePostfix(char postfix[])
+double evaluatePostfix(char postfix[])
 {
-    IntStack s;
-    initIntStack(&s);
+    DoubleStack s;
+    initDoubleStack(&s);
 
     int i = 0;
 
@@ -53,27 +51,27 @@ int evaluatePostfix(char postfix[])
             continue;
         }
 
-        if (isdigit(postfix[i]))
+        /* Read a decimal number */
+        if (isdigit(postfix[i]) || postfix[i] == '.')
         {
-            int number = 0;
-            while (isdigit(postfix[i]))
-            {
-                number = number * 10 + (postfix[i] - '0');
-                i++;
-            }
+            char *endPtr;
 
-            pushInt(&s, number);
+            double number = strtod(&postfix[i], &endPtr);
+
+            pushDouble(&s, number);
+
+            i = endPtr - postfix;
             continue;
         }
 
-        int b = popInt(&s);
-        int a = popInt(&s);
+        double b = popDouble(&s);
+        double a = popDouble(&s);
 
-        int result = applyOperation(a, b, postfix[i]);
+        double result = applyOperation(a, b, postfix[i]);
 
-        pushInt(&s, result);
+        pushDouble(&s, result);
         i++;
     }
 
-    return popInt(&s);
+    return popDouble(&s);
 }

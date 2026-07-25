@@ -1,13 +1,12 @@
-#include <ctype.h>
+#include <stdlib.h>
 
-int readNumber(char expression[], int *index)
+double readNumber(char expression[], int *index)
 {
-    int number = 0;
+    char *endPtr;
 
-    while (isdigit(expression[*index]))
-    {
-        number = number * 10 + (expression[*index] - '0');
-        (*index)++;
-    }
+    double number = strtod(&expression[*index], &endPtr);
+
+    *index = endPtr - expression;
+
     return number;
 }

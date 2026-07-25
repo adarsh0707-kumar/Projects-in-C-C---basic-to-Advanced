@@ -4,21 +4,21 @@
 #define MAX 100
 
 typedef struct{
-    int items[MAX];
+    double items[MAX];
     int top;
-} IntStack;
+} DoubleStack;
 
 typedef struct{
     char items[MAX];
     int top;
 } CharStack;
 
-// Function to initialize the Integer stack
-void initIntStack(IntStack *s);
-void pushInt(IntStack *s, int value);
-int popInt(IntStack *s);
-int peekInt(IntStack *s);
-int isEmptyIntStack(IntStack *s);
+// Function to initialize the Double stack
+void initDoubleStack(DoubleStack *s);
+void pushDouble(DoubleStack *s, double value);
+double popDouble(DoubleStack *s);
+double peekDouble(DoubleStack *s);
+int isEmptyDoubleStack(DoubleStack *s);
 
 // Function to initialize the Character stack
 void initCharStack(CharStack *s);

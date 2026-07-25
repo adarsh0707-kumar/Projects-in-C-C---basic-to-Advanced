@@ -32,9 +32,9 @@ int main(void)
     printf("Postfix Expression : %s\n", postfix);
 
     /* Evaluate postfix */
-    int result = evaluatePostfix(postfix);
+    double result = evaluatePostfix(postfix);
 
-    printf("Result             : %d\n", result);
+    printf("Result             : %g\n", result);
 
     return 0;
 }
