@@ -1,12 +1,33 @@
+#include <stdio.h>
+#include <ctype.h>
 #include <stdlib.h>
 
 double readNumber(char expression[], int *index)
 {
-    char *endPtr;
+    int dotCount = 0;
+    int start = *index;
 
-    double number = strtod(&expression[*index], &endPtr);
+    while (isdigit(expression[*index]) || expression[*index] == '.')
+    {
+        if (expression[*index] == '.')
+            dotCount++;
 
-    *index = endPtr - expression;
+        if (dotCount > 1)
+        {
+            printf("Error: Invalid number format.\n");
+            exit(EXIT_FAILURE);
+        }
 
-    return number;
+        (*index)++;
+    }
+
+    char temp[64];
+    int len = *index - start;
+
+    for (int i = 0; i < len; i++)
+        temp[i] = expression[start + i];
+
+    temp[len] = '\0';
+
+    return atof(temp);
 }

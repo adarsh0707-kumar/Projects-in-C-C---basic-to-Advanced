@@ -57,13 +57,9 @@ double evaluatePostfix(char postfix[])
          (postfix[i] == '-' &&
           (isdigit(postfix[i + 1]) || postfix[i + 1] == '.')))
         {
-            char *endPtr;
-
-            double number = strtod(&postfix[i], &endPtr);
+            double number = readNumber(postfix, &i);
 
             pushDouble(&s, number);
-
-            i = endPtr - postfix;
             continue;
         }
 

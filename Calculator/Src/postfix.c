@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
 #include "calculator.h"
 #include "stack.h"
 
@@ -71,8 +72,19 @@ void infixToPostfix(char infix[], char postfix[])
                 postfix[j++] = infix[i++];
             }
 
+            int dotCount = 0;
+
             while (isdigit(infix[i]) || infix[i] == '.')
             {
+                if (infix[i] == '.')
+                    dotCount++;
+
+                if (dotCount > 1)
+                {
+                    printf("Error: Invalid number format.\n");
+                    exit(EXIT_FAILURE);
+                }
+
                 postfix[j++] = infix[i++];
             }
 
