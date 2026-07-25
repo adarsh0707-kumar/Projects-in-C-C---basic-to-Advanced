@@ -46,11 +46,11 @@ void infixToPostfix(char infix[], char postfix[])
             continue;
         }
 
-        if (infix[i] = '(')
+        if (infix[i] == '(')
         {
             pushChar(&s, '(');
         }
-        else if (infix[i] = ')')
+        else if (infix[i] == ')')
         {
             while (!isEmptyCharStack(&s) && peekChar(&s) != '(')
             {

@@ -9,25 +9,32 @@ int applyOperation(int a, int b, char op)
     {
     case '+':
         return a + b;
-        break;
 
     case '-':
         return a - b;
-        break;
 
     case '*':
         return a * b;
-        break;
 
     case '/':
+        if (b == 0)
+        {
+            printf("Error: Division by zero!\n");
+            return 0;
+        }
         return a / b;
-        break;
 
     case '%':
+        if (b == 0)
+        {
+            printf("Error: Modulus by zero!\n");
+            return 0;
+        }
         return a % b;
-        break;
+
     default:
-        break;
+        printf("Error: Invalid operator '%c'\n", op);
+        return 0;
     }
 }
 

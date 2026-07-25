@@ -9,5 +9,5 @@ int readNumber(char expression[], int *index)
         number = number * 10 + (expression[*index] - '0');
         (*index)++;
     }
-    return 0;
+    return number;
 }
