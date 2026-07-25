@@ -52,7 +52,10 @@ double evaluatePostfix(char postfix[])
         }
 
         /* Read a decimal number */
-        if (isdigit(postfix[i]) || postfix[i] == '.')
+        if(isdigit(postfix[i]) ||
+         postfix[i] == '.' ||
+         (postfix[i] == '-' &&
+          (isdigit(postfix[i + 1]) || postfix[i + 1] == '.')))
         {
             char *endPtr;
 

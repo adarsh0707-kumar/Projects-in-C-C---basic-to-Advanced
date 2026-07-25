@@ -22,6 +22,18 @@ double precedence(char op)
     }
 }
 
+int previousNonSpace(char expression[], int index)
+{
+    index--;
+
+    while (index >= 0 && expression[index] == ' ')
+    {
+        index--;
+    }
+
+    return index;
+}
+
 void infixToPostfix(char infix[], char postfix[])
 {
     CharStack s;
@@ -39,9 +51,26 @@ void infixToPostfix(char infix[], char postfix[])
             continue;
         }
 
-        /* Number (integer or decimal) */
-        if (isdigit(infix[i]) || infix[i] == '.')
+        /* Number (including unary minus) */
+        int prev = previousNonSpace(infix, i);
+
+        if (isdigit(infix[i]) ||
+            infix[i] == '.' ||
+            (infix[i] == '-' &&
+             (prev < 0 ||
+              infix[prev] == '(' ||
+              infix[prev] == '+' ||
+              infix[prev] == '-' ||
+              infix[prev] == '*' ||
+              infix[prev] == '/' ||
+              infix[prev] == '%')))
         {
+            /* Store the negative sign if present */
+            if (infix[i] == '-')
+            {
+                postfix[j++] = infix[i++];
+            }
+
             while (isdigit(infix[i]) || infix[i] == '.')
             {
                 postfix[j++] = infix[i++];
