@@ -1,64 +1,62 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include "main.h"
+#include "calculator.h"
 
-int num;
-char operator;
-int result = 0;
-char expression[256] = "";
-
-int main()
+int main(void)
 {
+    int firstNumber;
+    int nextNumber;
+    char op;
 
-    do
+    char infix[256] = "";
+    char postfix[256];
+
+    printf("Enter first number: ");
+
+    if (scanf("%d", &firstNumber) != 1)
     {
-        printf("Enter a number for Calculation: ");
-        scanf("%d", &num);
-        printf("\nEnter an operator (+, -, *, /, %%, =): ");
-        scanf(" %c", &operator);
-
-        char temp[32];
-
-        sprintf(temp, "%d %c ", num, operator);
-        strcat(expression, temp);
-
-        if (operator == '=')
-        {
-            printf("Exiting the calculator.\n");
-            
-
-            result = Calculate(result, num, operator);
-            printf("The Result of %s = %d\n", expression, result);
-            break;
-        };
-        printf("\n");
-    } while (operator != '=');
-}
-
-int Calculate(int result, int num, char operator)
-{
-    switch (operator)
-    {
-
-    case '+':
-        result = Sum(result, num);
-        break;
-    case '-':
-        result = Subtract(result, num);
-        break;
-    case '*':
-        result = Multiply(result, num);
-        break;
-    case '/':
-        result = Divide(result, num);
-        break;
-    case '%':
-        result = Modulus(result, num);
-        break;
-    default:
-        printf("Invalid operator. Please try again.\n");
+        printf("Invalid input!\n");
+        return 1;
     }
 
-    return result;
+    snprintf(infix, sizeof(infix), "%d ", firstNumber);
+
+    while (1)
+    {
+        printf("Operator (+, -, *, /, %%, =): ");
+
+        if (scanf(" %c", &op) != 1)
+        {
+            printf("Invalid input!\n");
+            return 1;
+        }
+
+        if (op == '=')
+            break;
+
+        printf("Next number: ");
+
+        if (scanf("%d", &nextNumber) != 1)
+        {
+            printf("Invalid input!\n");
+            return 1;
+        }
+
+        char temp[50];
+        snprintf(temp, sizeof(temp), "%c %d ", op, nextNumber);
+
+        strcat(infix, temp);
+    }
+
+    printf("\nInfix Expression   : %s\n", infix);
+
+    infixToPostfix(infix, postfix);
+
+    printf("Postfix Expression : %s\n", postfix);
+
+    int result = evaluatePostfix(postfix);
+
+    printf("Result             : %d\n", result);
+
+    return 0;
 }

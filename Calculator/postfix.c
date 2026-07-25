@@ -58,8 +58,28 @@ void infixToPostfix(char infix[], char postfix[])
                 postfix[j++] = ' ';
             }
 
-            if(!isEmptyCharStack(&s))
+            if (!isEmptyCharStack(&s))
                 popChar(&s);
         }
+        else
+        {
+            while (!isEmptyCharStack(&s) && peekChar(&s) != '(' && precedence(peekChar(&s)) >= precedence(infix[i]))
+            {
+                postfix[j++] = popChar(&s);
+                postfix[j++] = ' ';
+            }
+
+            pushChar(&s, infix[i]);
+        }
+
+        i++;
     }
+
+    while (!isEmptyCharStack(&s))
+    {
+        postfix[j++] = popChar(&s);
+        postfix[j++] = ' ';
+    }
+
+    postfix[j] = '\0';
 }

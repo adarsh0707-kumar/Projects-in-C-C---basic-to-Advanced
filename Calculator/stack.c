@@ -1,4 +1,5 @@
 #include"stack.h"
+#include<stdio.h>
 
 // Function to initialize the Integer stack
 void initIntStack(IntStack *s){
