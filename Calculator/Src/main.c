@@ -17,6 +17,10 @@ int main(void)
 
     /* Remove trailing newline */
     infix[strcspn(infix, "\n")] = '\0';
+    if (!validateExpression(infix))
+    {
+        return 1;
+    }
 
     /* Validate parentheses */
     if (!validateParentheses(infix))

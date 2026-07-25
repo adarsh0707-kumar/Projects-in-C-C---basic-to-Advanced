@@ -18,7 +18,8 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/tokenizer.c \
        $(SRC_DIR)/postfix.c \
        $(SRC_DIR)/evaluate.c\
-       $(SRC_DIR)/parser.c
+       $(SRC_DIR)/parser.c\
+       $(SRC_DIR)/validator.c
 
 # Object files
 OBJS = $(OBJ_DIR)/main.o \
@@ -26,7 +27,8 @@ OBJS = $(OBJ_DIR)/main.o \
        $(OBJ_DIR)/tokenizer.o \
        $(OBJ_DIR)/postfix.o \
        $(OBJ_DIR)/evaluate.o\
-	   $(OBJ_DIR)/parser.o
+	$(OBJ_DIR)/parser.o\
+       $(OBJ_DIR)/validator.o
 
 # Header files
 HEADERS = $(INC_DIR)/stack.h $(INC_DIR)/calculator.h
