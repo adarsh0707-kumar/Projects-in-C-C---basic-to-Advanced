@@ -17,7 +17,8 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/stack.c \
        $(SRC_DIR)/tokenizer.c \
        $(SRC_DIR)/postfix.c \
-       $(SRC_DIR)/evaluate.c
+       $(SRC_DIR)/evaluate.c\
+       $(SRC_DIR)/parser.c
 
 # Object files
 OBJS = $(OBJ_DIR)/main.o \

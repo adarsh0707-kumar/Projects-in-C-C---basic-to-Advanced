@@ -48,6 +48,12 @@ int main(void)
         strcat(infix, temp);
     }
 
+    if (!validateParentheses(infix))
+    {
+        printf("\nError: Mismatched parentheses.\n");
+        return 1;
+    }
+
     printf("\nInfix Expression   : %s\n", infix);
 
     infixToPostfix(infix, postfix);

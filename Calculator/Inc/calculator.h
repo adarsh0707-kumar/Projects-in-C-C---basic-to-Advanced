@@ -3,13 +3,12 @@
 
 int precedence(char op);
 
-int applyOperation(int a,
-                   int b,
-                   char op);
+int applyOperation(int a, int b, char op);
 
-void infixToPostfix(char infix[],
-                    char postfix[]);
+void infixToPostfix(char infix[], char postfix[]);
 
 int evaluatePostfix(char postfix[]);
+
+int validateParentheses(char expression[]);
 
 #endif
