@@ -39,6 +39,48 @@ double applyFunction(const char name[], double value)
     if (strcmp(name, "acos") == 0)
         return acos(value);
 
+    /* Rounding (Phase 11) */
+    if (strcmp(name, "floor") == 0)
+        return floor(value);
+
+    if (strcmp(name, "ceil") == 0)
+        return ceil(value);
+
+    if (strcmp(name, "round") == 0)
+        return round(value);
+
+    if (strcmp(name, "trunc") == 0)
+        return trunc(value);
+
+    if (strcmp(name, "fabs") == 0)
+        return fabs(value);
+
+    /* Hyperbolic (Phase 11) */
+    if (strcmp(name, "sinh") == 0)
+        return sinh(value);
+
+    if (strcmp(name, "cosh") == 0)
+        return cosh(value);
+
+    if (strcmp(name, "tanh") == 0)
+        return tanh(value);
+
+    if (strcmp(name, "asinh") == 0)
+        return asinh(value);
+
+    if (strcmp(name, "acosh") == 0)
+        return acosh(value);
+
+    if (strcmp(name, "atanh") == 0)
+        return atanh(value);
+
+    /* Misc (Phase 11) */
+    if (strcmp(name, "fact") == 0)
+        return factorial(value);
+
+    if (strcmp(name, "gamma") == 0)
+        return tgamma(value);
+
     printf("Unknown function: %s\n", name);
 
     return 0;

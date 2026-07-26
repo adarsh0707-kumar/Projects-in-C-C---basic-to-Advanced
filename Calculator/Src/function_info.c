@@ -1,8 +1,16 @@
 #include <string.h>
+#include <stddef.h>
 #include "function_info.h"
+
 /*
-static FunctionInfo functions[] =
+ * Single source of truth for every known function name and its
+ * required argument count. functionArgumentCount() and isFunction()
+ * both derive from this one table, so adding a function only ever
+ * means adding one line here.
+ */
+static const FunctionInfo functions[] =
     {
+        /* Unary — basic */
         {"sqrt", 1},
         {"sin", 1},
         {"cos", 1},
@@ -15,76 +23,52 @@ static FunctionInfo functions[] =
         {"abs", 1},
         {"cbrt", 1},
 
+        /* Unary — rounding (Phase 11) */
+        {"floor", 1},
+        {"ceil", 1},
+        {"round", 1},
+        {"trunc", 1},
+        {"fabs", 1},
+
+        /* Unary — hyperbolic (Phase 11) */
+        {"sinh", 1},
+        {"cosh", 1},
+        {"tanh", 1},
+        {"asinh", 1},
+        {"acosh", 1},
+        {"atanh", 1},
+
+        /* Unary — misc (Phase 11) */
+        {"fact", 1},
+        {"gamma", 1},
+
+        /* Binary */
         {"pow", 2},
         {"max", 2},
         {"min", 2},
         {"hypot", 2},
-        {"atan2", 2}
-    };
-"""
-// #define FUNCTION_COUNT \
-//     (sizeof(functions) / sizeof(functions[0]))
-*/
+        {"atan2", 2}};
+
+#define FUNCTION_COUNT (sizeof(functions) / sizeof(functions[0]))
 
 int functionArgumentCount(const char name[])
 {
-    if (!strcmp(name, "sqrt"))
-        return 1;
-    if (!strcmp(name, "sin"))
-        return 1;
-    if (!strcmp(name, "cos"))
-        return 1;
-    if (!strcmp(name, "tan"))
-        return 1;
-    if (!strcmp(name, "log"))
-        return 1;
-    if (!strcmp(name, "ln"))
-        return 1;
-    if (!strcmp(name, "exp"))
-        return 1;
-    if (!strcmp(name, "abs"))
-        return 1;
-    if (!strcmp(name, "asin"))
-        return 1;
-    if (!strcmp(name, "acos"))
-        return 1;
-    if (!strcmp(name, "cbrt"))
-        return 1;
-
-    if (!strcmp(name, "pow"))
-        return 2;
-    if (!strcmp(name, "max"))
-        return 2;
-    if (!strcmp(name, "min"))
-        return 2;
-    if (!strcmp(name, "hypot"))
-        return 2;
-    if (!strcmp(name, "atan2"))
-        return 2;
+    for (size_t i = 0; i < FUNCTION_COUNT; i++)
+    {
+        if (strcmp(functions[i].name, name) == 0)
+            return functions[i].argc;
+    }
 
     return 0;
 }
 
 int isFunction(const char name[])
 {
-    return strcmp(name, "sqrt") == 0 ||
-           strcmp(name, "sin") == 0 ||
-           strcmp(name, "cos") == 0 ||
-           strcmp(name, "tan") == 0 ||
-           strcmp(name, "log") == 0 ||
-           strcmp(name, "ln") == 0 ||
-           strcmp(name, "exp") == 0 ||
-           strcmp(name, "abs") == 0 ||
-           strcmp(name, "asin") == 0 ||
-           strcmp(name, "acos") == 0 ||
-           strcmp(name, "cbrt") == 0 ||
+    for (size_t i = 0; i < FUNCTION_COUNT; i++)
+    {
+        if (strcmp(functions[i].name, name) == 0)
+            return 1;
+    }
 
-           /* Binary functions */
-
-           strcmp(name, "pow") == 0 ||
-           strcmp(name, "max") == 0 ||
-           strcmp(name, "min") == 0 ||
-           strcmp(name, "hypot") == 0 ||
-           strcmp(name, "atan2") == 0;
-    ;
+    return 0;
 }
