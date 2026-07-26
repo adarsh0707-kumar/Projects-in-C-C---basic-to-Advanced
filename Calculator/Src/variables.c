@@ -1,12 +1,24 @@
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include "variables.h"
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+#ifndef M_E
+#define M_E 2.71828182845904523536
+#endif
 
 static Variable variables[MAX_VARIABLES] =
     {
-        {"ans", 0}};
+        {"ans", 0},
+        {"pi", M_PI},
+        {"e", M_E}
+    };
 
-static int variableCount = 1;
+static int variableCount = 3;
 
 /*-------------------------
     Built-in variable ans
@@ -32,6 +44,13 @@ double getAns(void)
 
 int setVariable(const char name[], double value)
 {
+    if (strcmp(name, "pi") == 0 ||
+        strcmp(name, "e") == 0)
+    {
+        printf("Error: '%s' is a read-only constant.\n", name);
+        return 0;
+    }
+    
     /* Update existing variable */
     for (int i = 0; i < variableCount; i++)
     {
