@@ -10,7 +10,8 @@ typedef enum
     TOKEN_FUNCTION,
     TOKEN_VARIABLE,
     TOKEN_LEFT_PAREN,
-    TOKEN_RIGHT_PAREN
+    TOKEN_RIGHT_PAREN,
+    TOKEN_COMMA
 } TokenType;
 
 typedef struct

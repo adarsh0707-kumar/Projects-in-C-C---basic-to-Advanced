@@ -5,7 +5,7 @@
 #include "calculator.h"
 #include "stack.h"
 #include "functions.h"
-
+#include "function_info.h"
 
 double applyOperation(double a, double b, char op)
 {
@@ -82,11 +82,28 @@ double evaluatePostfix(char postfix[])
 
             function[j] = '\0';
 
-            double value = popDouble(&s);
+            int argc = functionArgumentCount(function);
 
-            double result = applyFunction(function, value);
+            if (argc == 1)
+            {
+                double a = popDouble(&s);
 
-            pushDouble(&s, result);
+                pushDouble(&s,
+                           applyFunction(function, a));
+            }
+            else if (argc == 2)
+            {
+                double b = popDouble(&s);
+                double a = popDouble(&s);
+
+                pushDouble(&s,
+                           applyBinaryFunction(function, a, b));
+            }
+            else
+            {
+                printf("Error: Unsupported function '%s'\n", function);
+                exit(EXIT_FAILURE);
+            }
 
             continue;
         }

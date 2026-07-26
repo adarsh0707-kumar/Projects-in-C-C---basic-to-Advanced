@@ -50,6 +50,17 @@ Token makeFunctionToken(char name[])
     return t;
 }
 
+Token makeCommaToken(void)
+{
+    Token t;
+
+    t.type = TOKEN_COMMA;
+
+    strcpy(t.text, ",");
+
+    return t;
+}
+
 double precedence(char op)
 {
     switch (op)
@@ -217,6 +228,29 @@ void infixToPostfix(char infix[], char postfix[])
                     top = popToken(&operators);
                     j += sprintf(&postfix[j], "%s ", top.text);
                 }
+            }
+
+            i++;
+            continue;
+        }
+
+        /* ---------------------------
+           Comma
+        ----------------------------*/
+        if (infix[i] == ',')
+        {
+            while (!isEmptyTokenStack(&operators))
+            {
+                Token top = peekToken(&operators);
+
+                if (top.type == TOKEN_LEFT_PAREN)
+                    break;
+
+                top = popToken(&operators);
+
+                j += sprintf(&postfix[j],
+                             "%s ",
+                             top.text);
             }
 
             i++;

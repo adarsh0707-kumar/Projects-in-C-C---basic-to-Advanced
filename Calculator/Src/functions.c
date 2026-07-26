@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <stdlib.h>
 #include "functions.h"
 
 double applyFunction(const char name[], double value)
@@ -56,4 +57,24 @@ int isFunction(const char name[])
            strcmp(name, "asin") == 0 ||
            strcmp(name, "acos") == 0 ||
            strcmp(name, "cbrt") == 0;
+}
+
+double applyBinaryFunction(char name[],
+                           double a,
+                           double b)
+{
+    if (strcmp(name, "pow") == 0)
+        return pow(a, b);
+
+    if (strcmp(name, "max") == 0)
+        return a > b ? a : b;
+
+    if (strcmp(name, "min") == 0)
+        return a < b ? a : b;
+
+    if (strcmp(name, "hypot") == 0)
+        return hypot(a, b);
+
+    printf("Unknown function %s\n", name);
+    exit(EXIT_FAILURE);
 }
