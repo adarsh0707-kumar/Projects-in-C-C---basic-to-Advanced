@@ -10,7 +10,11 @@ int main(void)
     char infix[256];
     char postfix[256];
 
+    char variableName[32];
+    char expression[256];
+
     int choice;
+
     double lastResult = 0.0;
 
     while (1)
@@ -20,8 +24,10 @@ int main(void)
         printf("2. View History\n");
         printf("3. Clear History\n");
         printf("4. Memory Function\n");
-        printf("5. Exit\n");
-        printf("Choice: ");
+        printf("5. View Variables\n");
+        printf("6. Exit\n");
+
+        printf("\nChoice: ");
 
         scanf("%d", &choice);
         getchar(); // consume newline
@@ -35,21 +41,58 @@ int main(void)
             if (fgets(infix, sizeof(infix), stdin) == NULL)
             {
                 printf("Error reading input.\n");
-                return 1;
+                break;
             }
 
             /* Remove trailing newline */
             infix[strcspn(infix, "\n")] = '\0';
+
+            /* ----------------------------
+               Variable Assignment
+               Example:
+               x=10
+               y=5+3
+               total=(x+y)*2
+               ---------------------------- */
+            char *equal = strchr(infix, '=');
+
+            if (equal != NULL)
+            {
+                int len = equal - infix;
+
+                strncpy(variableName, infix, len);
+                variableName[len] = '\0';
+
+                strcpy(expression, equal + 1);
+
+                infixToPostfix(expression, postfix);
+
+                lastResult = evaluatePostfix(postfix);
+
+                setVariable(variableName, lastResult);
+                setAns(lastResult);
+
+                printf("\n%s = %g\n",
+                       variableName,
+                       lastResult);
+
+                addHistory(infix, lastResult);
+
+                break;
+            }
+
+            /* Normal expression */
+
             if (!validateExpression(infix))
             {
-                return 1;
+                break;
             }
 
             /* Validate parentheses */
             if (!validateParentheses(infix))
             {
                 printf("Error: Mismatched parentheses.\n");
-                return 1;
+                break;
             }
 
             /* Convert infix to postfix */
@@ -131,6 +174,11 @@ int main(void)
             break;
         }
         case 5:
+            showVariables();
+            break;
+
+        case 6:
+            printf("Goodbye!\n");
             return 0;
 
         default:

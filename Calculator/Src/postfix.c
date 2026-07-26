@@ -53,18 +53,28 @@ void infixToPostfix(char infix[], char postfix[])
             continue;
         }
 
-        /* Built-in variable: ans */
-        if (strncmp(&infix[i], "ans", 3) == 0)
+        /* Variable (ans, x, y, radius, etc.) */
+        if (isalpha(infix[i]))
         {
-            char temp[32];
+            char variable[32];
+            int k = 0;
 
-            sprintf(temp, "%g ", getAns());
+            while (isalnum(infix[i]) || infix[i] == '_')
+            {
+                variable[k++] = infix[i++];
+            }
 
-            strcpy(&postfix[j], temp);
+            variable[k] = '\0';
 
-            j += strlen(temp);
-            i += 3;
+            double value;
 
+            if (!getVariable(variable, &value))
+            {
+                printf("Error: Undefined variable '%s'\n", variable);
+                exit(EXIT_FAILURE);
+            }
+
+            j += sprintf(&postfix[j], "%g ", value);
             continue;
         }
 
@@ -82,7 +92,6 @@ void infixToPostfix(char infix[], char postfix[])
               infix[prev] == '/' ||
               infix[prev] == '%')))
         {
-            /* Store the negative sign if present */
             if (infix[i] == '-')
             {
                 postfix[j++] = infix[i++];
@@ -111,7 +120,7 @@ void infixToPostfix(char infix[], char postfix[])
         /* Left Parenthesis */
         if (infix[i] == '(')
         {
-            pushChar(&s, infix[i]);
+            pushChar(&s, '(');
         }
 
         /* Right Parenthesis */
@@ -125,9 +134,7 @@ void infixToPostfix(char infix[], char postfix[])
             }
 
             if (!isEmptyCharStack(&s))
-            {
                 popChar(&s);
-            }
         }
 
         /* Operator */
