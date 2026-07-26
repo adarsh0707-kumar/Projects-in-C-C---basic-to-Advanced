@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <ctype.h>
-#include "calculator.h"
-#include "stack.h"
 #include <stdlib.h>
 #include <math.h>
+#include "calculator.h"
+#include "stack.h"
+#include "functions.h"
+
 
 double applyOperation(double a, double b, char op)
 {
@@ -49,30 +51,54 @@ double evaluatePostfix(char postfix[])
 
     while (postfix[i] != '\0')
     {
+        /* Skip spaces */
         if (postfix[i] == ' ')
         {
             i++;
             continue;
         }
 
-        /* Read a decimal number */
+        /* Read number */
         if (isdigit(postfix[i]) ||
             postfix[i] == '.' ||
             (postfix[i] == '-' &&
              (isdigit(postfix[i + 1]) || postfix[i + 1] == '.')))
         {
             double number = readNumber(postfix, &i);
-
             pushDouble(&s, number);
             continue;
         }
 
+        /* Read function name */
+        if (isalpha(postfix[i]))
+        {
+            char function[32];
+            int j = 0;
+
+            while (isalpha(postfix[i]))
+            {
+                function[j++] = postfix[i++];
+            }
+
+            function[j] = '\0';
+
+            double value = popDouble(&s);
+
+            double result = applyFunction(function, value);
+
+            pushDouble(&s, result);
+
+            continue;
+        }
+
+        /* Operator */
         double b = popDouble(&s);
         double a = popDouble(&s);
 
         double result = applyOperation(a, b, postfix[i]);
 
         pushDouble(&s, result);
+
         i++;
     }
 

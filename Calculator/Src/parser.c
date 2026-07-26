@@ -23,3 +23,15 @@ int validateParentheses(char expression[])
     }
     return isEmptyCharStack(&s);
 }
+
+int isFunction(char name[])
+{
+    return strcmp(name, "sqrt") == 0 ||
+           strcmp(name, "sin") == 0 ||
+           strcmp(name, "cos") == 0 ||
+           strcmp(name, "tan") == 0 ||
+           strcmp(name, "log") == 0 ||
+           strcmp(name, "ln") == 0 ||
+           strcmp(name, "exp") == 0 ||
+           strcmp(name, "abs") == 0;
+}

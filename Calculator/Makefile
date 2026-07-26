@@ -25,7 +25,8 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/validator.c\
        $(SRC_DIR)/history.c\
        $(SRC_DIR)/memory.c\
-       $(SRC_DIR)/variables.c
+       $(SRC_DIR)/variables.c\
+       $(SRC_DIR)/functions.c
 
 # Object files
 OBJS = $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
@@ -37,7 +38,8 @@ HEADERS = \
        $(INC_DIR)/validator.h \
        $(INC_DIR)/history.h \
        $(INC_DIR)/memory.h \
-       $(INC_DIR)/variables.h
+       $(INC_DIR)/variables.h\
+       $(INC_DIR)/functions.h
 
 # Default target
 all: $(TARGET)
