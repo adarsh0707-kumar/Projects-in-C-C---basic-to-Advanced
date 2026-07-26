@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include "calculator.h"
 #include "history.h"
 #include "memory.h"
-#include"variables.h"
-
-
+#include "variables.h"
+#include "angle_mode.h"
 
 int main(void)
 {
@@ -47,7 +47,7 @@ int main(void)
         {
         case 1:
             /* Existing calculator code goes here */
-            printf("Enter expression: ");
+            printf("Enter expression [%s]: ", angleModeName());
 
             if (fgets(expression, sizeof(expression), stdin) == NULL)
             {
@@ -56,6 +56,42 @@ int main(void)
             }
 
             expression[strcspn(expression, "\n")] = '\0';
+
+            /* ----------------------------
+               Angle mode command
+               Example:
+               mode deg
+               mode rad
+               mode        (shows current mode)
+               ---------------------------- */
+            if (strncmp(expression, "mode", 4) == 0 &&
+                (expression[4] == '\0' || isspace((unsigned char)expression[4])))
+            {
+                char arg[16] = "";
+
+                sscanf(expression + 4, "%15s", arg);
+
+                if (strcmp(arg, "deg") == 0)
+                {
+                    setAngleMode(MODE_DEGREE);
+                    printf("Angle mode set to DEGREE.\n");
+                }
+                else if (strcmp(arg, "rad") == 0)
+                {
+                    setAngleMode(MODE_RADIAN);
+                    printf("Angle mode set to RADIAN.\n");
+                }
+                else if (arg[0] == '\0')
+                {
+                    printf("Current angle mode: %s\n", angleModeName());
+                }
+                else
+                {
+                    printf("Unknown mode '%s'. Use 'mode deg' or 'mode rad'.\n", arg);
+                }
+
+                break;
+            }
 
             /* Insert implicit '*' operators */
             insertImplicitMultiplication(expression, processed);
@@ -136,7 +172,7 @@ int main(void)
                 printf("Error: Mismatched parentheses.\n");
                 break;
             }
-            
+
             /* Convert infix to postfix */
             infixToPostfix(infix, postfix);
 
@@ -239,7 +275,7 @@ int main(void)
                 }
             }
 
-            exitMemoryMenu:
+        exitMemoryMenu:
             break;
         }
         case 5:
