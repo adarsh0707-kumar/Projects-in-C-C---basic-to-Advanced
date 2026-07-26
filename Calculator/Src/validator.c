@@ -2,7 +2,7 @@
 #include <ctype.h>
 #include <string.h>
 #include "validator.h"
-#include <stdlib.h>
+#include "functions.h"
 
 typedef enum
 {
@@ -31,35 +31,55 @@ int validateExpression(char expression[])
         {
         case EXPECT_OPERAND:
 
-            /* Number or identifier */
-            if (isdigit(c) || c == '.' || isalpha(c))
+            /* Number */
+            if (isdigit(c) || c == '.')
             {
-                if (isalpha(c))
+                int dotCount = 0;
+
+                while (isdigit(expression[i]) || expression[i] == '.')
                 {
-                    while (isalnum(expression[i]) || expression[i] == '_')
+                    if (expression[i] == '.')
+                        dotCount++;
+
+                    if (dotCount > 1)
                     {
-                        i++;
+                        printf("Error: Invalid number format.\n");
+                        return 0;
                     }
-                }
-                else
-                {
-                    int dotCount = 0;
 
-                    while (isdigit(expression[i]) || expression[i] == '.')
-                    {
-                        if (expression[i] == '.')
-                            dotCount++;
-
-                        if (dotCount > 1)
-                        {
-                            printf("Error: Invalid number format.\n");
-                            return 0;
-                        }
-
-                        i++;
-                    }
+                    i++;
                 }
 
+                state = AFTER_OPERAND;
+                continue;
+            }
+
+            /* Variable or Function */
+            if (isalpha(c))
+            {
+                char identifier[32];
+                int k = 0;
+
+                while (isalnum(expression[i]) || expression[i] == '_')
+                {
+                    identifier[k++] = expression[i++];
+                }
+
+                identifier[k] = '\0';
+
+                while (isspace(expression[i]))
+                    i++;
+
+                /* Function call */
+                if (expression[i] == '(' && isFunction(identifier))
+                {
+                    balance++;
+                    i++; /* consume '(' */
+                    state = EXPECT_OPERAND;
+                    continue;
+                }
+
+                /* Variable */
                 state = AFTER_OPERAND;
                 continue;
             }
@@ -96,10 +116,13 @@ int validateExpression(char expression[])
                 continue;
             }
 
-            if (c == '+' || c == '-' ||
-                c == '*' || c == '/' ||
-                c == '%' || c == '^'
-            )
+            if (c == '+' ||
+                c == '-' ||
+                c == '*' ||
+                c == '/' ||
+                c == '%' ||
+                c == '^' ||
+                c == ',')
             {
                 state = EXPECT_OPERAND;
                 i++;

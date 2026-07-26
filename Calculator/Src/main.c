@@ -103,7 +103,7 @@ int main(void)
                 printf("Error: Mismatched parentheses.\n");
                 break;
             }
-
+            
             /* Convert infix to postfix */
             infixToPostfix(infix, postfix);
 

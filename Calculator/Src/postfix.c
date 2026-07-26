@@ -5,6 +5,7 @@
 #include "calculator.h"
 #include "stack.h"
 #include "variables.h"
+#include "functions.h"
 
 int isOperator(char ch)
 {
@@ -73,7 +74,7 @@ double precedence(char op)
     case '/':
     case '%':
         return 2;
-    
+
     case '^':
         return 3;
 
@@ -134,6 +135,7 @@ void infixToPostfix(char infix[], char postfix[])
             if (infix[temp] == '(' && isFunction(identifier))
             {
                 pushToken(&operators, makeFunctionToken(identifier));
+                i = temp;
                 continue;
             }
 

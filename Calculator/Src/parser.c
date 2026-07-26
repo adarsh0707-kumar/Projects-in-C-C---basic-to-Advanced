@@ -2,6 +2,7 @@
 #include <string.h>
 #include "stack.h"
 #include"calculator.h"
+#include"functions.h"
 
 int validateParentheses(char expression[])
 {
@@ -26,18 +27,6 @@ int validateParentheses(char expression[])
     return isEmptyCharStack(&s);
 }
 
-int isFunction(char name[])
-{
-    return strcmp(name, "sqrt") == 0 ||
-           strcmp(name, "sin") == 0 ||
-           strcmp(name, "cos") == 0 ||
-           strcmp(name, "tan") == 0 ||
-           strcmp(name, "log") == 0 ||
-           strcmp(name, "ln") == 0 ||
-           strcmp(name, "exp") == 0 ||
-           strcmp(name, "abs") == 0;
-}
-
 void insertImplicitMultiplication(char input[], char output[])
 {
     int i = 0;
@@ -45,31 +34,66 @@ void insertImplicitMultiplication(char input[], char output[])
 
     while (input[i] != '\0')
     {
+        /* Copy current character */
         output[j++] = input[i];
 
-        char current = input[i];
-        char next = input[i + 1];
-
-        if (next == '\0')
+        if (input[i + 1] == '\0')
         {
             i++;
             continue;
         }
 
-        int left =
-            isdigit(current) ||
-            current == '.' ||
-            current == ')' ||
-            isalpha(current);
+        char current = input[i];
+        char next = input[i + 1];
 
-        int right =
-            next == '(' ||
-            isalpha(next);
-
-        if (left && right)
+        /* Skip spaces */
+        if (isspace(current) || isspace(next))
         {
-            output[j++] = '*';
+            i++;
+            continue;
         }
+
+        int insert = 0;
+
+        /* -------------------------
+           Number followed by '('
+           or identifier
+        --------------------------*/
+        if ((isdigit(current) || current == '.') &&
+            (next == '(' || isalpha(next)))
+        {
+            insert = 1;
+        }
+
+        /* -------------------------
+           ')' followed by number,
+           identifier or '('
+        --------------------------*/
+        else if (current == ')' &&
+                 (isdigit(next) ||
+                  isalpha(next) ||
+                  next == '('))
+        {
+            insert = 1;
+        }
+
+        /* -------------------------
+           Identifier followed by '('
+        --------------------------*/
+        else if (current == ')' && next == '(')
+        {
+            insert = 1;
+        }
+
+        /*
+         * IMPORTANT:
+         * Never insert '*' inside an identifier.
+         * Never insert '*' between a function name
+         * and '('.
+         */
+
+        if (insert)
+            output[j++] = '*';
 
         i++;
     }

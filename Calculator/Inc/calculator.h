@@ -17,4 +17,6 @@ int validateExpression(char expression[]);
 
 void insertImplicitMultiplication(char input[], char output[]);
 
+void infixToPostfix(char infix[], char postfix[]);
+
 #endif
