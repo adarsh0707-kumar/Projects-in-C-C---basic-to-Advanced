@@ -46,7 +46,7 @@ HEADERS = \
        $(INC_DIR)/function_info.h\
        $(INC_DIR)/token.h\
        $(INC_DIR)/constants.h\
-       $(INC_DIR)/angle_mode.h
+       $(INC_DIR)/angle_mode.h\
 
 # Default target
 all: $(TARGET)
