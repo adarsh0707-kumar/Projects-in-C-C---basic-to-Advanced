@@ -3,7 +3,7 @@
 
 double applyFunction(const char name[], double value);
 
-double applyBinaryFunction(char name[],
+double applyBinaryFunction(const char name[],
                            double a,
                            double b);
 

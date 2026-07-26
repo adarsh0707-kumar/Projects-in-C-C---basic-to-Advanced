@@ -11,13 +11,7 @@ typedef enum
     AFTER_OPERAND
 } ParserState;
 
-typedef enum
-{
-    EXPECT_OPERAND,
-    AFTER_OPERAND
-} ParserState;
-
-/* NEW: one frame per nesting depth, tracks function-call arity */
+/* One frame per nesting depth, tracks function-call arity */
 #define MAX_PAREN_DEPTH 64
 
 typedef struct
@@ -35,7 +29,7 @@ int validateExpression(char expression[])
     int i = 0;
     int balance = 0;
 
-    ParenFrame frames[MAX_PAREN_DEPTH]; /* NEW */
+    ParenFrame frames[MAX_PAREN_DEPTH];
 
     while (expression[i] != '\0')
     {
@@ -82,6 +76,12 @@ int validateExpression(char expression[])
 
                 while (isalnum(expression[i]) || expression[i] == '_')
                 {
+                    if (k >= (int)sizeof(identifier) - 1)
+                    {
+                        printf("Error: Identifier name too long.\n");
+                        return 0;
+                    }
+
                     identifier[k++] = expression[i++];
                 }
 
@@ -110,6 +110,7 @@ int validateExpression(char expression[])
                     state = EXPECT_OPERAND;
                     continue;
                 }
+
                 /* Variable */
                 state = AFTER_OPERAND;
                 continue;
@@ -131,7 +132,7 @@ int validateExpression(char expression[])
                     return 0;
                 }
 
-                frames[balance].isFunctionCall = 0; /* NEW: mark as non-function */
+                frames[balance].isFunctionCall = 0;
 
                 i++;
                 continue;
@@ -199,7 +200,7 @@ int validateExpression(char expression[])
                 c == '*' ||
                 c == '/' ||
                 c == '%' ||
-                c == '^') 
+                c == '^')
             {
                 state = EXPECT_OPERAND;
                 i++;

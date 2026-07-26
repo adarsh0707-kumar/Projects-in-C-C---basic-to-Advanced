@@ -1,8 +1,25 @@
 #include <ctype.h>
 #include <string.h>
 #include "stack.h"
-#include"calculator.h"
-#include"functions.h"
+#include "calculator.h"
+#include "functions.h"
+
+/*
+ * Walks backward from position i over a contiguous run of
+ * alnum/'_' characters. If that run contains a letter, the
+ * character at i is part of an identifier (e.g. the '2' in
+ * "atan2"), not a standalone numeric literal.
+ */
+static int isPartOfIdentifier(char input[], int i)
+{
+    while (i >= 0 && (isalnum((unsigned char)input[i]) || input[i] == '_'))
+    {
+        if (isalpha((unsigned char)input[i]))
+            return 1;
+        i--;
+    }
+    return 0;
+}
 
 int validateParentheses(char expression[])
 {
@@ -11,13 +28,16 @@ int validateParentheses(char expression[])
 
     int i = 0;
 
-    while(expression[i] != '\0')
+    while (expression[i] != '\0')
     {
-        if(expression[i] == '('){
+        if (expression[i] == '(')
+        {
             pushChar(&s, '(');
         }
-        else if(expression[i] == ')'){
-            if(isEmptyCharStack(&s)){
+        else if (expression[i] == ')')
+        {
+            if (isEmptyCharStack(&s))
+            {
                 return 0;
             }
             popChar(&s);
@@ -60,7 +80,8 @@ void insertImplicitMultiplication(char input[], char output[])
            or identifier
         --------------------------*/
         if ((isdigit(current) || current == '.') &&
-            (next == '(' || isalpha(next)))
+            (next == '(' || isalpha(next)) &&
+            !isPartOfIdentifier(input, i))
         {
             insert = 1;
         }
@@ -73,14 +94,6 @@ void insertImplicitMultiplication(char input[], char output[])
                  (isdigit(next) ||
                   isalpha(next) ||
                   next == '('))
-        {
-            insert = 1;
-        }
-
-        /* -------------------------
-           Identifier followed by '('
-        --------------------------*/
-        else if (current == ')' && next == '(')
         {
             insert = 1;
         }

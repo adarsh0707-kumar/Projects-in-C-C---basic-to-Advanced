@@ -74,7 +74,6 @@ double precedence(char op)
         return 0;
 
     case '=':
-    case '!':
         return 0;
     case '+':
     case '-':
@@ -137,6 +136,12 @@ void infixToPostfix(char infix[], char postfix[])
 
             while (isalnum(infix[i]) || infix[i] == '_')
             {
+                if (k >= (int)sizeof(identifier) - 1)
+                {
+                    printf("Error: Identifier name too long.\n");
+                    exit(EXIT_FAILURE);
+                }
+
                 identifier[k++] = infix[i++];
             }
 

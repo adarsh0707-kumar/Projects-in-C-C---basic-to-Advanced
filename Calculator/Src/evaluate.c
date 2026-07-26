@@ -32,7 +32,7 @@ double applyOperation(double a, double b, char op)
 
         printf("Error: Modulus is supported only for integers.\n");
         exit(EXIT_FAILURE);
-    
+
     case '^':
         return pow(a, b);
 
@@ -75,8 +75,14 @@ double evaluatePostfix(char postfix[])
             char function[32];
             int j = 0;
 
-            while (isalpha(postfix[i]))
+            while (isalpha(postfix[i]) || isdigit(postfix[i]))
             {
+                if (j >= (int)sizeof(function) - 1)
+                {
+                    printf("Error: Function name too long.\n");
+                    exit(EXIT_FAILURE);
+                }
+
                 function[j++] = postfix[i++];
             }
 
@@ -113,7 +119,7 @@ double evaluatePostfix(char postfix[])
 
             continue;
         }
-        
+
         /* Factorial */
         if (postfix[i] == '!')
         {

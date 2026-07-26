@@ -38,15 +38,13 @@ double applyFunction(const char name[], double value)
 
     if (strcmp(name, "acos") == 0)
         return acos(value);
-    
+
     printf("Unknown function: %s\n", name);
 
     return 0;
 }
 
-
-
-double applyBinaryFunction(char name[],
+double applyBinaryFunction(const char name[],
                            double a,
                            double b)
 {
