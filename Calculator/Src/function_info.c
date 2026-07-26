@@ -59,6 +59,8 @@ int functionArgumentCount(const char name[])
         return 2;
     if (!strcmp(name, "hypot"))
         return 2;
+    if (!strcmp(name, "atan2"))
+        return 2;
 
     return 0;
 }
@@ -82,5 +84,7 @@ int isFunction(const char name[])
            strcmp(name, "pow") == 0 ||
            strcmp(name, "max") == 0 ||
            strcmp(name, "min") == 0 ||
-           strcmp(name, "hypot") == 0;
+           strcmp(name, "hypot") == 0 ||
+           strcmp(name, "atan2") == 0;
+    ;
 }

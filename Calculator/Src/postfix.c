@@ -69,6 +69,13 @@ double precedence(char op)
 {
     switch (op)
     {
+    case '>':
+    case '<':
+        return 0;
+
+    case '=':
+    case '!':
+        return 0;
     case '+':
     case '-':
         return 1;

@@ -38,7 +38,7 @@ double applyFunction(const char name[], double value)
 
     if (strcmp(name, "acos") == 0)
         return acos(value);
-
+    
     printf("Unknown function: %s\n", name);
 
     return 0;
@@ -61,6 +61,9 @@ double applyBinaryFunction(char name[],
 
     if (strcmp(name, "hypot") == 0)
         return hypot(a, b);
+
+    if (strcmp(name, "atan2") == 0)
+        return atan2(a, b);
 
     printf("Unknown function %s\n", name);
     exit(EXIT_FAILURE);
