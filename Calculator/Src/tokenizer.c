@@ -7,6 +7,11 @@ double readNumber(char expression[], int *index)
     int dotCount = 0;
     int start = *index;
 
+    /* Consume an optional leading '-' (evaluate.c only calls this
+       function when it has already confirmed a digit or '.' follows) */
+    if (expression[*index] == '-')
+        (*index)++;
+
     while (isdigit(expression[*index]) || expression[*index] == '.')
     {
         if (expression[*index] == '.')
