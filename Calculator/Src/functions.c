@@ -3,6 +3,25 @@
 #include <math.h>
 #include <stdlib.h>
 #include "functions.h"
+#include "angle_mode.h"
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+/* Angle-mode conversion helpers. Only used by the circular trig
+   functions (sin/cos/tan/asin/acos/atan2) — hyperbolic functions
+   (sinh/cosh/tanh/...) operate on plain reals and are never
+   affected by degree/radian mode. */
+static double toRadians(double degrees)
+{
+    return degrees * M_PI / 180.0;
+}
+
+static double toDegrees(double radians)
+{
+    return radians * 180.0 / M_PI;
+}
 
 double applyFunction(const char name[], double value)
 {
@@ -10,13 +29,13 @@ double applyFunction(const char name[], double value)
         return sqrt(value);
 
     if (strcmp(name, "sin") == 0)
-        return sin(value);
+        return sin(getAngleMode() == MODE_DEGREE ? toRadians(value) : value);
 
     if (strcmp(name, "cos") == 0)
-        return cos(value);
+        return cos(getAngleMode() == MODE_DEGREE ? toRadians(value) : value);
 
     if (strcmp(name, "tan") == 0)
-        return tan(value);
+        return tan(getAngleMode() == MODE_DEGREE ? toRadians(value) : value);
 
     if (strcmp(name, "log") == 0)
         return log10(value);
@@ -27,6 +46,10 @@ double applyFunction(const char name[], double value)
     if (strcmp(name, "exp") == 0)
         return exp(value);
 
+    /* 'abs' and 'fabs' are intentional aliases for the same operation:
+       'abs' is the name a casual user types; 'fabs' matches the
+       underlying C library function name. Both resolve to fabs()
+       here, so there's no duplicated logic — just two entry points. */
     if (strcmp(name, "abs") == 0)
         return fabs(value);
 
@@ -34,10 +57,16 @@ double applyFunction(const char name[], double value)
         return cbrt(value);
 
     if (strcmp(name, "asin") == 0)
-        return asin(value);
+    {
+        double result = asin(value);
+        return getAngleMode() == MODE_DEGREE ? toDegrees(result) : result;
+    }
 
     if (strcmp(name, "acos") == 0)
-        return acos(value);
+    {
+        double result = acos(value);
+        return getAngleMode() == MODE_DEGREE ? toDegrees(result) : result;
+    }
 
     /* Rounding (Phase 11) */
     if (strcmp(name, "floor") == 0)
@@ -103,7 +132,10 @@ double applyBinaryFunction(const char name[],
         return hypot(a, b);
 
     if (strcmp(name, "atan2") == 0)
-        return atan2(a, b);
+    {
+        double result = atan2(a, b);
+        return getAngleMode() == MODE_DEGREE ? toDegrees(result) : result;
+    }
 
     printf("Unknown function %s\n", name);
     exit(EXIT_FAILURE);
