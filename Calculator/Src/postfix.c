@@ -18,6 +18,9 @@ double precedence(char op)
     case '/':
     case '%':
         return 2;
+    
+    case '^':
+        return 3;
 
     default:
         return 0;
@@ -142,7 +145,13 @@ void infixToPostfix(char infix[], char postfix[])
         {
             while (!isEmptyCharStack(&s) &&
                    peekChar(&s) != '(' &&
-                   precedence(peekChar(&s)) >= precedence(infix[i]))
+                   (
+                        precedence(peekChar(&s)) > precedence(infix[i]) ||
+                    (
+                        precedence(peekChar(&s)) == precedence(infix[i]) &&
+                        infix[i] != '^')
+                )
+                )
             {
                 postfix[j++] = popChar(&s);
                 postfix[j++] = ' ';

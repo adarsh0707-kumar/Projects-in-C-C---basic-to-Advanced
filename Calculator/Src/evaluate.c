@@ -3,6 +3,7 @@
 #include "calculator.h"
 #include "stack.h"
 #include <stdlib.h>
+#include <math.h>
 
 double applyOperation(double a, double b, char op)
 {
@@ -29,6 +30,9 @@ double applyOperation(double a, double b, char op)
 
         printf("Error: Modulus is supported only for integers.\n");
         exit(EXIT_FAILURE);
+    
+    case '^':
+        return pow(a, b);
 
     default:
         printf("Error: Invalid operator '%c'\n", op);
@@ -52,10 +56,10 @@ double evaluatePostfix(char postfix[])
         }
 
         /* Read a decimal number */
-        if(isdigit(postfix[i]) ||
-         postfix[i] == '.' ||
-         (postfix[i] == '-' &&
-          (isdigit(postfix[i + 1]) || postfix[i + 1] == '.')))
+        if (isdigit(postfix[i]) ||
+            postfix[i] == '.' ||
+            (postfix[i] == '-' &&
+             (isdigit(postfix[i + 1]) || postfix[i + 1] == '.')))
         {
             double number = readNumber(postfix, &i);
 

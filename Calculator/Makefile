@@ -4,6 +4,9 @@ CC = gcc
 # Compiler flags
 CFLAGS = -Wall -Wextra -std=c11 -IInc
 
+# Linker flags
+LDFLAGS = -lm
+
 # Directories
 SRC_DIR = Src
 OBJ_DIR = Obj
@@ -25,26 +28,23 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/variables.c
 
 # Object files
-OBJS = $(OBJ_DIR)/main.o \
-       $(OBJ_DIR)/stack.o \
-       $(OBJ_DIR)/tokenizer.o \
-       $(OBJ_DIR)/postfix.o \
-       $(OBJ_DIR)/evaluate.o\
-	$(OBJ_DIR)/parser.o\
-       $(OBJ_DIR)/validator.o\
-       $(OBJ_DIR)/history.o\
-       $(OBJ_DIR)/memory.o\
-       $(OBJ_DIR)/variables.o
+OBJS = $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
 # Header files
-HEADERS = $(INC_DIR)/stack.h $(INC_DIR)/calculator.h
+HEADERS = \
+       $(INC_DIR)/calculator.h \
+       $(INC_DIR)/stack.h \
+       $(INC_DIR)/validator.h \
+       $(INC_DIR)/history.h \
+       $(INC_DIR)/memory.h \
+       $(INC_DIR)/variables.h
 
 # Default target
 all: $(TARGET)
 
 # Link object files
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LDFLAGS)
 
 # Compile source files
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(HEADERS)

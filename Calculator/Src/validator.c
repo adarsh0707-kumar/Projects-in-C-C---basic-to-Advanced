@@ -98,7 +98,8 @@ int validateExpression(char expression[])
 
             if (c == '+' || c == '-' ||
                 c == '*' || c == '/' ||
-                c == '%')
+                c == '%' || c == '^'
+            )
             {
                 state = EXPECT_OPERAND;
                 i++;
