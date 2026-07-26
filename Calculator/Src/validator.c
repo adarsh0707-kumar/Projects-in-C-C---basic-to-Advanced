@@ -3,6 +3,7 @@
 #include <string.h>
 #include "validator.h"
 #include "functions.h"
+#include "function_info.h"
 
 typedef enum
 {

@@ -7,6 +7,7 @@
 #include "variables.h"
 #include "functions.h"
 #include "constants.h"
+#include "function_info.h"
 
 int isOperator(char ch)
 {
@@ -79,6 +80,9 @@ double precedence(char op)
     case '^':
         return 3;
 
+    case '!':
+        return 4;
+
     default:
         return 0;
     }
@@ -121,33 +125,38 @@ void infixToPostfix(char infix[], char postfix[])
             char identifier[32];
             int k = 0;
 
-            /* Check built-in constants first */
+            /* Read complete identifier */
 
-            if (strncmp(&infix[i], "pi", 2) == 0 &&
-                !isalnum(infix[i + 2]) &&
-                infix[i + 2] != '_')
+            while (isalnum(infix[i]) || infix[i] == '_')
             {
-                j += sprintf(&postfix[j], "%g ", getConstant("pi"));
-                i += 2;
-                continue;
-            }
-
-            if (strncmp(&infix[i], "e", 1) == 0 &&
-                !isalnum(infix[i + 1]) &&
-                infix[i + 1] != '_')
-            {
-                j += sprintf(&postfix[j], "%g ", getConstant("e"));
-                i += 1;
-                continue;
+                identifier[k++] = infix[i++];
             }
 
             identifier[k] = '\0';
 
+            /* Built-in constants */
+
+            if (strcmp(identifier, "pi") == 0)
+            {
+                j += sprintf(&postfix[j], "%g ", getConstant("pi"));
+                continue;
+            }
+
+            if (strcmp(identifier, "e") == 0)
+            {
+                j += sprintf(&postfix[j], "%g ", getConstant("e"));
+                continue;
+            }
+
+            /* Skip spaces after identifier */
+
             int temp = i;
+
             while (isspace(infix[temp]))
                 temp++;
 
             /* Function */
+
             if (infix[temp] == '(' && isFunction(identifier))
             {
                 pushToken(&operators, makeFunctionToken(identifier));
@@ -156,6 +165,7 @@ void infixToPostfix(char infix[], char postfix[])
             }
 
             /* Variable */
+
             double value;
 
             if (!getVariable(identifier, &value))
@@ -165,6 +175,7 @@ void infixToPostfix(char infix[], char postfix[])
             }
 
             j += sprintf(&postfix[j], "%g ", value);
+
             continue;
         }
 
@@ -233,8 +244,14 @@ void infixToPostfix(char infix[], char postfix[])
                 j += sprintf(&postfix[j], "%s ", top.text);
             }
 
-            if (!isEmptyTokenStack(&operators))
-                popToken(&operators);
+            if (isEmptyTokenStack(&operators))
+            {
+                printf("Error: Mismatched parentheses.\n");
+                exit(EXIT_FAILURE);
+            }
+
+            /* Remove '(' */
+            popToken(&operators);
 
             /* If a function is on top, output it */
             if (!isEmptyTokenStack(&operators))
@@ -253,8 +270,8 @@ void infixToPostfix(char infix[], char postfix[])
         }
 
         /* ---------------------------
-           Comma
-        ----------------------------*/
+            Function argument separator
+            ----------------------------*/
         if (infix[i] == ',')
         {
             while (!isEmptyTokenStack(&operators))
@@ -269,6 +286,12 @@ void infixToPostfix(char infix[], char postfix[])
                 j += sprintf(&postfix[j],
                              "%s ",
                              top.text);
+            }
+
+            if (isEmptyTokenStack(&operators))
+            {
+                printf("Error: Misplaced comma.\n");
+                exit(EXIT_FAILURE);
             }
 
             i++;

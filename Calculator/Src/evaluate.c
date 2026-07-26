@@ -84,6 +84,12 @@ double evaluatePostfix(char postfix[])
 
             int argc = functionArgumentCount(function);
 
+            if (argc == -1)
+            {
+                printf("Unknown function '%s'\n", function);
+                exit(EXIT_FAILURE);
+            }
+
             if (argc == 1)
             {
                 double a = popDouble(&s);

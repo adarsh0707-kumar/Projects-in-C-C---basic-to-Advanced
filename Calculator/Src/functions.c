@@ -44,20 +44,7 @@ double applyFunction(const char name[], double value)
     return 0;
 }
 
-int isFunction(const char name[])
-{
-    return strcmp(name, "sqrt") == 0 ||
-           strcmp(name, "sin") == 0 ||
-           strcmp(name, "cos") == 0 ||
-           strcmp(name, "tan") == 0 ||
-           strcmp(name, "log") == 0 ||
-           strcmp(name, "ln") == 0 ||
-           strcmp(name, "exp") == 0 ||
-           strcmp(name, "abs") == 0 ||
-           strcmp(name, "asin") == 0 ||
-           strcmp(name, "acos") == 0 ||
-           strcmp(name, "cbrt") == 0;
-}
+
 
 double applyBinaryFunction(char name[],
                            double a,
