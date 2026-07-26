@@ -15,4 +15,6 @@ double readNumber(char expression[], int *index);
 
 int validateExpression(char expression[]);
 
+void insertImplicitMultiplication(char input[], char output[]);
+
 #endif

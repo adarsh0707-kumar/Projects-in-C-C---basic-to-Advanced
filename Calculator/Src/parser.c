@@ -1,3 +1,5 @@
+#include <ctype.h>
+#include <string.h>
 #include "stack.h"
 #include"calculator.h"
 
@@ -34,4 +36,43 @@ int isFunction(char name[])
            strcmp(name, "ln") == 0 ||
            strcmp(name, "exp") == 0 ||
            strcmp(name, "abs") == 0;
+}
+
+void insertImplicitMultiplication(char input[], char output[])
+{
+    int i = 0;
+    int j = 0;
+
+    while (input[i] != '\0')
+    {
+        output[j++] = input[i];
+
+        char current = input[i];
+        char next = input[i + 1];
+
+        if (next == '\0')
+        {
+            i++;
+            continue;
+        }
+
+        int left =
+            isdigit(current) ||
+            current == '.' ||
+            current == ')' ||
+            isalpha(current);
+
+        int right =
+            next == '(' ||
+            isalpha(next);
+
+        if (left && right)
+        {
+            output[j++] = '*';
+        }
+
+        i++;
+    }
+
+    output[j] = '\0';
 }

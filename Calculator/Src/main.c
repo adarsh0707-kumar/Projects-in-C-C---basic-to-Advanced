@@ -12,6 +12,7 @@ int main(void)
 
     char variableName[32];
     char expression[256];
+    char processed[512];
 
     int choice;
 
@@ -38,14 +39,19 @@ int main(void)
             /* Existing calculator code goes here */
             printf("Enter expression: ");
 
-            if (fgets(infix, sizeof(infix), stdin) == NULL)
+            if (fgets(expression, sizeof(expression), stdin) == NULL)
             {
                 printf("Error reading input.\n");
                 break;
             }
 
-            /* Remove trailing newline */
-            infix[strcspn(infix, "\n")] = '\0';
+            expression[strcspn(expression, "\n")] = '\0';
+
+            /* Insert implicit '*' operators */
+            insertImplicitMultiplication(expression, processed);
+
+            /* Copy processed expression */
+            strcpy(infix, processed);
 
             /* ----------------------------
                Variable Assignment
@@ -65,7 +71,10 @@ int main(void)
 
                 strcpy(expression, equal + 1);
 
-                infixToPostfix(expression, postfix);
+                /* Expand implicit multiplication */
+                insertImplicitMultiplication(expression, processed);
+
+                infixToPostfix(processed, postfix);
 
                 lastResult = evaluatePostfix(postfix);
 
