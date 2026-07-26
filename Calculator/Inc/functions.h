@@ -7,4 +7,6 @@ double applyBinaryFunction(char name[],
                            double a,
                            double b);
 
+double factorial(double n);
+
 #endif

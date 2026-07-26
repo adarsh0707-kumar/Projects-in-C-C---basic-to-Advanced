@@ -65,3 +65,19 @@ double applyBinaryFunction(char name[],
     printf("Unknown function %s\n", name);
     exit(EXIT_FAILURE);
 }
+
+double factorial(double n)
+{
+    if (n < 0 || floor(n) != n)
+    {
+        printf("Factorial only works for non-negative integers.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    double result = 1;
+
+    for (int i = 2; i <= (int)n; i++)
+        result *= i;
+
+    return result;
+}

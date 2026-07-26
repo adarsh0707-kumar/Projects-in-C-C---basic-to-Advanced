@@ -113,8 +113,19 @@ double evaluatePostfix(char postfix[])
 
             continue;
         }
+        
+        /* Factorial */
+        if (postfix[i] == '!')
+        {
+            double value = popDouble(&s);
 
-        /* Operator */
+            pushDouble(&s, factorial(value));
+
+            i++;
+            continue;
+        }
+
+        /* Binary operator */
         double b = popDouble(&s);
         double a = popDouble(&s);
 

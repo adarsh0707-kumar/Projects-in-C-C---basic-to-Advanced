@@ -117,13 +117,21 @@ int validateExpression(char expression[])
                 continue;
             }
 
+            /* Postfix factorial */
+            if (c == '!')
+            {
+                i++;
+                continue;
+            }
+
+            /* Binary operators */
             if (c == '+' ||
                 c == '-' ||
                 c == '*' ||
                 c == '/' ||
                 c == '%' ||
                 c == '^' ||
-                c == ',')
+                c == ',' )
             {
                 state = EXPECT_OPERAND;
                 i++;

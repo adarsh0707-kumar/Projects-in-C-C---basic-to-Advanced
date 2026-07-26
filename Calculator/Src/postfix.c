@@ -16,7 +16,8 @@ int isOperator(char ch)
            ch == '*' ||
            ch == '/' ||
            ch == '%' ||
-           ch == '^';
+           ch == '^' ||
+           ch == '!';
 }
 
 Token makeOperatorToken(char op)
@@ -264,6 +265,33 @@ void infixToPostfix(char infix[], char postfix[])
                     j += sprintf(&postfix[j], "%s ", top.text);
                 }
             }
+
+            i++;
+            continue;
+        }
+
+        /* Postfix factorial */
+        if (infix[i] == '!')
+        {
+            while (!isEmptyTokenStack(&operators))
+            {
+                Token top = peekToken(&operators);
+
+                if (top.type != TOKEN_OPERATOR)
+                    break;
+
+                if (precedence(top.text[0]) >= precedence('!'))
+                {
+                    top = popToken(&operators);
+                    j += sprintf(&postfix[j], "%s ", top.text);
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            pushToken(&operators, makeOperatorToken('!'));
 
             i++;
             continue;
