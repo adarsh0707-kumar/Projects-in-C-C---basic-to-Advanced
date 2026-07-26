@@ -31,22 +31,33 @@ int validateExpression(char expression[])
         {
         case EXPECT_OPERAND:
 
-            if (isdigit(c) || c == '.')
+            /* Number or identifier */
+            if (isdigit(c) || c == '.' || isalpha(c))
             {
-                int dot = 0;
-
-                while (isdigit(expression[i]) || expression[i] == '.')
+                if (isalpha(c))
                 {
-                    if (expression[i] == '.')
-                        dot++;
-
-                    if (dot > 1)
+                    while (isalnum(expression[i]) || expression[i] == '_')
                     {
-                        printf("Error: Invalid number.\n");
-                        return 0;
+                        i++;
                     }
+                }
+                else
+                {
+                    int dotCount = 0;
 
-                    i++;
+                    while (isdigit(expression[i]) || expression[i] == '.')
+                    {
+                        if (expression[i] == '.')
+                            dotCount++;
+
+                        if (dotCount > 1)
+                        {
+                            printf("Error: Invalid number format.\n");
+                            return 0;
+                        }
+
+                        i++;
+                    }
                 }
 
                 state = AFTER_OPERAND;

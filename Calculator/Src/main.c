@@ -3,6 +3,7 @@
 #include "calculator.h"
 #include "history.h"
 #include "memory.h"
+#include"variables.h"
 
 int main(void)
 {
@@ -59,6 +60,8 @@ int main(void)
 
             /* Evaluate postfix */
             lastResult = evaluatePostfix(postfix);
+
+            setAns(lastResult);
 
             printf("Result             : %g\n", lastResult);
             addHistory(infix, lastResult);

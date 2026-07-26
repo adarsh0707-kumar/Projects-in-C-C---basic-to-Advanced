@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include "calculator.h"
 #include "stack.h"
+#include "variables.h"
 
 double precedence(char op)
 {
@@ -49,6 +50,21 @@ void infixToPostfix(char infix[], char postfix[])
         if (infix[i] == ' ')
         {
             i++;
+            continue;
+        }
+
+        /* Built-in variable: ans */
+        if (strncmp(&infix[i], "ans", 3) == 0)
+        {
+            char temp[32];
+
+            sprintf(temp, "%g ", getAns());
+
+            strcpy(&postfix[j], temp);
+
+            j += strlen(temp);
+            i += 3;
+
             continue;
         }
 
