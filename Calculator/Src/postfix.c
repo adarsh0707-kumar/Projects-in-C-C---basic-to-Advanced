@@ -6,6 +6,7 @@
 #include "stack.h"
 #include "variables.h"
 #include "functions.h"
+#include "constants.h"
 
 int isOperator(char ch)
 {
@@ -120,9 +121,24 @@ void infixToPostfix(char infix[], char postfix[])
             char identifier[32];
             int k = 0;
 
-            while (isalnum(infix[i]) || infix[i] == '_')
+            /* Check built-in constants first */
+
+            if (strncmp(&infix[i], "pi", 2) == 0 &&
+                !isalnum(infix[i + 2]) &&
+                infix[i + 2] != '_')
             {
-                identifier[k++] = infix[i++];
+                j += sprintf(&postfix[j], "%g ", getConstant("pi"));
+                i += 2;
+                continue;
+            }
+
+            if (strncmp(&infix[i], "e", 1) == 0 &&
+                !isalnum(infix[i + 1]) &&
+                infix[i + 1] != '_')
+            {
+                j += sprintf(&postfix[j], "%g ", getConstant("e"));
+                i += 1;
+                continue;
             }
 
             identifier[k] = '\0';

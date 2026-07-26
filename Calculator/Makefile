@@ -27,7 +27,8 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/memory.c\
        $(SRC_DIR)/variables.c\
        $(SRC_DIR)/functions.c\
-       $(SRC_DIR)/function_info.c
+       $(SRC_DIR)/function_info.c\
+       $(SRC_DIR)/constants.c
 
 # Object files
 OBJS = $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
@@ -42,7 +43,8 @@ HEADERS = \
        $(INC_DIR)/variables.h\
        $(INC_DIR)/functions.h\
        $(INC_DIR)/function_info.h\
-       $(INC_DIR)/token.h
+       $(INC_DIR)/token.h\
+       $(INC_DIR)/constants.h
 
 # Default target
 all: $(TARGET)

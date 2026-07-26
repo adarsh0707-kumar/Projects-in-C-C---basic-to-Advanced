@@ -5,6 +5,8 @@
 #include "memory.h"
 #include"variables.h"
 
+
+
 int main(void)
 {
     char infix[256];
@@ -30,8 +32,16 @@ int main(void)
 
         printf("\nChoice: ");
 
-        scanf("%d", &choice);
-        getchar(); // consume newline
+        if (scanf("%d", &choice) != 1)
+        {
+            while (getchar() != '\n')
+                ; // discard invalid input
+            printf("Invalid choice!\n");
+            continue;
+        }
+
+        while (getchar() != '\n')
+            ; // discard remaining characters
 
         switch (choice)
         {
@@ -69,10 +79,33 @@ int main(void)
                 strncpy(variableName, infix, len);
                 variableName[len] = '\0';
 
+                char *start = variableName;
+
+                while (*start == ' ')
+                    start++;
+
+                char *end = start + strlen(start) - 1;
+
+                while (end > start && *end == ' ')
+                {
+                    *end = '\0';
+                    end--;
+                }
+
+                strcpy(variableName, start);
+
                 strcpy(expression, equal + 1);
 
-                /* Expand implicit multiplication */
                 insertImplicitMultiplication(expression, processed);
+
+                if (!validateExpression(processed))
+                    break;
+
+                if (!validateParentheses(processed))
+                {
+                    printf("Error: Mismatched parentheses.\n");
+                    break;
+                }
 
                 infixToPostfix(processed, postfix);
 
@@ -143,7 +176,16 @@ int main(void)
                 printf("6. Back\n");
                 printf("Choice: ");
 
-                scanf("%d", &memChoice);
+                if (scanf("%d", &memChoice) != 1)
+                {
+                    while (getchar() != '\n')
+                        ;
+                    printf("Invalid choice!\n");
+                    continue;
+                }
+
+                while (getchar() != '\n')
+                    ;
 
                 switch (memChoice)
                 {
@@ -157,13 +199,31 @@ int main(void)
 
                 case 3:
                     printf("Enter value: ");
-                    scanf("%lf", &value);
+                    if (scanf("%lf", &value) != 1)
+                    {
+                        while (getchar() != '\n')
+                            ;
+                        printf("Invalid number!\n");
+                        continue;
+                    }
+
+                    while (getchar() != '\n')
+                        ;
                     memoryAdd(value);
                     break;
 
                 case 4:
                     printf("Enter value: ");
-                    scanf("%lf", &value);
+                    if (scanf("%lf", &value) != 1)
+                    {
+                        while (getchar() != '\n')
+                            ;
+                        printf("Invalid number!\n");
+                        continue;
+                    }
+
+                    while (getchar() != '\n')
+                        ;
                     memorySubtract(value);
                     break;
 
@@ -187,6 +247,7 @@ int main(void)
             break;
 
         case 6:
+            printf("\nThank you for using the Scientific Calculator.\n");
             printf("Goodbye!\n");
             return 0;
 
