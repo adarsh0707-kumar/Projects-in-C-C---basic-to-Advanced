@@ -29,7 +29,8 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/functions.c\
        $(SRC_DIR)/function_info.c\
        $(SRC_DIR)/constants.c\
-       $(SRC_DIR)/angle_mode.c
+       $(SRC_DIR)/angle_mode.c\
+       $(SRC_DIR)/units.c
 
 # Object files
 OBJS = $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
@@ -46,7 +47,8 @@ HEADERS = \
        $(INC_DIR)/function_info.h\
        $(INC_DIR)/token.h\
        $(INC_DIR)/constants.h\
-       $(INC_DIR)/angle_mode.h
+       $(INC_DIR)/angle_mode.h\
+       $(INC_DIR)/units.h
 
 # Default target
 all: $(TARGET)

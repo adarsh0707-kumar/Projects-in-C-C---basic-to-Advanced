@@ -6,6 +6,7 @@
 #include "memory.h"
 #include "variables.h"
 #include "angle_mode.h"
+#include "units.h"
 
 int main(void)
 {
@@ -28,7 +29,8 @@ int main(void)
         printf("3. Clear History\n");
         printf("4. Memory Function\n");
         printf("5. View Variables\n");
-        printf("6. Exit\n");
+        printf("6. Unit Converter\n");
+        printf("7. Exit\n");
 
         printf("\nChoice: ");
 
@@ -283,6 +285,33 @@ int main(void)
             break;
 
         case 6:
+        {
+            char convInput[64];
+            double convValue;
+            char convUnit[16];
+
+            printf("Enter value with unit (e.g. 10km, 30C, 5kg, 2hr): ");
+
+            if (fgets(convInput, sizeof(convInput), stdin) == NULL)
+            {
+                printf("Error reading input.\n");
+                break;
+            }
+
+            convInput[strcspn(convInput, "\n")] = '\0';
+
+            if (!parseValueWithUnit(convInput, &convValue, convUnit))
+            {
+                printf("Error: Could not parse '%s'. Expected a format like '10km'.\n",
+                       convInput);
+                break;
+            }
+
+            convertAndPrint(convValue, convUnit);
+            break;
+        }
+
+        case 7:
             printf("\nThank you for using the Scientific Calculator.\n");
             printf("Goodbye!\n");
             return 0;
