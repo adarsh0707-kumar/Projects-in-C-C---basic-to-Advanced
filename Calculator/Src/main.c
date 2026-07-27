@@ -7,6 +7,7 @@
 #include "variables.h"
 #include "angle_mode.h"
 #include "units.h"
+#include "complex_eval.h"
 
 int main(void)
 {
@@ -30,7 +31,8 @@ int main(void)
         printf("4. Memory Function\n");
         printf("5. View Variables\n");
         printf("6. Unit Converter\n");
-        printf("7. Exit\n");
+        printf("7. Complex Number Calculator\n");
+        printf("8. Exit\n");
 
         printf("\nChoice: ");
 
@@ -318,6 +320,29 @@ int main(void)
         }
 
         case 7:
+        {
+            char complexInput[128];
+            char complexResult[128];
+
+            printf("Enter complex expression (e.g. (2+3i)*(4-5i), sqrt(-1)): ");
+
+            if (fgets(complexInput, sizeof(complexInput), stdin) == NULL)
+            {
+                printf("Error reading input.\n");
+                break;
+            }
+
+            complexInput[strcspn(complexInput, "\n")] = '\0';
+
+            if (evaluateComplexExpression(complexInput, complexResult, sizeof(complexResult)))
+                printf("%s = %s\n", complexInput, complexResult);
+            else
+                printf("Error: %s\n", complexResult);
+
+            break;
+        }
+
+        case 8:
             printf("\nThank you for using the Scientific Calculator.\n");
             printf("Goodbye!\n");
             return 0;

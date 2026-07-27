@@ -1,8 +1,10 @@
 # Compiler
 CC = gcc
+CXX = g++
 
 # Compiler flags
 CFLAGS = -Wall -Wextra -std=c11 -IInc
+CXXFLAGS = -Wall -Wextra -std=c++17 -IInc
 
 # Linker flags
 LDFLAGS = -lm
@@ -32,8 +34,14 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/angle_mode.c\
        $(SRC_DIR)/units.c
 
+# C++ source files (isolated to the complex-number feature —
+# see complex_eval.h for the C-facing interface)
+CXX_SRCS = $(SRC_DIR)/complex.cpp \
+           $(SRC_DIR)/complex_eval.cpp
+
 # Object files
 OBJS = $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+CXX_OBJS = $(CXX_SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
 # Header files
 HEADERS = \
@@ -48,18 +56,25 @@ HEADERS = \
        $(INC_DIR)/token.h\
        $(INC_DIR)/constants.h\
        $(INC_DIR)/angle_mode.h\
-       $(INC_DIR)/units.h
+       $(INC_DIR)/units.h\
+       $(INC_DIR)/complex_eval.h
+
+CXX_HEADERS = $(INC_DIR)/complex.hpp
 
 # Default target
 all: $(TARGET)
 
-# Link object files
-$(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LDFLAGS)
+# Link object files (uses g++ as the linker since CXX_OBJS need libstdc++)
+$(TARGET): $(OBJS) $(CXX_OBJS)
+	$(CXX) -o $@ $(OBJS) $(CXX_OBJS) $(LDFLAGS)
 
-# Compile source files
+# Compile C source files
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(HEADERS)
 	$(CC) $(CFLAGS) -c $< -o $@
+
+# Compile C++ source files
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(CXX_HEADERS) $(INC_DIR)/complex_eval.h
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # Run program
 run: $(TARGET)
