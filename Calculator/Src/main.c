@@ -288,9 +288,10 @@ int main(void)
         {
             char convInput[64];
             double convValue;
-            char convUnit[16];
+            char convFromUnit[16];
+            char convToUnit[16];
 
-            printf("Enter value with unit (e.g. 10km, 30C, 5kg, 2hr): ");
+            printf("Enter value with unit (e.g. 10km, 30C, or 10km to miles): ");
 
             if (fgets(convInput, sizeof(convInput), stdin) == NULL)
             {
@@ -300,14 +301,19 @@ int main(void)
 
             convInput[strcspn(convInput, "\n")] = '\0';
 
-            if (!parseValueWithUnit(convInput, &convValue, convUnit))
+            if (!parseConversion(convInput, &convValue, convFromUnit, convToUnit))
             {
-                printf("Error: Could not parse '%s'. Expected a format like '10km'.\n",
+                printf("Error: Could not parse '%s'. Expected a format like "
+                       "'10km' or '10km to miles'.\n",
                        convInput);
                 break;
             }
 
-            convertAndPrint(convValue, convUnit);
+            if (convToUnit[0] == '\0')
+                convertAndPrint(convValue, convFromUnit);
+            else
+                convertToSingleUnit(convValue, convFromUnit, convToUnit);
+
             break;
         }
 

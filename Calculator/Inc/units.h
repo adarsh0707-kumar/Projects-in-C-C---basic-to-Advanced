@@ -25,4 +25,15 @@ UnitCategory unitCategory(const char unit[]);
    1 on success. */
 int convertAndPrint(double value, const char unit[]);
 
+/* Parses "<value><unit>" optionally followed by "to <targetUnit>"
+   (e.g. "10km", "10km to miles", "80F to C"). toUnit[0] is set to
+   '\0' if no "to" clause was present. Returns 1 on success. */
+int parseConversion(const char input[], double *value, char fromUnit[16], char toUnit[16]);
+
+/* Converts value/fromUnit to a single target unit and prints the
+   result (used when the user gave an explicit "to <unit>" clause).
+   Returns 0 (and prints an error) on unknown unit or category
+   mismatch (e.g. trying to convert km to kg), 1 on success. */
+int convertToSingleUnit(double value, const char fromUnit[], const char toUnit[]);
+
 #endif

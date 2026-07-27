@@ -37,6 +37,14 @@ static const UnitDef unitTable[] =
         {"ft", UNIT_CAT_LENGTH, 0.3048, 1},
         {"inch", UNIT_CAT_LENGTH, 0.0254, 1},
         {"in", UNIT_CAT_LENGTH, 0.0254, 0},
+        {"miles", UNIT_CAT_LENGTH, 1609.344, 0},
+        {"yards", UNIT_CAT_LENGTH, 0.9144, 0},
+        {"inches", UNIT_CAT_LENGTH, 0.0254, 0},
+        {"feet", UNIT_CAT_LENGTH, 0.3048, 0},
+        {"meters", UNIT_CAT_LENGTH, 1.0, 0},
+        {"kilometers", UNIT_CAT_LENGTH, 1000.0, 0},
+        {"centimeters", UNIT_CAT_LENGTH, 0.01, 0},
+        {"millimeters", UNIT_CAT_LENGTH, 0.001, 0},
 
         /* Weight */
         {"kg", UNIT_CAT_WEIGHT, 1000.0, 1},
@@ -44,6 +52,10 @@ static const UnitDef unitTable[] =
         {"mg", UNIT_CAT_WEIGHT, 0.001, 1},
         {"lb", UNIT_CAT_WEIGHT, 453.592, 1},
         {"oz", UNIT_CAT_WEIGHT, 28.3495, 1},
+        {"pounds", UNIT_CAT_WEIGHT, 453.592, 0},
+        {"ounces", UNIT_CAT_WEIGHT, 28.3495, 0},
+        {"kilograms", UNIT_CAT_WEIGHT, 1000.0, 0},
+        {"grams", UNIT_CAT_WEIGHT, 1.0, 0},
 
         /* Time */
         {"day", UNIT_CAT_TIME, 86400.0, 1},
@@ -52,7 +64,11 @@ static const UnitDef unitTable[] =
         {"min", UNIT_CAT_TIME, 60.0, 1},
         {"sec", UNIT_CAT_TIME, 1.0, 1},
         {"s", UNIT_CAT_TIME, 1.0, 0},
-        {"ms", UNIT_CAT_TIME, 0.001, 1}};
+        {"ms", UNIT_CAT_TIME, 0.001, 1},
+        {"hours", UNIT_CAT_TIME, 3600.0, 0},
+        {"minutes", UNIT_CAT_TIME, 60.0, 0},
+        {"seconds", UNIT_CAT_TIME, 1.0, 0},
+        {"days", UNIT_CAT_TIME, 86400.0, 0}};
 
 #define UNIT_TABLE_COUNT (sizeof(unitTable) / sizeof(unitTable[0]))
 
@@ -159,6 +175,158 @@ static double toCelsius(double value, const char unit[])
 
     /* K */
     return value - 273.15;
+}
+
+int parseConversion(const char input[], double *value, char fromUnit[16], char toUnit[16])
+{
+    int i = 0;
+
+    while (isspace((unsigned char)input[i]))
+        i++;
+
+    int start = i;
+
+    if (input[i] == '-' || input[i] == '+')
+        i++;
+
+    int dotCount = 0;
+    int hasDigits = 0;
+
+    while (isdigit((unsigned char)input[i]) || input[i] == '.')
+    {
+        if (input[i] == '.')
+            dotCount++;
+        else
+            hasDigits = 1;
+
+        if (dotCount > 1)
+            return 0;
+
+        i++;
+    }
+
+    if (!hasDigits)
+        return 0;
+
+    char numBuf[32];
+    int len = i - start;
+
+    if (len <= 0 || len >= (int)sizeof(numBuf))
+        return 0;
+
+    strncpy(numBuf, input + start, len);
+    numBuf[len] = '\0';
+    *value = atof(numBuf);
+
+    while (isspace((unsigned char)input[i]))
+        i++;
+
+    int u = 0;
+
+    while (isalpha((unsigned char)input[i]) && u < 15)
+        fromUnit[u++] = input[i++];
+
+    fromUnit[u] = '\0';
+
+    if (u == 0)
+        return 0;
+
+    while (isspace((unsigned char)input[i]))
+        i++;
+
+    toUnit[0] = '\0';
+
+    if (input[i] == '\0')
+        return 1; /* no "to <target>" clause: bare "<value><unit>" */
+
+    /* Expect "to <unit>" */
+    if ((input[i] == 't' || input[i] == 'T') &&
+        (input[i + 1] == 'o' || input[i + 1] == 'O') &&
+        (input[i + 2] == '\0' || isspace((unsigned char)input[i + 2])))
+    {
+        i += 2;
+
+        while (isspace((unsigned char)input[i]))
+            i++;
+
+        int t = 0;
+
+        while (isalpha((unsigned char)input[i]) && t < 15)
+            toUnit[t++] = input[i++];
+
+        toUnit[t] = '\0';
+
+        while (isspace((unsigned char)input[i]))
+            i++;
+
+        if (t == 0 || input[i] != '\0')
+            return 0;
+
+        return 1;
+    }
+
+    return 0; /* trailing text that isn't a valid "to <unit>" clause */
+}
+
+int convertToSingleUnit(double value, const char fromUnitIn[], const char toUnitIn[])
+{
+    char from[16], to[16];
+    strncpy(from, fromUnitIn, sizeof(from) - 1);
+    from[sizeof(from) - 1] = '\0';
+    strncpy(to, toUnitIn, sizeof(to) - 1);
+    to[sizeof(to) - 1] = '\0';
+
+    if (strlen(from) == 1)
+    {
+        char upper = (char)toupper((unsigned char)from[0]);
+        if (upper == 'C' || upper == 'F' || upper == 'K')
+            from[0] = upper;
+    }
+
+    if (strlen(to) == 1)
+    {
+        char upper = (char)toupper((unsigned char)to[0]);
+        if (upper == 'C' || upper == 'F' || upper == 'K')
+            to[0] = upper;
+    }
+
+    UnitCategory catFrom = unitCategory(from);
+    UnitCategory catTo = unitCategory(to);
+
+    if (catFrom == UNIT_CAT_UNKNOWN)
+    {
+        printf("Error: Unknown unit '%s'.\n", fromUnitIn);
+        return 0;
+    }
+
+    if (catTo == UNIT_CAT_UNKNOWN)
+    {
+        printf("Error: Unknown unit '%s'.\n", toUnitIn);
+        return 0;
+    }
+
+    if (catFrom != catTo)
+    {
+        printf("Error: Cannot convert '%s' to '%s' (different unit categories).\n",
+               fromUnitIn, toUnitIn);
+        return 0;
+    }
+
+    if (catFrom == UNIT_CAT_TEMPERATURE)
+    {
+        double c = toCelsius(value, from);
+        double result = (strcmp(to, "C") == 0) ? c : (strcmp(to, "F") == 0) ? c * 9.0 / 5.0 + 32.0
+                                                                            : c + 273.15;
+
+        printf("%g %s = %g %s\n", value, fromUnitIn, result, toUnitIn);
+        return 1;
+    }
+
+    double base = value * toBaseFactor(from);
+    double result = base / toBaseFactor(to);
+
+    printf("%g %s = %g %s\n", value, fromUnitIn, result, toUnitIn);
+    return 1;
 }
 
 int convertAndPrint(double value, const char unitIn[])
