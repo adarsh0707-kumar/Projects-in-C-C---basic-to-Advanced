@@ -1,11 +1,10 @@
-
 # API Documentation
 
-**Project:** Scientific Calculator in C
+**Project:** Scientific Calculator in C/C++
 
 Version: 2.0
 
-Language: C11
+Language: C11/C++
 
 ---
 
