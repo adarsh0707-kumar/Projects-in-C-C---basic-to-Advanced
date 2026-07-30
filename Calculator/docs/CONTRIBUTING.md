@@ -71,7 +71,7 @@ You can contribute by:
 2. Clone your fork.
 
 ```bash
-git clone https://github.com/adarsh0707-kumar/Projects-in-C-C---basic-to-Advanced/tree/main/Calculator
+git clone https://github.com/adarsh0707-kumar/Projects-in-C-C---basic-to-Advanced/Calculator
 ```
 
 3. Create a new branch.
