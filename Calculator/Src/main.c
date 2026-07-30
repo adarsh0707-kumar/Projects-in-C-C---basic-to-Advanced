@@ -9,6 +9,7 @@
 #include "units.h"
 #include "complex_eval.h"
 #include "matrix_eval.h"
+#include "stats.h"
 
 int main(void)
 {
@@ -34,7 +35,8 @@ int main(void)
         printf("6. Unit Converter\n");
         printf("7. Complex Number Calculator\n");
         printf("8. Matrix Calculator\n");
-        printf("9. Exit\n");
+        printf("9. Statistics\n");
+        printf("10. Exit\n");
 
         printf("\nChoice: ");
 
@@ -369,6 +371,30 @@ int main(void)
         }
 
         case 9:
+        {
+            char statsInput[256];
+            char statsResult[64];
+
+            printf("Enter statistics expression (e.g. mean(1,2,3,4), "
+                   "median(2,7,5), stddev(4,8,6,5,3,7)): ");
+
+            if (fgets(statsInput, sizeof(statsInput), stdin) == NULL)
+            {
+                printf("Error reading input.\n");
+                break;
+            }
+
+            statsInput[strcspn(statsInput, "\n")] = '\0';
+
+            if (evaluateStatsExpression(statsInput, statsResult, sizeof(statsResult)))
+                printf("%s = %s\n", statsInput, statsResult);
+            else
+                printf("%s\n", statsResult);
+
+            break;
+        }
+
+        case 10:
             printf("\nThank you for using the Scientific Calculator.\n");
             printf("Goodbye!\n");
             return 0;
