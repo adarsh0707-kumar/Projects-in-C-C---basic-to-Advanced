@@ -12,6 +12,7 @@
 #include "matrix_eval.h"
 #include "stats.h"
 #include "base.h"
+#include "plot.h"
 
 int main(void)
 {
@@ -39,7 +40,8 @@ int main(void)
         printf("8. Matrix Calculator\n");
         printf("9. Statistics\n");
         printf("10. Base Converter\n");
-        printf("11. Exit\n");
+        printf("11. Plot Graph\n");
+        printf("12. Exit\n");
 
         printf("\nChoice: ");
 
@@ -498,6 +500,30 @@ int main(void)
         }
 
         case 11:
+        {
+            char plotInput[256];
+            char plotError[128];
+
+            printf("Enter plot expression (e.g. plot(sin(x)), plot(x^2), plot(log(x))): ");
+
+            if (fgets(plotInput, sizeof(plotInput), stdin) == NULL)
+            {
+                printf("Error reading input.\n");
+                break;
+            }
+
+            plotInput[strcspn(plotInput, "\n")] = '\0';
+
+            if (!evaluatePlotExpression(plotInput, plotError, sizeof(plotError)))
+            {
+                if (plotError[0] != '\0')
+                    printf("%s\n", plotError);
+            }
+
+            break;
+        }
+
+        case 12:
             printf("\nThank you for using the Scientific Calculator.\n");
             printf("Goodbye!\n");
             return 0;
