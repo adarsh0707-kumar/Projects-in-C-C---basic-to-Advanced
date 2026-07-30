@@ -36,8 +36,10 @@ SRCS = $(SRC_DIR)/main.c \
 
 # C++ source files (isolated to the complex-number feature —
 # see complex_eval.h for the C-facing interface)
-CXX_SRCS = $(SRC_DIR)/complex.cpp \
-           $(SRC_DIR)/complex_eval.cpp
+CXX_SRCS = $(SRC_DIR)/Complex.cpp \
+           $(SRC_DIR)/complex_eval.cpp \
+           $(SRC_DIR)/Matrix.cpp \
+           $(SRC_DIR)/matrix_eval.cpp
 
 # Object files
 OBJS = $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
@@ -57,9 +59,10 @@ HEADERS = \
        $(INC_DIR)/constants.h\
        $(INC_DIR)/angle_mode.h\
        $(INC_DIR)/units.h\
-       $(INC_DIR)/complex_eval.h
+       $(INC_DIR)/complex_eval.h\
+       $(INC_DIR)/matrix_eval.h
 
-CXX_HEADERS = $(INC_DIR)/complex.hpp
+CXX_HEADERS = $(INC_DIR)/Complex.hpp $(INC_DIR)/Matrix.hpp
 
 # Default target
 all: $(TARGET)
@@ -73,7 +76,7 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(HEADERS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Compile C++ source files
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(CXX_HEADERS) $(INC_DIR)/complex_eval.h
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(CXX_HEADERS) $(INC_DIR)/complex_eval.h $(INC_DIR)/matrix_eval.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # Run program

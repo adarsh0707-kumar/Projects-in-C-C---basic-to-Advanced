@@ -8,6 +8,7 @@
 #include "angle_mode.h"
 #include "units.h"
 #include "complex_eval.h"
+#include "matrix_eval.h"
 
 int main(void)
 {
@@ -32,7 +33,8 @@ int main(void)
         printf("5. View Variables\n");
         printf("6. Unit Converter\n");
         printf("7. Complex Number Calculator\n");
-        printf("8. Exit\n");
+        printf("8. Matrix Calculator\n");
+        printf("9. Exit\n");
 
         printf("\nChoice: ");
 
@@ -343,6 +345,30 @@ int main(void)
         }
 
         case 8:
+        {
+            char matrixInput[256];
+            char matrixResult[256];
+
+            printf("Enter matrix expression (e.g. det([[1,2],[3,4]]), "
+                   "inverse([[1,2],[3,4]]), transpose([[1,2],[3,4]])): ");
+
+            if (fgets(matrixInput, sizeof(matrixInput), stdin) == NULL)
+            {
+                printf("Error reading input.\n");
+                break;
+            }
+
+            matrixInput[strcspn(matrixInput, "\n")] = '\0';
+
+            if (evaluateMatrixExpression(matrixInput, matrixResult, sizeof(matrixResult)))
+                printf("%s = %s\n", matrixInput, matrixResult);
+            else
+                printf("Error: %s\n", matrixResult);
+
+            break;
+        }
+
+        case 9:
             printf("\nThank you for using the Scientific Calculator.\n");
             printf("Goodbye!\n");
             return 0;
