@@ -70,6 +70,38 @@ HEADERS = \
 
 CXX_HEADERS = $(INC_DIR)/Complex.hpp $(INC_DIR)/Matrix.hpp
 
+# ---------------------------------------------------------------
+# Phase 20 -- Unit tests
+#
+# Tests link the real module .c files directly (not through the
+# library), swapping in Tests/test_main.c in place of Src/main.c so
+# there's exactly one main(). This keeps the tests exercising the
+# actual production code, not a reimplementation of it.
+# ---------------------------------------------------------------
+TEST_DIR = Tests
+TEST_TARGET = run_tests
+
+TEST_SRCS = $(TEST_DIR)/test_main.c \
+            $(TEST_DIR)/test_stack.c \
+            $(TEST_DIR)/test_tokenizer.c \
+            $(TEST_DIR)/test_validator.c \
+            $(TEST_DIR)/test_parser.c \
+            $(TEST_DIR)/test_postfix.c \
+            $(TEST_DIR)/test_functions.c \
+            $(TEST_DIR)/test_variables.c \
+            $(TEST_DIR)/test_history.c \
+            $(TEST_DIR)/test_memory.c
+
+# Every module under test, EXCEPT main.c (Tests/test_main.c supplies
+# main() instead).
+TESTED_SRCS = $(filter-out $(SRC_DIR)/main.c,$(SRCS))
+
+test: $(TEST_TARGET)
+	./$(TEST_TARGET)
+
+$(TEST_TARGET): $(TEST_SRCS) $(TESTED_SRCS) $(HEADERS) $(TEST_DIR)/test_framework.h $(TEST_DIR)/tests.h
+	$(CC) $(CFLAGS) -I$(TEST_DIR) -o $@ $(TEST_SRCS) $(TESTED_SRCS) $(LDFLAGS)
+
 # Default target
 all: $(TARGET)
 
@@ -91,9 +123,9 @@ run: $(TARGET)
 
 # Clean build files
 clean:
-	rm -f $(OBJ_DIR)/*.o $(TARGET)
+	rm -f $(OBJ_DIR)/*.o $(TARGET) $(TEST_TARGET)
 
 # Rebuild everything
 rebuild: clean all
 
-.PHONY: all clean run rebuild
+.PHONY: all clean run rebuild test

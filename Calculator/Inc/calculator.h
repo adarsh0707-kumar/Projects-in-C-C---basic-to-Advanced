@@ -3,6 +3,8 @@
 
 double precedence(char op);
 
+int isOperator(char ch);
+
 double applyOperation(double a, double b, char op);
 
 void infixToPostfix(char infix[], char postfix[]);
