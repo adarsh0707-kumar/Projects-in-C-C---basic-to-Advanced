@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
 #include "calculator.h"
 #include "history.h"
 #include "memory.h"
@@ -10,6 +11,7 @@
 #include "complex_eval.h"
 #include "matrix_eval.h"
 #include "stats.h"
+#include "base.h"
 
 int main(void)
 {
@@ -36,7 +38,8 @@ int main(void)
         printf("7. Complex Number Calculator\n");
         printf("8. Matrix Calculator\n");
         printf("9. Statistics\n");
-        printf("10. Exit\n");
+        printf("10. Base Converter\n");
+        printf("11. Exit\n");
 
         printf("\nChoice: ");
 
@@ -64,6 +67,82 @@ int main(void)
             }
 
             expression[strcspn(expression, "\n")] = '\0';
+
+            /* ----------------------------
+               Expression history shortcuts
+               Example:
+               !!            (repeat the most recent calculation)
+               !5            (repeat calculation #5 from history)
+               history(10)   (show only the last 10 history entries)
+               ---------------------------- */
+            if (expression[0] == '!')
+            {
+                char resolved[256];
+
+                if (expression[1] == '!' && expression[2] == '\0')
+                {
+                    if (!getLastHistoryExpression(resolved, sizeof(resolved)))
+                    {
+                        printf("Error: No history available.\n");
+                        break;
+                    }
+                }
+                else
+                {
+                    char *endptr;
+                    long n = strtol(expression + 1, &endptr, 10);
+
+                    if (endptr == expression + 1 || *endptr != '\0' || n <= 0)
+                    {
+                        printf("Error: Invalid history reference. "
+                               "Use '!!' or '!<number>'.\n");
+                        break;
+                    }
+
+                    if (!getHistoryExpressionByNumber((int)n, resolved, sizeof(resolved)))
+                    {
+                        printf("Error: History entry #%ld not found.\n", n);
+                        break;
+                    }
+                }
+
+                printf("Repeating: %s\n", resolved);
+                strcpy(expression, resolved);
+            }
+            else if (strncmp(expression, "history(", 8) == 0)
+            {
+                char *closeParen = strchr(expression, ')');
+
+                if (closeParen == NULL || *(closeParen + 1) != '\0')
+                {
+                    printf("Error: Invalid syntax. Use 'history(<count>)'.\n");
+                    break;
+                }
+
+                char countStr[16];
+                int len = (int)(closeParen - (expression + 8));
+
+                if (len <= 0 || len >= (int)sizeof(countStr))
+                {
+                    printf("Error: Invalid syntax. Use 'history(<count>)'.\n");
+                    break;
+                }
+
+                strncpy(countStr, expression + 8, (size_t)len);
+                countStr[len] = '\0';
+
+                char *endptr;
+                long n = strtol(countStr, &endptr, 10);
+
+                if (*endptr != '\0' || n <= 0)
+                {
+                    printf("Error: 'history(<count>)' requires a positive integer.\n");
+                    break;
+                }
+
+                showRecentHistory((int)n);
+                break;
+            }
 
             /* ----------------------------
                Angle mode command
@@ -395,6 +474,30 @@ int main(void)
         }
 
         case 10:
+        {
+            char baseInput[64];
+            char baseResult[64];
+
+            printf("Enter base expression (e.g. bin(25), hex(255), "
+                   "oct(64), dec(1111b)): ");
+
+            if (fgets(baseInput, sizeof(baseInput), stdin) == NULL)
+            {
+                printf("Error reading input.\n");
+                break;
+            }
+
+            baseInput[strcspn(baseInput, "\n")] = '\0';
+
+            if (evaluateBaseExpression(baseInput, baseResult, sizeof(baseResult)))
+                printf("%s = %s\n", baseInput, baseResult);
+            else
+                printf("%s\n", baseResult);
+
+            break;
+        }
+
+        case 11:
             printf("\nThank you for using the Scientific Calculator.\n");
             printf("Goodbye!\n");
             return 0;

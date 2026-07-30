@@ -33,7 +33,8 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/constants.c\
        $(SRC_DIR)/angle_mode.c\
        $(SRC_DIR)/units.c\
-       $(SRC_DIR)/stats.c
+       $(SRC_DIR)/stats.c\
+       $(SRC_DIR)/base.c
 
 # C++ source files (isolated to the complex-number feature —
 # see complex_eval.h for the C-facing interface)
@@ -62,7 +63,8 @@ HEADERS = \
        $(INC_DIR)/units.h\
        $(INC_DIR)/complex_eval.h\
        $(INC_DIR)/matrix_eval.h\
-       $(INC_DIR)/stats.h
+       $(INC_DIR)/stats.h\
+       $(INC_DIR)/base.h
 
 CXX_HEADERS = $(INC_DIR)/Complex.hpp $(INC_DIR)/Matrix.hpp
 
