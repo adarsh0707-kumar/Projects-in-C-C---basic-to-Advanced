@@ -1,3 +1,4 @@
+
 # Changelog
 
 All notable changes to this project are documented in this file.
@@ -6,7 +7,41 @@ The format is based on **Keep a Changelog** and follows **Semantic Versioning** 
 
 ---
 
-# [2.0.0] - Current Development
+# [Unreleased]
+
+## Fixed
+
+- `%` (modulus) operator was unconditionally erroring, even for valid
+  integer operands (e.g. `10 % 3`). Now computes a real result via
+  `fmod()` and only errors on non-integer or zero operands.
+- A fatal math error anywhere (division by zero, invalid factorial
+  input, etc.) used to call `exit()` and terminate the *entire*
+  program, including from inside `plot()`'s per-sample evaluation
+  loop, e.g. `plot(1/x)` or `plot(x!)` would crash the whole
+  calculator instead of just skipping the invalid sample. Errors
+  during expression evaluation now propagate as `NaN` + a retrievable
+  message (`getLastEvalError()`) instead of terminating the process,
+  while single-value functions that are meant to fail loudly on
+  invalid direct input (e.g. `factorial()` called outside the
+  evaluator) keep their existing behavior.
+- Unknown-function detection in the postfix evaluator had a dead
+  sentinel check (`functionArgumentCount()` returned `0` instead of
+  `-1` for unrecognized names).
+
+## Changed
+
+- **Build system**: the Makefile now supports four build
+  configurations (`BUILD=debug|release|asan|ubsan`), each with its
+  own object directory so switching configurations never links stale
+  objects. Header dependencies are tracked automatically
+  (`-MMD -MP`) instead of via a manually maintained file list.
+- Added a GitHub Actions CI workflow that builds and runs the full
+  test suite on every push/PR, in both debug and release
+  configurations, plus dedicated AddressSanitizer/UndefinedBehavior-
+  Sanitizer jobs that exercise the calculator, complex, matrix, and
+  plotting features.
+
+---
 
 ## Overview
 
