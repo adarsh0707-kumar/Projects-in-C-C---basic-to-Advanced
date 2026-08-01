@@ -1,0 +1,75 @@
+# NOTE ON PLACEMENT: this repo hosts multiple independent projects
+# (Calculator, GuessTheNumber, ...), but GitHub Actions only reads
+# workflow files from <repo-root>/.github/workflows/ -- not from a
+# subproject's own .github/workflows/. So this file needs to live at
+# the *repository* root, e.g.:
+#
+#   Projects-in-C-C---basic-to-Advanced/
+#   ├── .github/workflows/ci.yml   <-- this file goes here
+#   ├── Calculator/
+#   └── GuessTheNumber/
+#
+# Every step below sets working-directory: Calculator so the build
+# runs against this subproject specifically.
+
+name: Calculator CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'Calculator/**'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'Calculator/**'
+      - '.github/workflows/ci.yml'
+
+defaults:
+  run:
+    working-directory: Calculator
+
+jobs:
+  build-and-test:
+    name: Build & Test (${{ matrix.build }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        build: [debug, release]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build calculator (${{ matrix.build }})
+        run: make BUILD=${{ matrix.build }} all
+
+      - name: Run unit test suite
+        run: make BUILD=${{ matrix.build }} test
+
+  sanitizers:
+    name: Sanitizer checks (${{ matrix.build }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        build: [asan, ubsan]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build with ${{ matrix.build }}
+        run: make BUILD=${{ matrix.build }} all
+
+      - name: Smoke test under ${{ matrix.build }}
+        run: |
+          mkdir -p Build
+          printf "1\n2+2*5\n1\n10 %% 3\n1\n5/0\n11\nplot(sin(x))\n11\nplot(1/x)\n11\nplot(x!)\n7\n3+4i\n8\n[[1,2],[3,4]]+[[5,6],[7,8]]\n12\n" | ./calculator
+
+      - name: Run unit test suite under ${{ matrix.build }}
+        run: make BUILD=${{ matrix.build }} test
