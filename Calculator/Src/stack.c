@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../Inc/error.h"
 
 /*==============================
     Double Stack Functions
@@ -18,8 +19,8 @@ void pushDouble(DoubleStack *s, double value)
 {
     if (s->top == MAX - 1)
     {
-        printf("Error: Stack Overflow\n");
-        exit(EXIT_FAILURE);
+        calculatorSetLastError(CALC_ERR_STACK_OVERFLOW);
+        return;
     }
 
     s->items[++s->top] = value;
@@ -30,8 +31,7 @@ double popDouble(DoubleStack *s)
 {
     if (s->top == -1)
     {
-        printf("Error: Stack Underflow\n");
-        exit(EXIT_FAILURE);
+        calculatorSetLastError(CALC_ERR_STACK_UNDERFLOW);
     }
 
     return s->items[s->top--];
@@ -70,8 +70,8 @@ void pushChar(CharStack *s, char value)
 {
     if (s->top == MAX - 1)
     {
-        printf("Error: Stack Overflow\n");
-        exit(EXIT_FAILURE);
+        calculatorSetLastError(CALC_ERR_STACK_OVERFLOW);
+        return;
     }
 
     s->items[++s->top] = value;
@@ -82,8 +82,7 @@ char popChar(CharStack *s)
 {
     if (s->top == -1)
     {
-        printf("Error: Stack Underflow\n");
-        exit(EXIT_FAILURE);
+        calculatorSetLastError(CALC_ERR_STACK_UNDERFLOW);
     }
 
     return s->items[s->top--];
@@ -120,8 +119,8 @@ void pushString(StringStack *s, const char str[])
 {
     if (s->top == MAX - 1)
     {
-        printf("Error: String Stack Overflow\n");
-        exit(EXIT_FAILURE);
+        calculatorSetLastError(CALC_ERR_STACK_OVERFLOW);
+        return;
     }
 
     strcpy(s->items[++s->top], str);
@@ -131,8 +130,7 @@ char *popString(StringStack *s)
 {
     if (s->top == -1)
     {
-        printf("Error: String Stack Underflow\n");
-        exit(EXIT_FAILURE);
+        calculatorSetLastError(CALC_ERR_STACK_UNDERFLOW);
     }
 
     return s->items[s->top--];
@@ -167,8 +165,8 @@ void pushToken(TokenStack *s, Token value)
 {
     if (s->top == MAX - 1)
     {
-        printf("Token Stack Overflow\n");
-        exit(EXIT_FAILURE);
+        calculatorSetLastError(CALC_ERR_STACK_OVERFLOW);
+        return;
     }
 
     s->items[++s->top] = value;
@@ -178,8 +176,7 @@ Token popToken(TokenStack *s)
 {
     if (s->top == -1)
     {
-        printf("Token Stack Underflow\n");
-        exit(EXIT_FAILURE);
+        calculatorSetLastError(CALC_ERR_STACK_UNDERFLOW);
     }
 
     return s->items[s->top--];

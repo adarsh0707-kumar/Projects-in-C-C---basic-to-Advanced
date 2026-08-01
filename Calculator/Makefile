@@ -67,7 +67,7 @@ SRCS := \
 	$(SRC_DIR)/stats.c \
 	$(SRC_DIR)/base.c \
 	$(SRC_DIR)/plot.c \
-       $(SRC_DIR)/error.c
+    $(SRC_DIR)/error.c
 
 CXX_SRCS := \
 	$(SRC_DIR)/Complex.cpp \
@@ -102,7 +102,7 @@ HEADERS := \
 	$(INC_DIR)/stats.h \
 	$(INC_DIR)/base.h \
 	$(INC_DIR)/plot.h \
-       $(INC_DIR)/error.h
+    $(INC_DIR)/error.h
 
 CXX_HEADERS := \
 	$(INC_DIR)/Complex.hpp \
@@ -121,7 +121,8 @@ TEST_SRCS := \
 	$(TEST_DIR)/test_functions.c \
 	$(TEST_DIR)/test_variables.c \
 	$(TEST_DIR)/test_history.c \
-	$(TEST_DIR)/test_memory.c
+	$(TEST_DIR)/test_memory.c \
+	$(TEST_DIR)/test_error.c
 
 TESTED_SRCS := $(filter-out $(SRC_DIR)/main.c,$(SRCS))
 
