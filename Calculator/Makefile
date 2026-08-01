@@ -1,131 +1,246 @@
+###############################################################################
+# Advanced Scientific Calculator
+# Production Makefile
+###############################################################################
+
+# ---------------------------------------------------------------------------
 # Compiler
-CC = gcc
-CXX = g++
+# ---------------------------------------------------------------------------
+CC      := gcc
+CXX     := g++
 
-# Compiler flags
-CFLAGS = -Wall -Wextra -std=c11 -IInc
-CXXFLAGS = -Wall -Wextra -std=c++17 -IInc
-
-# Linker flags
-LDFLAGS = -lm
-
+# ---------------------------------------------------------------------------
 # Directories
-SRC_DIR = Src
-OBJ_DIR = Obj
-INC_DIR = Inc
+# ---------------------------------------------------------------------------
+SRC_DIR  := Src
+OBJ_DIR  := Obj
+INC_DIR  := Inc
+TEST_DIR := Tests
 
-# Target executable
-TARGET = calculator
+# ---------------------------------------------------------------------------
+# Executables
+# ---------------------------------------------------------------------------
+TARGET      := calculator
+TEST_TARGET := run_tests
 
-# Source files
-SRCS = $(SRC_DIR)/main.c \
-       $(SRC_DIR)/stack.c \
-       $(SRC_DIR)/tokenizer.c \
-       $(SRC_DIR)/postfix.c \
-       $(SRC_DIR)/evaluate.c\
-       $(SRC_DIR)/parser.c\
-       $(SRC_DIR)/validator.c\
-       $(SRC_DIR)/history.c\
-       $(SRC_DIR)/memory.c\
-       $(SRC_DIR)/variables.c\
-       $(SRC_DIR)/functions.c\
-       $(SRC_DIR)/function_info.c\
-       $(SRC_DIR)/constants.c\
-       $(SRC_DIR)/angle_mode.c\
-       $(SRC_DIR)/units.c\
-       $(SRC_DIR)/stats.c\
-       $(SRC_DIR)/base.c \
-       $(SRC_DIR)/plot.c
+# ---------------------------------------------------------------------------
+# Warning Flags
+# ---------------------------------------------------------------------------
+WARNINGS := \
+	-Wall \
+	-Wextra \
+	-Wpedantic \
+	-Wshadow \
+	-Wformat=2
 
-# C++ source files (isolated to the complex-number feature —
-# see complex_eval.h for the C-facing interface)
-CXX_SRCS = $(SRC_DIR)/Complex.cpp \
-           $(SRC_DIR)/complex_eval.cpp \
-           $(SRC_DIR)/Matrix.cpp \
-           $(SRC_DIR)/matrix_eval.cpp
+# ---------------------------------------------------------------------------
+# Compiler Flags
+# ---------------------------------------------------------------------------
+CFLAGS   := $(WARNINGS) -std=c11 -I$(INC_DIR)
+CXXFLAGS := $(WARNINGS) -std=c++17 -I$(INC_DIR)
 
-# Object files
-OBJS = $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
-CXX_OBJS = $(CXX_SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
+# Dependency generation
+DEPFLAGS := -MMD -MP
 
-# Header files
-HEADERS = \
-       $(INC_DIR)/calculator.h \
-       $(INC_DIR)/stack.h \
-       $(INC_DIR)/validator.h \
-       $(INC_DIR)/history.h \
-       $(INC_DIR)/memory.h \
-       $(INC_DIR)/variables.h\
-       $(INC_DIR)/functions.h\
-       $(INC_DIR)/function_info.h\
-       $(INC_DIR)/token.h\
-       $(INC_DIR)/constants.h\
-       $(INC_DIR)/angle_mode.h\
-       $(INC_DIR)/units.h\
-       $(INC_DIR)/complex_eval.h\
-       $(INC_DIR)/matrix_eval.h\
-       $(INC_DIR)/stats.h\
-       $(INC_DIR)/base.h \
-       $(INC_DIR)/plot.h
+# Linker
+LDFLAGS := -lm
 
-CXX_HEADERS = $(INC_DIR)/Complex.hpp $(INC_DIR)/Matrix.hpp
+# ---------------------------------------------------------------------------
+# Source Files
+# ---------------------------------------------------------------------------
+SRCS := \
+	$(SRC_DIR)/main.c \
+	$(SRC_DIR)/stack.c \
+	$(SRC_DIR)/tokenizer.c \
+	$(SRC_DIR)/postfix.c \
+	$(SRC_DIR)/evaluate.c \
+	$(SRC_DIR)/parser.c \
+	$(SRC_DIR)/validator.c \
+	$(SRC_DIR)/history.c \
+	$(SRC_DIR)/memory.c \
+	$(SRC_DIR)/variables.c \
+	$(SRC_DIR)/functions.c \
+	$(SRC_DIR)/function_info.c \
+	$(SRC_DIR)/constants.c \
+	$(SRC_DIR)/angle_mode.c \
+	$(SRC_DIR)/units.c \
+	$(SRC_DIR)/stats.c \
+	$(SRC_DIR)/base.c \
+	$(SRC_DIR)/plot.c \
+       $(SRC_DIR)/error.c
 
-# ---------------------------------------------------------------
-# Phase 20 -- Unit tests
-#
-# Tests link the real module .c files directly (not through the
-# library), swapping in Tests/test_main.c in place of Src/main.c so
-# there's exactly one main(). This keeps the tests exercising the
-# actual production code, not a reimplementation of it.
-# ---------------------------------------------------------------
-TEST_DIR = Tests
-TEST_TARGET = run_tests
+CXX_SRCS := \
+	$(SRC_DIR)/Complex.cpp \
+	$(SRC_DIR)/complex_eval.cpp \
+	$(SRC_DIR)/Matrix.cpp \
+	$(SRC_DIR)/matrix_eval.cpp
 
-TEST_SRCS = $(TEST_DIR)/test_main.c \
-            $(TEST_DIR)/test_stack.c \
-            $(TEST_DIR)/test_tokenizer.c \
-            $(TEST_DIR)/test_validator.c \
-            $(TEST_DIR)/test_parser.c \
-            $(TEST_DIR)/test_postfix.c \
-            $(TEST_DIR)/test_functions.c \
-            $(TEST_DIR)/test_variables.c \
-            $(TEST_DIR)/test_history.c \
-            $(TEST_DIR)/test_memory.c
+# ---------------------------------------------------------------------------
+# Object Files
+# ---------------------------------------------------------------------------
+OBJS := $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+CXX_OBJS := $(CXX_SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
-# Every module under test, EXCEPT main.c (Tests/test_main.c supplies
-# main() instead).
-TESTED_SRCS = $(filter-out $(SRC_DIR)/main.c,$(SRCS))
+# ---------------------------------------------------------------------------
+# Headers
+# ---------------------------------------------------------------------------
+HEADERS := \
+	$(INC_DIR)/calculator.h \
+	$(INC_DIR)/stack.h \
+	$(INC_DIR)/validator.h \
+	$(INC_DIR)/history.h \
+	$(INC_DIR)/memory.h \
+	$(INC_DIR)/variables.h \
+	$(INC_DIR)/functions.h \
+	$(INC_DIR)/function_info.h \
+	$(INC_DIR)/token.h \
+	$(INC_DIR)/constants.h \
+	$(INC_DIR)/angle_mode.h \
+	$(INC_DIR)/units.h \
+	$(INC_DIR)/complex_eval.h \
+	$(INC_DIR)/matrix_eval.h \
+	$(INC_DIR)/stats.h \
+	$(INC_DIR)/base.h \
+	$(INC_DIR)/plot.h \
+       $(INC_DIR)/error.h
 
-test: $(TEST_TARGET)
-	./$(TEST_TARGET)
+CXX_HEADERS := \
+	$(INC_DIR)/Complex.hpp \
+	$(INC_DIR)/Matrix.hpp
 
-$(TEST_TARGET): $(TEST_SRCS) $(TESTED_SRCS) $(HEADERS) $(TEST_DIR)/test_framework.h $(TEST_DIR)/tests.h
-	$(CC) $(CFLAGS) -I$(TEST_DIR) -o $@ $(TEST_SRCS) $(TESTED_SRCS) $(LDFLAGS)
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+TEST_SRCS := \
+	$(TEST_DIR)/test_main.c \
+	$(TEST_DIR)/test_stack.c \
+	$(TEST_DIR)/test_tokenizer.c \
+	$(TEST_DIR)/test_validator.c \
+	$(TEST_DIR)/test_parser.c \
+	$(TEST_DIR)/test_postfix.c \
+	$(TEST_DIR)/test_functions.c \
+	$(TEST_DIR)/test_variables.c \
+	$(TEST_DIR)/test_history.c \
+	$(TEST_DIR)/test_memory.c
 
-# Default target
+TESTED_SRCS := $(filter-out $(SRC_DIR)/main.c,$(SRCS))
+
+# ---------------------------------------------------------------------------
+# Default Target
+# ---------------------------------------------------------------------------
 all: $(TARGET)
 
-# Link object files (uses g++ as the linker since CXX_OBJS need libstdc++)
+# ---------------------------------------------------------------------------
+# Main Executable
+# ---------------------------------------------------------------------------
 $(TARGET): $(OBJS) $(CXX_OBJS)
-	$(CXX) -o $@ $(OBJS) $(CXX_OBJS) $(LDFLAGS)
+	$(CXX) -o $@ $^ $(LDFLAGS)
 
-# Compile C source files
+# ---------------------------------------------------------------------------
+# Compile C
+# ---------------------------------------------------------------------------
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(HEADERS)
-	$(CC) $(CFLAGS) -c $< -o $@
+	@mkdir -p $(OBJ_DIR)
+	$(CC) $(CFLAGS) $(DEPFLAGS) -c $< -o $@
 
-# Compile C++ source files
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(CXX_HEADERS) $(INC_DIR)/complex_eval.h $(INC_DIR)/matrix_eval.h
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+# ---------------------------------------------------------------------------
+# Compile C++
+# ---------------------------------------------------------------------------
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(CXX_HEADERS) \
+	$(INC_DIR)/complex_eval.h \
+	$(INC_DIR)/matrix_eval.h
+	@mkdir -p $(OBJ_DIR)
+	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -c $< -o $@
 
-# Run program
+# ---------------------------------------------------------------------------
+# Run
+# ---------------------------------------------------------------------------
 run: $(TARGET)
 	./$(TARGET)
 
-# Clean build files
-clean:
-	rm -f $(OBJ_DIR)/*.o $(TARGET) $(TEST_TARGET)
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+test: $(TEST_TARGET)
+	./$(TEST_TARGET)
 
-# Rebuild everything
+$(TEST_TARGET): $(TEST_SRCS) $(TESTED_SRCS)
+	$(CC) $(CFLAGS) -I$(TEST_DIR) \
+	-o $@ \
+	$(TEST_SRCS) \
+	$(TESTED_SRCS) \
+	$(LDFLAGS)
+
+# ---------------------------------------------------------------------------
+# Debug Build
+# ---------------------------------------------------------------------------
+debug: CFLAGS += -O0 -g3
+debug: CXXFLAGS += -O0 -g3
+debug: rebuild
+
+# ---------------------------------------------------------------------------
+# Release Build
+# ---------------------------------------------------------------------------
+release: CFLAGS += -O3 -DNDEBUG
+release: CXXFLAGS += -O3 -DNDEBUG
+release: rebuild
+
+# ---------------------------------------------------------------------------
+# Address Sanitizer
+# ---------------------------------------------------------------------------
+asan: CFLAGS += -fsanitize=address -g
+asan: CXXFLAGS += -fsanitize=address -g
+asan: LDFLAGS += -fsanitize=address
+asan: rebuild
+
+# ---------------------------------------------------------------------------
+# Undefined Behavior Sanitizer
+# ---------------------------------------------------------------------------
+ubsan: CFLAGS += -fsanitize=undefined -g
+ubsan: CXXFLAGS += -fsanitize=undefined -g
+ubsan: LDFLAGS += -fsanitize=undefined
+ubsan: rebuild
+
+# ---------------------------------------------------------------------------
+# Documentation
+# ---------------------------------------------------------------------------
+docs:
+	doxygen Doxyfile
+
+# ---------------------------------------------------------------------------
+# Clean
+# ---------------------------------------------------------------------------
+clean:
+	rm -f $(OBJ_DIR)/*.o
+	rm -f $(OBJ_DIR)/*.d
+	rm -f $(TARGET)
+	rm -f $(TEST_TARGET)
+
+distclean: clean
+
+# ---------------------------------------------------------------------------
+# Rebuild
+# ---------------------------------------------------------------------------
 rebuild: clean all
 
-.PHONY: all clean run rebuild test
+# ---------------------------------------------------------------------------
+# Dependency Files
+# ---------------------------------------------------------------------------
+-include $(OBJS:.o=.d)
+-include $(CXX_OBJS:.o=.d)
+
+# ---------------------------------------------------------------------------
+# Phony Targets
+# ---------------------------------------------------------------------------
+.PHONY: \
+	all \
+	run \
+	test \
+	debug \
+	release \
+	asan \
+	ubsan \
+	clean \
+	distclean \
+	rebuild \
+	docs
