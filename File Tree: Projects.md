@@ -1,10 +1,12 @@
 # File Tree: Projects
 
-**Generated:** 30/07/2026, 21:41:02
+**Generated:** 01/08/2026, 21:27:18
 **Root Path:** `/run/media/mahakal108/Servers/Skills/C Langagues/Projects`
 
 ```
-├── 📁 .lsp
+├── 📁 .github
+│   └── 📁 workflows
+│       └── ⚙️ ci.yml
 ├── 📁 Calculator
 │   ├── 📁 Inc
 │   │   ├── ⚡ Complex.hpp
@@ -14,6 +16,7 @@
 │   │   ├── ⚡ calculator.h
 │   │   ├── ⚡ complex_eval.h
 │   │   ├── ⚡ constants.h
+│   │   ├── ⚡ error.h
 │   │   ├── ⚡ function_info.h
 │   │   ├── ⚡ functions.h
 │   │   ├── ⚡ history.h
@@ -33,6 +36,7 @@
 │   │   ├── 📄 base.c
 │   │   ├── ⚡ complex_eval.cpp
 │   │   ├── 📄 constants.c
+│   │   ├── 📄 error.c
 │   │   ├── 📄 evaluate.c
 │   │   ├── 📄 function_info.c
 │   │   ├── 📄 functions.c
@@ -50,6 +54,7 @@
 │   │   ├── 📄 validator.c
 │   │   └── 📄 variables.c
 │   ├── 📁 Tests
+│   │   ├── 📄 test_error.c
 │   │   ├── ⚡ test_framework.h
 │   │   ├── 📄 test_functions.c
 │   │   ├── 📄 test_history.c
@@ -68,6 +73,8 @@
 │   │   ├── 📝 CHANGELOG.md
 │   │   ├── 📝 CONTRIBUTING.md
 │   │   ├── 📝 DESIGN.md
+│   │   ├── 📝 DOXYFILE.md
+│   │   ├── 📝 ERROR_HANDLING.md
 │   │   ├── 📝 MEMORY.md
 │   │   ├── 📝 PHASES.md
 │   │   ├── 📝 PRD.md
@@ -75,10 +82,10 @@
 │   │   ├── 📝 RULES.md
 │   │   └── 📝 TEST_PLAN.md
 │   ├── ⚙️ .gitignore
+│   ├── 📄 LICENSE
 │   ├── 📄 Makefile
 │   ├── 📝 Readme.md
-│   ├── 📄 calculator
-│   └── 📄 run_tests
+│   └── ⚙️ compile_commands.json
 ├── 📁 GuessTheNumber
 │   ├── 📄 main
 │   └── 📄 main.c
