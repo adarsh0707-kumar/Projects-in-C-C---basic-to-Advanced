@@ -1,9 +1,10 @@
 # File Tree: Projects
 
-**Generated:** 01/08/2026, 22:10:25
+**Generated:** 01/08/2026, 23:23:58
 **Root Path:** `/run/media/mahakal108/Servers/Skills/C Langagues/Projects`
 
 ```
+├── 📁 .clj-kondo
 ├── 📁 .github
 │   └── 📁 workflows
 │       └── ⚙️ ci.yml
@@ -92,6 +93,9 @@
 │   │   └── ⚙️ themes.ini
 │   ├── 📁 Docs
 │   │   ├── 📁 Images
+│   │   │   ├── 🖼️ architecture.png
+│   │   │   ├── 🖼️ class_diagram.png
+│   │   │   └── 🖼️ flowchart.png
 │   │   ├── 📝 API_Documentation.md
 │   │   ├── 📝 Architecture.md
 │   │   ├── 📝 ChangeLog.md
