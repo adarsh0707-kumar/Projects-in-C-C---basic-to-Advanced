@@ -2,6 +2,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include <math.h>
 #include "calculator.h"
 #include "history.h"
 #include "memory.h"
@@ -236,6 +237,12 @@ int main(void)
 
                 lastResult = evaluatePostfix(postfix);
 
+                if (!isfinite(lastResult))
+                {
+                    printf("Error: %s\n", getLastEvalError());
+                    break;
+                }
+
                 setVariable(variableName, lastResult);
                 setAns(lastResult);
 
@@ -270,6 +277,12 @@ int main(void)
 
             /* Evaluate postfix */
             lastResult = evaluatePostfix(postfix);
+
+            if (!isfinite(lastResult))
+            {
+                printf("Error: %s\n", getLastEvalError());
+                break;
+            }
 
             setAns(lastResult);
 

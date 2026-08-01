@@ -59,7 +59,7 @@ int functionArgumentCount(const char name[])
             return functions[i].argc;
     }
 
-    return 0;
+    return -1; /* sentinel: unknown function (see evaluate.c) */
 }
 
 int isFunction(const char name[])
