@@ -1,6 +1,6 @@
 # File Tree: Projects
 
-**Generated:** 01/08/2026, 21:27:18
+**Generated:** 01/08/2026, 22:10:25
 **Root Path:** `/run/media/mahakal108/Servers/Skills/C Langagues/Projects`
 
 ```
@@ -86,10 +86,66 @@
 │   ├── 📄 Makefile
 │   ├── 📝 Readme.md
 │   └── ⚙️ compile_commands.json
+├── 📁 DigitalClock
+│   ├── 📁 Config
+│   │   ├── ⚙️ config.ini
+│   │   └── ⚙️ themes.ini
+│   ├── 📁 Docs
+│   │   ├── 📁 Images
+│   │   ├── 📝 API_Documentation.md
+│   │   ├── 📝 Architecture.md
+│   │   ├── 📝 ChangeLog.md
+│   │   ├── 📝 Software_Design_Document.md
+│   │   ├── 📝 Software_Requirements_Specification.md
+│   │   ├── 📝 Testing_Report.md
+│   │   └── 📝 User_Manual.md
+│   ├── 📁 Inc
+│   │   ├── ⚡ Clock.h
+│   │   ├── ⚡ Config.h
+│   │   ├── ⚡ Console.h
+│   │   ├── ⚡ Date.h
+│   │   ├── ⚡ Display.h
+│   │   ├── ⚡ Logger.h
+│   │   ├── ⚡ TimeFormatter.h
+│   │   ├── ⚡ Utility.h
+│   │   └── ⚡ Version.h
+│   ├── 📁 Logs
+│   ├── 📁 Resources
+│   │   ├── 📁 themes
+│   │   │   ├── 📄 dark.theme
+│   │   │   └── 📄 light.theme
+│   │   ├── 📄 banner.txt
+│   │   └── 📄 logo.txt
+│   ├── 📁 Scripts
+│   │   ├── 📄 build.sh
+│   │   ├── 📄 clean.sh
+│   │   └── 📄 run.sh
+│   ├── 📁 Src
+│   │   ├── ⚡ Clock.cpp
+│   │   ├── ⚡ Console.cpp
+│   │   ├── ⚡ Date.cpp
+│   │   ├── ⚡ Display.cpp
+│   │   ├── ⚡ Logger.cpp
+│   │   ├── ⚡ TimeFormatter.cpp
+│   │   ├── ⚡ Utility.cpp
+│   │   └── ⚡ main.cpp
+│   ├── 📁 Tests
+│   │   ├── ⚡ test_clock.cpp
+│   │   ├── ⚡ test_date.cpp
+│   │   ├── ⚡ test_display.cpp
+│   │   ├── ⚡ test_formatter.cpp
+│   │   └── ⚡ test_main.cpp
+│   ├── ⚙️ .gitigoner
+│   ├── 📄 CMakeLists.txt
+│   ├── 📝 CONTRIBUTING.md
+│   ├── 📄 LICENSE
+│   ├── 📄 Makefile
+│   └── 📝 README.md
 ├── 📁 GuessTheNumber
 │   ├── 📄 main
 │   └── 📄 main.c
 ├── ⚙️ .gitignore
+├── 📝 File Tree: Projects.md
 └── 📝 Readme.md
 ```
 
