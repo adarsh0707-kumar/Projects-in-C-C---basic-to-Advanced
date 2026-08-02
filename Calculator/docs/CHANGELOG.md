@@ -1,4 +1,3 @@
-
 # Changelog
 
 All notable changes to this project are documented in this file.
@@ -8,6 +7,48 @@ The format is based on **Keep a Changelog** and follows **Semantic Versioning** 
 ---
 
 # [Unreleased]
+
+## Added
+
+- `Inc/error.h` / `Src/error.c`: a centralized `CalculatorError` enum
+  and last-error accessor (`calculatorSetLastError()` /
+  `calculatorGetLastError()` / `calculatorErrorString()` /
+  `calculatorClearError()`), per docs/RULES.md's own "never call
+  exit() from library modules" guidance. Being adopted incrementally,
+  module by module, rather than all at once.
+
+## Changed
+
+- **`stack.c` migrated off `exit()`.** `pushDouble`/`popDouble`/
+  `peekDouble`, `pushChar`/`popChar`/`peekChar`,
+  `pushString`/`popString`/`peekString`, and
+  `pushToken`/`popToken`/`peekToken` all now return `1`/`0` (success/
+  failure, via an out-parameter for pop/peek) and record *why*
+  through the new error module, instead of printing a message and
+  terminating the process on overflow/underflow. This is the module
+  most directly exposed to adversarial or simply very large input
+  (e.g. a pathologically deep expression), so it's the first one
+  migrated. `evaluate.c` now integrates stack failures into its
+  existing NAN-based graceful-error propagation (see the earlier
+  `plot()`-crash fix); `parser.c`'s `validateParentheses()` treats a
+  stack failure as "invalid expression" instead of exiting.
+  `postfix.c`'s `TokenStack` usage is wired to the new API via local
+  wrapper functions that intentionally preserve its *existing*
+  fail-loud behavior for now (unknown variables, malformed numbers,
+  mismatched parentheses, etc. in `infixToPostfix()` are a separate,
+  larger follow-up: they need `infixToPostfix()`'s own signature to
+  change, plus updates to every caller).
+- Note: in the currently-wired CLI pipeline, `validator.c`'s own
+  64-deep parenthesis-nesting cap (`MAX_PAREN_DEPTH`) already caught
+  pathologically nested input before it could reach `stack.c`'s
+  100-element limit, so this change is primarily defense-in-depth for
+  any future/direct caller of the stack API, not a newly-reachable
+  CLI crash fix on top of the earlier `plot()`/modulus fixes.
+- `Tests/test_stack.c` rewritten against the new status-code API;
+  overflow/underflow are now asserted directly (checking the returned
+  status and `calculatorGetLastError()`) instead of via
+  `ASSERT_EXITS_NONZERO`, since those two paths no longer exit().
+  Test suite grew from 114 to 243 cases in the process.
 
 ## Fixed
 
