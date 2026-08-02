@@ -31,10 +31,26 @@ int isOperator(char ch);
  *  @return   The result, or NAN if the operation failed. */
 double applyOperation(double a, double b, char op);
 
+<<<<<<< HEAD
 /** @brief Converts an infix expression into postfix (Reverse Polish) form.
  *  @param infix   Null-terminated input expression.
  *  @param postfix Destination buffer for the postfix form. */
+=======
+<<<<<<< Updated upstream
+>>>>>>> Calculator
 void infixToPostfix(char infix[], char postfix[]);
+=======
+/** @brief Converts an infix expression into postfix (Reverse Polish) form.
+ *  @param infix   Null-terminated input expression.
+ *  @param postfix Destination buffer for the postfix form. Its
+ *  contents are undefined on failure.
+ *  @return 1 on success, 0 on a recoverable parse error (undefined
+ *  variable, malformed number, mismatched parentheses, an
+ *  expression too complex to parse, ...) -- a specific message is
+ *  printed to stdout and getLastEvalError()/calculatorGetLastError()
+ *  describe why. */
+int infixToPostfix(char infix[], char postfix[]);
+>>>>>>> Stashed changes
 
 /** @brief Evaluates a postfix expression produced by infixToPostfix().
  *

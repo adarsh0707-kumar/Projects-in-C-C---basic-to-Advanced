@@ -8,6 +8,7 @@
 #include "functions.h"
 #include "constants.h"
 #include "function_info.h"
+#include "../Inc/error.h"
 
 int isOperator(char ch)
 {
@@ -107,6 +108,7 @@ int previousNonSpace(char expression[], int index)
     return index;
 }
 
+<<<<<<< HEAD
 /*
  * infixToPostfix()'s other error paths (unknown variable, malformed
  * number, mismatched parentheses, ...) still exit() on failure --
@@ -151,7 +153,37 @@ static void requirePushToken(TokenStack *s, Token t)
     }
 }
 
+=======
+<<<<<<< Updated upstream
+>>>>>>> Calculator
 void infixToPostfix(char infix[], char postfix[])
+=======
+/* Both of these "should never happen" given how infixToPostfix() drives
+   the stack (it never pops/peeks without having just confirmed the
+   stack isn't empty, and never pushes more tokens than there are
+   characters in the input) -- but stack.c can still fail if that
+   invariant is ever violated by a future change, so every call site
+   below checks anyway rather than assuming success. */
+static int reportInternalStackError(void)
+{
+    printf("Error: Internal stack error while parsing expression.\n");
+    calculatorSetLastError(CALC_ERR_INTERNAL);
+    return 0;
+}
+
+static int reportTooComplex(void)
+{
+    printf("Error: Expression is too complex to parse (too many pending operators/parentheses).\n");
+    calculatorSetLastError(CALC_ERR_STACK_OVERFLOW);
+    return 0;
+}
+
+/**
+ * Converts an infix expression into postfix (Reverse Polish) form.
+ * Returns 1 on success, 0 on failure -- see calculator.h.
+ */
+int infixToPostfix(char infix[], char postfix[])
+>>>>>>> Stashed changes
 {
     TokenStack operators;
     initTokenStack(&operators);
@@ -183,7 +215,8 @@ void infixToPostfix(char infix[], char postfix[])
                 if (k >= (int)sizeof(identifier) - 1)
                 {
                     printf("Error: Identifier name too long.\n");
-                    exit(EXIT_FAILURE);
+                    calculatorSetLastError(CALC_ERR_INVALID_TOKEN);
+                    return 0;
                 }
 
                 identifier[k++] = infix[i++];
@@ -216,7 +249,17 @@ void infixToPostfix(char infix[], char postfix[])
 
             if (infix[temp] == '(' && isFunction(identifier))
             {
+<<<<<<< HEAD
                 requirePushToken(&operators, makeFunctionToken(identifier));
+=======
+<<<<<<< Updated upstream
+                pushToken(&operators, makeFunctionToken(identifier));
+=======
+                if (!pushToken(&operators, makeFunctionToken(identifier)))
+                    return reportTooComplex();
+
+>>>>>>> Stashed changes
+>>>>>>> Calculator
                 i = temp;
                 continue;
             }
@@ -228,7 +271,8 @@ void infixToPostfix(char infix[], char postfix[])
             if (!getVariable(identifier, &value))
             {
                 printf("Error: Undefined variable '%s'\n", identifier);
-                exit(EXIT_FAILURE);
+                calculatorSetLastError(CALC_ERR_INVALID_VARIABLE);
+                return 0;
             }
 
             j += sprintf(&postfix[j], "%g ", value);
@@ -262,7 +306,8 @@ void infixToPostfix(char infix[], char postfix[])
                 if (dotCount > 1)
                 {
                     printf("Invalid number.\n");
-                    exit(EXIT_FAILURE);
+                    calculatorSetLastError(CALC_ERR_INVALID_TOKEN);
+                    return 0;
                 }
 
                 postfix[j++] = infix[i++];
@@ -278,7 +323,17 @@ void infixToPostfix(char infix[], char postfix[])
 
         if (infix[i] == '(')
         {
+<<<<<<< HEAD
             requirePushToken(&operators, makeLeftParenToken());
+=======
+<<<<<<< Updated upstream
+            pushToken(&operators, makeLeftParenToken());
+=======
+            if (!pushToken(&operators, makeLeftParenToken()))
+                return reportTooComplex();
+
+>>>>>>> Stashed changes
+>>>>>>> Calculator
             i++;
             continue;
         }
@@ -291,12 +346,32 @@ void infixToPostfix(char infix[], char postfix[])
         {
             while (!isEmptyTokenStack(&operators))
             {
+<<<<<<< HEAD
                 Token top = requirePeekToken(&operators);
+=======
+<<<<<<< Updated upstream
+                Token top = peekToken(&operators);
+=======
+                Token top;
+
+                if (!peekToken(&operators, &top))
+                    return reportInternalStackError();
+>>>>>>> Stashed changes
+>>>>>>> Calculator
 
                 if (top.type == TOKEN_LEFT_PAREN)
                     break;
 
+<<<<<<< HEAD
                 top = requirePopToken(&operators);
+=======
+<<<<<<< Updated upstream
+                top = popToken(&operators);
+=======
+                if (!popToken(&operators, &top))
+                    return reportInternalStackError();
+>>>>>>> Stashed changes
+>>>>>>> Calculator
 
                 j += sprintf(&postfix[j], "%s ", top.text);
             }
@@ -304,20 +379,52 @@ void infixToPostfix(char infix[], char postfix[])
             if (isEmptyTokenStack(&operators))
             {
                 printf("Error: Mismatched parentheses.\n");
-                exit(EXIT_FAILURE);
+                calculatorSetLastError(CALC_ERR_INVALID_EXPRESSION);
+                return 0;
             }
 
             /* Remove '(' */
+<<<<<<< HEAD
             requirePopToken(&operators);
+=======
+<<<<<<< Updated upstream
+            popToken(&operators);
+=======
+            Token discarded;
+            if (!popToken(&operators, &discarded))
+                return reportInternalStackError();
+>>>>>>> Stashed changes
+>>>>>>> Calculator
 
             /* If a function is on top, output it */
             if (!isEmptyTokenStack(&operators))
             {
+<<<<<<< HEAD
                 Token top = requirePeekToken(&operators);
 
                 if (top.type == TOKEN_FUNCTION)
                 {
                     top = requirePopToken(&operators);
+=======
+<<<<<<< Updated upstream
+                Token top = peekToken(&operators);
+
+                if (top.type == TOKEN_FUNCTION)
+                {
+                    top = popToken(&operators);
+=======
+                Token top;
+
+                if (!peekToken(&operators, &top))
+                    return reportInternalStackError();
+
+                if (top.type == TOKEN_FUNCTION)
+                {
+                    if (!popToken(&operators, &top))
+                        return reportInternalStackError();
+
+>>>>>>> Stashed changes
+>>>>>>> Calculator
                     j += sprintf(&postfix[j], "%s ", top.text);
                 }
             }
@@ -331,14 +438,35 @@ void infixToPostfix(char infix[], char postfix[])
         {
             while (!isEmptyTokenStack(&operators))
             {
+<<<<<<< HEAD
                 Token top = requirePeekToken(&operators);
+=======
+<<<<<<< Updated upstream
+                Token top = peekToken(&operators);
+=======
+                Token top;
+
+                if (!peekToken(&operators, &top))
+                    return reportInternalStackError();
+>>>>>>> Stashed changes
+>>>>>>> Calculator
 
                 if (top.type != TOKEN_OPERATOR)
                     break;
 
                 if (precedence(top.text[0]) >= precedence('!'))
                 {
+<<<<<<< HEAD
                     top = requirePopToken(&operators);
+=======
+<<<<<<< Updated upstream
+                    top = popToken(&operators);
+=======
+                    if (!popToken(&operators, &top))
+                        return reportInternalStackError();
+
+>>>>>>> Stashed changes
+>>>>>>> Calculator
                     j += sprintf(&postfix[j], "%s ", top.text);
                 }
                 else
@@ -347,7 +475,16 @@ void infixToPostfix(char infix[], char postfix[])
                 }
             }
 
+<<<<<<< HEAD
             requirePushToken(&operators, makeOperatorToken('!'));
+=======
+<<<<<<< Updated upstream
+            pushToken(&operators, makeOperatorToken('!'));
+=======
+            if (!pushToken(&operators, makeOperatorToken('!')))
+                return reportTooComplex();
+>>>>>>> Stashed changes
+>>>>>>> Calculator
 
             i++;
             continue;
@@ -360,12 +497,32 @@ void infixToPostfix(char infix[], char postfix[])
         {
             while (!isEmptyTokenStack(&operators))
             {
+<<<<<<< HEAD
                 Token top = requirePeekToken(&operators);
+=======
+<<<<<<< Updated upstream
+                Token top = peekToken(&operators);
+=======
+                Token top;
+
+                if (!peekToken(&operators, &top))
+                    return reportInternalStackError();
+>>>>>>> Stashed changes
+>>>>>>> Calculator
 
                 if (top.type == TOKEN_LEFT_PAREN)
                     break;
 
+<<<<<<< HEAD
                 top = requirePopToken(&operators);
+=======
+<<<<<<< Updated upstream
+                top = popToken(&operators);
+=======
+                if (!popToken(&operators, &top))
+                    return reportInternalStackError();
+>>>>>>> Stashed changes
+>>>>>>> Calculator
 
                 j += sprintf(&postfix[j],
                              "%s ",
@@ -375,7 +532,8 @@ void infixToPostfix(char infix[], char postfix[])
             if (isEmptyTokenStack(&operators))
             {
                 printf("Error: Misplaced comma.\n");
-                exit(EXIT_FAILURE);
+                calculatorSetLastError(CALC_ERR_INVALID_EXPRESSION);
+                return 0;
             }
 
             i++;
@@ -390,7 +548,18 @@ void infixToPostfix(char infix[], char postfix[])
 
         while (!isEmptyTokenStack(&operators))
         {
+<<<<<<< HEAD
             Token top = requirePeekToken(&operators);
+=======
+<<<<<<< Updated upstream
+            Token top = peekToken(&operators);
+=======
+            Token top;
+
+            if (!peekToken(&operators, &top))
+                return reportInternalStackError();
+>>>>>>> Stashed changes
+>>>>>>> Calculator
 
             if (top.type != TOKEN_OPERATOR)
                 break;
@@ -401,7 +570,17 @@ void infixToPostfix(char infix[], char postfix[])
                 (precedence(topOp) == precedence(current.text[0]) &&
                  current.text[0] != '^'))
             {
+<<<<<<< HEAD
                 top = requirePopToken(&operators);
+=======
+<<<<<<< Updated upstream
+                top = popToken(&operators);
+=======
+                if (!popToken(&operators, &top))
+                    return reportInternalStackError();
+
+>>>>>>> Stashed changes
+>>>>>>> Calculator
                 j += sprintf(&postfix[j], "%s ", top.text);
             }
             else
@@ -410,7 +589,17 @@ void infixToPostfix(char infix[], char postfix[])
             }
         }
 
+<<<<<<< HEAD
         requirePushToken(&operators, current);
+=======
+<<<<<<< Updated upstream
+        pushToken(&operators, current);
+=======
+        if (!pushToken(&operators, current))
+            return reportTooComplex();
+
+>>>>>>> Stashed changes
+>>>>>>> Calculator
         i++;
     }
 
@@ -418,7 +607,18 @@ void infixToPostfix(char infix[], char postfix[])
 
     while (!isEmptyTokenStack(&operators))
     {
+<<<<<<< HEAD
         Token top = requirePopToken(&operators);
+=======
+<<<<<<< Updated upstream
+        Token top = popToken(&operators);
+=======
+        Token top;
+
+        if (!popToken(&operators, &top))
+            return reportInternalStackError();
+>>>>>>> Stashed changes
+>>>>>>> Calculator
 
         if (top.type == TOKEN_LEFT_PAREN)
             continue;
@@ -427,4 +627,5 @@ void infixToPostfix(char infix[], char postfix[])
     }
 
     postfix[j] = '\0';
+    return 1;
 }

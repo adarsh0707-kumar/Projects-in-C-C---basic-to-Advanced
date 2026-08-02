@@ -2,6 +2,10 @@
 #include "tests.h"
 #include "calculator.h"
 #include "variables.h"
+<<<<<<< HEAD
+=======
+#include "../Inc/error.h"
+>>>>>>> Calculator
 
 static void assertPostfix(const char *input, const char *expected, const char *msg)
 {
@@ -9,8 +13,13 @@ static void assertPostfix(const char *input, const char *expected, const char *m
     char out[256];
 
     strcpy(in, input);
+<<<<<<< HEAD
     infixToPostfix(in, out);
 
+=======
+
+    ASSERT_TRUE(infixToPostfix(in, out), "infixToPostfix should succeed on a valid expression");
+>>>>>>> Calculator
     ASSERT_STR_EQ(out, expected, msg);
 }
 
@@ -49,9 +58,39 @@ static void test_evaluate_postfix(void)
     ASSERT_DOUBLE_EQ(evaluatePostfix(postfix3), 8.0, "pow(2,3) should evaluate to 8");
 }
 
+<<<<<<< HEAD
 void run_postfix_tests(void)
 {
     test_infix_to_postfix();
+=======
+static void test_infix_to_postfix_error_paths(void)
+{
+    char in[128];
+    char out[256];
+
+    /* As of the Phase C error-handling migration, infixToPostfix()
+       reports failure via its return value instead of exit()ing --
+       see docs/CHANGELOG.md. */
+    strcpy(in, "totallyUndefinedVariable+1");
+    calculatorClearError();
+    ASSERT_TRUE(!infixToPostfix(in, out),
+                "an undefined variable should fail, not silently substitute a wrong value");
+    ASSERT_TRUE(calculatorGetLastError() == CALC_ERR_INVALID_VARIABLE,
+                "should record CALC_ERR_INVALID_VARIABLE");
+
+    strcpy(in, "1.2.3+1");
+    calculatorClearError();
+    ASSERT_TRUE(!infixToPostfix(in, out),
+                "a malformed number (two decimal points) should fail, not silently truncate");
+    ASSERT_TRUE(calculatorGetLastError() == CALC_ERR_INVALID_TOKEN,
+                "should record CALC_ERR_INVALID_TOKEN");
+}
+
+void run_postfix_tests(void)
+{
+    test_infix_to_postfix();
+    test_infix_to_postfix_error_paths();
+>>>>>>> Calculator
     test_operator_helpers();
     test_evaluate_postfix();
 }

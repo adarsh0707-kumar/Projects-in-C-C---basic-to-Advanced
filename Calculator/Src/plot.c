@@ -148,7 +148,21 @@ int evaluatePlotExpression(const char input[], char errorMsg[], size_t errorSize
         setVariable("x", x);
 
         char postfix[400];
+<<<<<<< HEAD
         infixToPostfix(processed, postfix);
+=======
+
+        if (!infixToPostfix(processed, postfix))
+        {
+            /* This is a structural failure (undefined variable,
+               malformed number, expression too complex, ...) that
+               doesn't depend on x's current value, so it'll be
+               identical on every column. infixToPostfix() already
+               printed a specific message to stdout -- stop here
+               instead of repeating it once per sample (61 times). */
+            return 0;
+        }
+>>>>>>> Calculator
 
         double y = evaluatePostfix(postfix);
 
