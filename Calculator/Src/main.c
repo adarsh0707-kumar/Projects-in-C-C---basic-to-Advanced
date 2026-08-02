@@ -230,7 +230,13 @@ int main(void)
                     break;
                 }
 
-                infixToPostfix(processed, postfix);
+                if (!infixToPostfix(processed, postfix))
+                {
+                    /* infixToPostfix() already printed a specific
+                       error message (undefined variable, malformed
+                       number, expression too complex, ...). */
+                    break;
+                }
 
                 lastResult = evaluatePostfix(postfix);
 
@@ -261,7 +267,13 @@ int main(void)
             }
 
             /* Convert infix to postfix */
-            infixToPostfix(infix, postfix);
+            if (!infixToPostfix(infix, postfix))
+            {
+                /* infixToPostfix() already printed a specific error
+                   message (undefined variable, malformed number,
+                   expression too complex, ...). */
+                break;
+            }
 
             printf("\nInfix Expression   : %s\n", infix);
             printf("Postfix Expression : %s\n", postfix);
