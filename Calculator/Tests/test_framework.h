@@ -33,12 +33,16 @@ extern int testsFailed;
 
 /*
  * Several functions in this codebase call exit(EXIT_FAILURE) on invalid
- * input (stack overflow/underflow, division by zero, factorial() on a
- * negative/non-integer, an unknown binary function...). That's an
- * existing, intentional design choice elsewhere in the app -- not
- * something this test suite should paper over -- but it means we can't
- * just call those code paths directly in-process, or the whole test
- * run would die with them.
+ * input (factorial() on a negative/non-integer, an unknown binary
+ * function...). That's an existing, intentional design choice elsewhere
+ * in the app -- not something this test suite should paper over -- but
+ * it means we can't just call those code paths directly in-process, or
+ * the whole test run would die with them.
+ *
+ * (Stack overflow/underflow used to be in this category too, but as of
+ * the Phase C error-handling migration stack.c reports those via a
+ * returned status code instead -- see test_double_stack_error_paths()
+ * in test_stack.c for how that's tested now.)
  *
  * ASSERT_EXITS_NONZERO forks a child, runs `stmt` in it, and checks
  * that the child terminated with a non-zero exit status -- i.e. it

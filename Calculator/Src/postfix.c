@@ -107,6 +107,50 @@ int previousNonSpace(char expression[], int index)
     return index;
 }
 
+/*
+ * infixToPostfix()'s other error paths (unknown variable, malformed
+ * number, mismatched parentheses, ...) still exit() on failure --
+ * that migration is tracked as follow-up work in docs/CHANGELOG.md,
+ * since it requires changing infixToPostfix()'s own signature and
+ * updating every caller (main.c, plot.c) to check it. These three
+ * wrappers just keep that existing, documented behavior consistent
+ * now that stack.c itself reports failure instead of exiting.
+ */
+static Token requirePopToken(TokenStack *s)
+{
+    Token t;
+
+    if (!popToken(s, &t))
+    {
+        printf("Error: Internal stack error while parsing expression.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    return t;
+}
+
+static Token requirePeekToken(TokenStack *s)
+{
+    Token t;
+
+    if (!peekToken(s, &t))
+    {
+        printf("Error: Internal stack error while parsing expression.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    return t;
+}
+
+static void requirePushToken(TokenStack *s, Token t)
+{
+    if (!pushToken(s, t))
+    {
+        printf("Error: Expression is too complex to parse (too many pending operators/parentheses).\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
 void infixToPostfix(char infix[], char postfix[])
 {
     TokenStack operators;
@@ -172,7 +216,7 @@ void infixToPostfix(char infix[], char postfix[])
 
             if (infix[temp] == '(' && isFunction(identifier))
             {
-                pushToken(&operators, makeFunctionToken(identifier));
+                requirePushToken(&operators, makeFunctionToken(identifier));
                 i = temp;
                 continue;
             }
@@ -234,7 +278,7 @@ void infixToPostfix(char infix[], char postfix[])
 
         if (infix[i] == '(')
         {
-            pushToken(&operators, makeLeftParenToken());
+            requirePushToken(&operators, makeLeftParenToken());
             i++;
             continue;
         }
@@ -247,12 +291,12 @@ void infixToPostfix(char infix[], char postfix[])
         {
             while (!isEmptyTokenStack(&operators))
             {
-                Token top = peekToken(&operators);
+                Token top = requirePeekToken(&operators);
 
                 if (top.type == TOKEN_LEFT_PAREN)
                     break;
 
-                top = popToken(&operators);
+                top = requirePopToken(&operators);
 
                 j += sprintf(&postfix[j], "%s ", top.text);
             }
@@ -264,16 +308,16 @@ void infixToPostfix(char infix[], char postfix[])
             }
 
             /* Remove '(' */
-            popToken(&operators);
+            requirePopToken(&operators);
 
             /* If a function is on top, output it */
             if (!isEmptyTokenStack(&operators))
             {
-                Token top = peekToken(&operators);
+                Token top = requirePeekToken(&operators);
 
                 if (top.type == TOKEN_FUNCTION)
                 {
-                    top = popToken(&operators);
+                    top = requirePopToken(&operators);
                     j += sprintf(&postfix[j], "%s ", top.text);
                 }
             }
@@ -287,14 +331,14 @@ void infixToPostfix(char infix[], char postfix[])
         {
             while (!isEmptyTokenStack(&operators))
             {
-                Token top = peekToken(&operators);
+                Token top = requirePeekToken(&operators);
 
                 if (top.type != TOKEN_OPERATOR)
                     break;
 
                 if (precedence(top.text[0]) >= precedence('!'))
                 {
-                    top = popToken(&operators);
+                    top = requirePopToken(&operators);
                     j += sprintf(&postfix[j], "%s ", top.text);
                 }
                 else
@@ -303,7 +347,7 @@ void infixToPostfix(char infix[], char postfix[])
                 }
             }
 
-            pushToken(&operators, makeOperatorToken('!'));
+            requirePushToken(&operators, makeOperatorToken('!'));
 
             i++;
             continue;
@@ -316,12 +360,12 @@ void infixToPostfix(char infix[], char postfix[])
         {
             while (!isEmptyTokenStack(&operators))
             {
-                Token top = peekToken(&operators);
+                Token top = requirePeekToken(&operators);
 
                 if (top.type == TOKEN_LEFT_PAREN)
                     break;
 
-                top = popToken(&operators);
+                top = requirePopToken(&operators);
 
                 j += sprintf(&postfix[j],
                              "%s ",
@@ -346,7 +390,7 @@ void infixToPostfix(char infix[], char postfix[])
 
         while (!isEmptyTokenStack(&operators))
         {
-            Token top = peekToken(&operators);
+            Token top = requirePeekToken(&operators);
 
             if (top.type != TOKEN_OPERATOR)
                 break;
@@ -357,7 +401,7 @@ void infixToPostfix(char infix[], char postfix[])
                 (precedence(topOp) == precedence(current.text[0]) &&
                  current.text[0] != '^'))
             {
-                top = popToken(&operators);
+                top = requirePopToken(&operators);
                 j += sprintf(&postfix[j], "%s ", top.text);
             }
             else
@@ -366,7 +410,7 @@ void infixToPostfix(char infix[], char postfix[])
             }
         }
 
-        pushToken(&operators, current);
+        requirePushToken(&operators, current);
         i++;
     }
 
@@ -374,7 +418,7 @@ void infixToPostfix(char infix[], char postfix[])
 
     while (!isEmptyTokenStack(&operators))
     {
-        Token top = popToken(&operators);
+        Token top = requirePopToken(&operators);
 
         if (top.type == TOKEN_LEFT_PAREN)
             continue;

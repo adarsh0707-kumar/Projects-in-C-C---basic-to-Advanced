@@ -1,55 +1,52 @@
 #include "stack.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "../Inc/error.h"
+#include <string.h>
 
 /*==============================
     Double Stack Functions
 ==============================*/
 
-// Function to initialize the Double stack
 void initDoubleStack(DoubleStack *s)
 {
     s->top = -1;
 }
 
-// Function to push an Double onto the stack
-void pushDouble(DoubleStack *s, double value)
+int pushDouble(DoubleStack *s, double value)
 {
     if (s->top == MAX - 1)
     {
         calculatorSetLastError(CALC_ERR_STACK_OVERFLOW);
-        return;
+        return 0;
     }
 
     s->items[++s->top] = value;
+    return 1;
 }
 
-// Function to pop an integer from the stack
-double popDouble(DoubleStack *s)
+int popDouble(DoubleStack *s, double *out)
 {
     if (s->top == -1)
     {
         calculatorSetLastError(CALC_ERR_STACK_UNDERFLOW);
+        return 0;
     }
 
-    return s->items[s->top--];
+    *out = s->items[s->top--];
+    return 1;
 }
 
-// Function to peek at the top integer of the stack without popping it
-double peekDouble(DoubleStack *s)
+int peekDouble(DoubleStack *s, double *out)
 {
     if (s->top == -1)
     {
-        printf("Error: Stack is Empty\n");
-        exit(EXIT_FAILURE);
+        calculatorSetLastError(CALC_ERR_STACK_UNDERFLOW);
+        return 0;
     }
 
-    return s->items[s->top];
+    *out = s->items[s->top];
+    return 1;
 }
 
-// Function to check if the Double stack is empty
 int isEmptyDoubleStack(DoubleStack *s)
 {
     return s->top == -1;
@@ -59,48 +56,47 @@ int isEmptyDoubleStack(DoubleStack *s)
     Char Stack Functions
 ==============================*/
 
-// Function to initialize the Character stack
 void initCharStack(CharStack *s)
 {
     s->top = -1;
 }
 
-// Function to push a character onto the stack
-void pushChar(CharStack *s, char value)
+int pushChar(CharStack *s, char value)
 {
     if (s->top == MAX - 1)
     {
         calculatorSetLastError(CALC_ERR_STACK_OVERFLOW);
-        return;
+        return 0;
     }
 
     s->items[++s->top] = value;
+    return 1;
 }
 
-// Function to pop a character from the stack
-char popChar(CharStack *s)
+int popChar(CharStack *s, char *out)
 {
     if (s->top == -1)
     {
         calculatorSetLastError(CALC_ERR_STACK_UNDERFLOW);
+        return 0;
     }
 
-    return s->items[s->top--];
+    *out = s->items[s->top--];
+    return 1;
 }
 
-// Function to peek at the top character of the stack without popping it
-char peekChar(CharStack *s)
+int peekChar(CharStack *s, char *out)
 {
     if (s->top == -1)
     {
-        printf("Error: Stack is Empty\n");
-        exit(EXIT_FAILURE);
+        calculatorSetLastError(CALC_ERR_STACK_UNDERFLOW);
+        return 0;
     }
 
-    return s->items[s->top];
+    *out = s->items[s->top];
+    return 1;
 }
 
-// Function to check if the Character stack is empty
 int isEmptyCharStack(CharStack *s)
 {
     return s->top == -1;
@@ -115,36 +111,44 @@ void initStringStack(StringStack *s)
     s->top = -1;
 }
 
-void pushString(StringStack *s, const char str[])
+int pushString(StringStack *s, const char str[])
 {
     if (s->top == MAX - 1)
     {
         calculatorSetLastError(CALC_ERR_STACK_OVERFLOW);
-        return;
+        return 0;
     }
 
-    strcpy(s->items[++s->top], str);
+    strncpy(s->items[s->top + 1], str, sizeof(s->items[0]) - 1);
+    s->items[s->top + 1][sizeof(s->items[0]) - 1] = '\0';
+    s->top++;
+    return 1;
 }
 
-char *popString(StringStack *s)
+int popString(StringStack *s, char out[], int outSize)
 {
     if (s->top == -1)
     {
         calculatorSetLastError(CALC_ERR_STACK_UNDERFLOW);
+        return 0;
     }
 
-    return s->items[s->top--];
+    strncpy(out, s->items[s->top--], outSize - 1);
+    out[outSize - 1] = '\0';
+    return 1;
 }
 
-char *peekString(StringStack *s)
+int peekString(StringStack *s, char out[], int outSize)
 {
     if (s->top == -1)
     {
-        printf("Error: String Stack Empty\n");
-        exit(EXIT_FAILURE);
+        calculatorSetLastError(CALC_ERR_STACK_UNDERFLOW);
+        return 0;
     }
 
-    return s->items[s->top];
+    strncpy(out, s->items[s->top], outSize - 1);
+    out[outSize - 1] = '\0';
+    return 1;
 }
 
 int isEmptyStringStack(StringStack *s)
@@ -161,36 +165,40 @@ void initTokenStack(TokenStack *s)
     s->top = -1;
 }
 
-void pushToken(TokenStack *s, Token value)
+int pushToken(TokenStack *s, Token value)
 {
     if (s->top == MAX - 1)
     {
         calculatorSetLastError(CALC_ERR_STACK_OVERFLOW);
-        return;
+        return 0;
     }
 
     s->items[++s->top] = value;
+    return 1;
 }
 
-Token popToken(TokenStack *s)
+int popToken(TokenStack *s, Token *out)
 {
     if (s->top == -1)
     {
         calculatorSetLastError(CALC_ERR_STACK_UNDERFLOW);
+        return 0;
     }
 
-    return s->items[s->top--];
+    *out = s->items[s->top--];
+    return 1;
 }
 
-Token peekToken(TokenStack *s)
+int peekToken(TokenStack *s, Token *out)
 {
     if (s->top == -1)
     {
-        printf("Token Stack Empty\n");
-        exit(EXIT_FAILURE);
+        calculatorSetLastError(CALC_ERR_STACK_UNDERFLOW);
+        return 0;
     }
 
-    return s->items[s->top];
+    *out = s->items[s->top];
+    return 1;
 }
 
 int isEmptyTokenStack(TokenStack *s)

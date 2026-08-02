@@ -32,15 +32,22 @@ int validateParentheses(char expression[])
     {
         if (expression[i] == '(')
         {
-            pushChar(&s, '(');
+            if (!pushChar(&s, '('))
+            {
+                /* Pathologically deep nesting -- can't validate, so
+                   treat it as invalid rather than exiting the whole
+                   program over a single malformed expression. */
+                return 0;
+            }
         }
         else if (expression[i] == ')')
         {
-            if (isEmptyCharStack(&s))
+            char discarded;
+
+            if (isEmptyCharStack(&s) || !popChar(&s, &discarded))
             {
                 return 0;
             }
-            popChar(&s);
         }
         i++;
     }

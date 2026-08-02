@@ -73,6 +73,7 @@ LDFLAGS  = -lm $(SAN_FLAGS)
 # Sources
 # ------------------------------------------------------------------
 SRCS = $(SRC_DIR)/main.c \
+       $(SRC_DIR)/error.c \
        $(SRC_DIR)/stack.c \
        $(SRC_DIR)/tokenizer.c \
        $(SRC_DIR)/postfix.c \

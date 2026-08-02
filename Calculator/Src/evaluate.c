@@ -7,6 +7,7 @@
 #include "stack.h"
 #include "functions.h"
 #include "function_info.h"
+#include "error.h"
 
 /* Last non-fatal evaluation error, set by applyOperation()/evaluatePostfix()
    whenever they return NAN instead of a real result. Callers that loop over
@@ -25,6 +26,34 @@ static void setEvalError(const char msg[])
 const char *getLastEvalError(void)
 {
     return lastEvalError;
+}
+
+/* Wraps stack.c's status-code pop/push so evaluatePostfix() can stay
+   written in the natural "value in, value out" style while still
+   degrading gracefully: a malformed postfix expression (e.g. one
+   with more operators than operands) now produces NAN + a recorded
+   error instead of exit()ing. NAN propagates through every
+   subsequent arithmetic op, so a single bad pop/push naturally
+   surfaces as a NAN final result without extra bookkeeping. */
+static double safePopDouble(DoubleStack *s)
+{
+    double value;
+
+    if (!popDouble(s, &value))
+    {
+        setEvalError(calculatorErrorString(calculatorGetLastError()));
+        return NAN;
+    }
+
+    return value;
+}
+
+static void safePushDouble(DoubleStack *s, double value)
+{
+    if (!pushDouble(s, value))
+    {
+        setEvalError(calculatorErrorString(calculatorGetLastError()));
+    }
 }
 
 double applyOperation(double a, double b, char op)
@@ -88,7 +117,7 @@ double evaluatePostfix(char postfix[])
              (isdigit(postfix[i + 1]) || postfix[i + 1] == '.')))
         {
             double number = readNumber(postfix, &i);
-            pushDouble(&s, number);
+            safePushDouble(&s, number);
             continue;
         }
 
@@ -121,7 +150,7 @@ double evaluatePostfix(char postfix[])
 
             if (argc == 1)
             {
-                double a = popDouble(&s);
+                double a = safePopDouble(&s);
 
                 /* factorial() itself intentionally exit()s on invalid
                    input (see functions.c / test_functions.c) -- that's
@@ -132,21 +161,21 @@ double evaluatePostfix(char postfix[])
                 if (strcmp(function, "fact") == 0 && (a < 0 || floor(a) != a))
                 {
                     setEvalError("Factorial only works for non-negative integers.");
-                    pushDouble(&s, NAN);
+                    safePushDouble(&s, NAN);
                 }
                 else
                 {
-                    pushDouble(&s,
-                               applyFunction(function, a));
+                    safePushDouble(&s,
+                                   applyFunction(function, a));
                 }
             }
             else if (argc == 2)
             {
-                double b = popDouble(&s);
-                double a = popDouble(&s);
+                double b = safePopDouble(&s);
+                double a = safePopDouble(&s);
 
-                pushDouble(&s,
-                           applyBinaryFunction(function, a, b));
+                safePushDouble(&s,
+                               applyBinaryFunction(function, a, b));
             }
             else
             {
@@ -160,7 +189,7 @@ double evaluatePostfix(char postfix[])
         /* Factorial */
         if (postfix[i] == '!')
         {
-            double value = popDouble(&s);
+            double value = safePopDouble(&s);
 
             /* Same reasoning as the 'fact' function above: validate
                before calling the (intentionally exit()-on-error)
@@ -168,11 +197,11 @@ double evaluatePostfix(char postfix[])
             if (value < 0 || floor(value) != value)
             {
                 setEvalError("Factorial only works for non-negative integers.");
-                pushDouble(&s, NAN);
+                safePushDouble(&s, NAN);
             }
             else
             {
-                pushDouble(&s, factorial(value));
+                safePushDouble(&s, factorial(value));
             }
 
             i++;
@@ -180,15 +209,15 @@ double evaluatePostfix(char postfix[])
         }
 
         /* Binary operator */
-        double b = popDouble(&s);
-        double a = popDouble(&s);
+        double b = safePopDouble(&s);
+        double a = safePopDouble(&s);
 
         double result = applyOperation(a, b, postfix[i]);
 
-        pushDouble(&s, result);
+        safePushDouble(&s, result);
 
         i++;
     }
 
-    return popDouble(&s);
+    return safePopDouble(&s);
 }
