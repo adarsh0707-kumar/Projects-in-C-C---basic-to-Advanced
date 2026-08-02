@@ -1,19 +1,6 @@
 #include "../Inc/error.h"
 
-static CalculatorStatus status =
-    {
-        CALC_OK,
-        "No error"};
-
-const CalculatorStatus *calculatorGetStatus(void)
-{
-    return &status;
-}
-
-CalculatorError calculatorGetLastError(void)
-{
-    return status.code;
-}
+static CalculatorError lastError = CALC_OK;
 
 const char *calculatorErrorString(CalculatorError error)
 {
@@ -22,20 +9,11 @@ const char *calculatorErrorString(CalculatorError error)
     case CALC_OK:
         return "No error";
 
-    case CALC_ERR_UNKNOWN:
-        return "Unknown error";
-
     case CALC_ERR_DIVIDE_BY_ZERO:
         return "Division by zero";
 
     case CALC_ERR_DOMAIN:
-        return "Domain error";
-
-    case CALC_ERR_OVERFLOW:
-        return "Overflow";
-
-    case CALC_ERR_UNDERFLOW:
-        return "Underflow";
+        return "Value outside the valid domain";
 
     case CALC_ERR_INVALID_TOKEN:
         return "Invalid token";
@@ -55,28 +33,25 @@ const char *calculatorErrorString(CalculatorError error)
     case CALC_ERR_STACK_UNDERFLOW:
         return "Stack underflow";
 
-    case CALC_ERR_MEMORY:
-        return "Memory allocation failed";
-
-    case CALC_ERR_FILE:
-        return "File error";
-
     case CALC_ERR_INTERNAL:
         return "Internal error";
 
     default:
-        return "Unknown error";
+        return "Unrecognized error code";
     }
+}
+
+CalculatorError calculatorGetLastError(void)
+{
+    return lastError;
 }
 
 void calculatorSetLastError(CalculatorError error)
 {
-    status.code = error;
-    status.message = calculatorErrorString(error);
+    lastError = error;
 }
 
 void calculatorClearError(void)
 {
-    status.code = CALC_OK;
-    status.message = "No error";
+    lastError = CALC_OK;
 }
