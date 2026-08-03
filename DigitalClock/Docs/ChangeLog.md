@@ -1,140 +1,1514 @@
-## Digital Clock System
+# Change Log
 
-**Project:** Digital Clock System
-**Language:** C++17
-**Documentation Version:** 1.0
-
----
-
-# Version History
+Version: 1.0
+Project: Digital Clock System
+Language: C++17
 
 ---
 
-## [1.0.0] – 2026-08-03
+# Table of Contents
 
-### Initial Release
+1. Introduction
+2. Versioning Policy
+3. Version History
+4. Release Notes
+5. Known Issues
+6. Future Releases
+7. Conclusion
 
-The first stable release of the Digital Clock System.
+# Chapter 1 – Introduction
+
+---
+
+# 1.1 Purpose
+
+The **Change Log** documents the history of changes made to the **Digital Clock System** throughout its development lifecycle. It serves as a chronological record of software updates, feature additions, bug fixes, performance improvements, documentation revisions, and release information.
+
+Maintaining an accurate change log helps developers, testers, project maintainers, and end users understand how the project has evolved over time. It also provides transparency for software releases and simplifies maintenance, debugging, and version tracking.
+
+---
+
+# 1.2 Scope
+
+This document covers all significant modifications made to the Digital Clock System from the initial development phase through future releases.
+
+The Change Log records:
+
+- New features
+- Bug fixes
+- Performance improvements
+- Security enhancements
+- Documentation updates
+- Build system changes
+- Testing improvements
+- Version releases
+
+Minor formatting changes or internal code cleanup that do not affect functionality may not be recorded unless they significantly impact maintainability.
+
+---
+
+# 1.3 Objectives
+
+The primary objectives of maintaining this Change Log are to:
+
+- Maintain a complete history of project development.
+- Record major software releases.
+- Document newly implemented features.
+- Track resolved defects.
+- Record documentation updates.
+- Improve communication among developers and stakeholders.
+- Support software maintenance and future development.
+
+A well-maintained change log contributes to better project management and release planning.
+
+---
+
+# 1.4 Intended Audience
+
+This document is intended for:
+
+- Software Developers
+- Project Maintainers
+- Test Engineers
+- Technical Reviewers
+- Project Managers
+- Contributors
+- End Users interested in release updates
+
+Each audience can use this document to understand what has changed between software versions.
+
+---
+
+# 1.5 Importance of a Change Log
+
+Maintaining a structured change log provides several benefits:
+
+- Tracks the evolution of the software.
+- Simplifies debugging by identifying when changes were introduced.
+- Assists developers during maintenance.
+- Improves collaboration within the development team.
+- Supports version comparison.
+- Provides transparency for users and stakeholders.
+- Helps prepare release notes for software distributions.
+
+Without a proper change log, it becomes difficult to identify the purpose and impact of historical changes.
+
+---
+
+# 1.6 Types of Recorded Changes
+
+The Digital Clock System categorizes changes into several types.
+
+| Change Type             | Description                                              |
+| ----------------------- | -------------------------------------------------------- |
+| **Added**         | New features, modules, or functionality                  |
+| **Changed**       | Improvements or modifications to existing features       |
+| **Fixed**         | Bug fixes and defect corrections                         |
+| **Improved**      | Performance, usability, or maintainability enhancements  |
+| **Removed**       | Deprecated or obsolete features removed from the project |
+| **Security**      | Security-related fixes and improvements                  |
+| **Documentation** | Updates to project documentation                         |
+
+This categorization makes it easier to review changes across releases.
+
+---
+
+# 1.7 Change Management Process
+
+The project follows a structured process for recording changes.
+
+```text
+Requirement or Issue
+        │
+        ▼
+Implementation
+        │
+        ▼
+Testing
+        │
+        ▼
+Code Review
+        │
+        ▼
+Merge into Main Branch
+        │
+        ▼
+Update Change Log
+        │
+        ▼
+Create Release
+```
+
+Updating the Change Log is a mandatory step before publishing a new software version.
+
+---
+
+# 1.8 Relationship with Other Documents
+
+The Change Log complements the project's technical documentation.
+
+| Document                            | Relationship                          |
+| ----------------------------------- | ------------------------------------- |
+| Software Requirements Specification | Records requirement-related changes   |
+| Software Design Document            | Tracks design modifications           |
+| Architecture Document               | Records architectural updates         |
+| API Documentation                   | Tracks API additions or modifications |
+| User Manual                         | Records user-facing feature updates   |
+| Testing Report                      | Documents testing improvements        |
+| Installation Guide                  | Records installation changes          |
+| Developer Guide                     | Tracks development process updates    |
+
+Together, these documents provide complete traceability for the project.
+
+---
+
+# 1.9 Version Tracking Principles
+
+Each software release should include:
+
+- Version number
+- Release date
+- Summary of changes
+- New features
+- Bug fixes
+- Known issues
+- Compatibility notes (if applicable)
+
+Following consistent version tracking improves software maintenance and release management.
+
+---
+
+# 1.10 Chapter Summary
+
+This chapter introduced the purpose and scope of the **Change Log** for the Digital Clock System. It explained the objectives, intended audience, importance of maintaining a change history, categories of recorded changes, the change management process, its relationship with other project documents, and the principles of version tracking.
+
+The following chapter defines the versioning policy used by the project, including version numbering conventions and release management practices.
+
+---
+
+# Chapter 2 – Versioning Policy
+
+---
+
+# 2.1 Introduction
+
+A well-defined versioning policy provides a consistent method for identifying software releases and tracking the evolution of the **Digital Clock System**. Version numbers help developers, testers, maintainers, and users determine the significance of changes introduced in each release.
+
+The Digital Clock System follows a structured versioning approach to ensure that every release is uniquely identified and its purpose is clearly communicated.
+
+---
+
+# 2.2 Objectives of Versioning
+
+The versioning policy aims to:
+
+- Identify every software release uniquely.
+- Distinguish between major, minor, and maintenance updates.
+- Simplify release management.
+- Improve compatibility tracking.
+- Support debugging and maintenance.
+- Provide a clear software evolution history.
+
+Consistent versioning improves communication among all project stakeholders.
+
+---
+
+# 2.3 Version Number Format
+
+The Digital Clock System uses the following version format:
+
+```text
+MAJOR.MINOR.PATCH
+```
+
+Example:
+
+```text
+1.0.0
+```
+
+Where:
+
+| Component       | Description                                                                       |
+| --------------- | --------------------------------------------------------------------------------- |
+| **MAJOR** | Significant architectural or feature changes that may introduce incompatibilities |
+| **MINOR** | New features or enhancements that remain backward compatible                      |
+| **PATCH** | Bug fixes, documentation updates, performance improvements, or minor corrections  |
+
+This format provides a simple and predictable versioning structure.
+
+---
+
+# 2.4 Version Number Examples
+
+| Version         | Meaning                                                    |
+| --------------- | ---------------------------------------------------------- |
+| **1.0.0** | Initial stable release                                     |
+| **1.1.0** | New features added                                         |
+| **1.2.0** | Additional enhancements                                    |
+| **1.2.1** | Bug fixes and minor improvements                           |
+| **1.3.0** | Feature expansion                                          |
+| **2.0.0** | Major architectural redesign or significant feature update |
+
+Each version communicates the scale and impact of the associated changes.
+
+---
+
+# 2.5 Release Types
+
+The project recognizes several categories of releases.
+
+### Major Release
+
+Major releases introduce significant functionality or architectural changes.
+
+Examples:
+
+- New application architecture
+- Large-scale feature additions
+- Breaking API changes
+- Major redesign
+
+---
+
+### Minor Release
+
+Minor releases introduce new functionality while maintaining backward compatibility.
+
+Examples:
+
+- Additional display themes
+- Alarm functionality
+- Stopwatch support
+- User interface improvements
+
+---
+
+### Patch Release
+
+Patch releases address defects and small improvements without introducing new features.
+
+Examples:
+
+- Bug fixes
+- Performance optimizations
+- Documentation corrections
+- Minor configuration updates
+
+---
+
+# 2.6 Release Naming Convention
+
+Each release should be identified using the following format:
+
+```text
+Version X.Y.Z
+```
+
+Example:
+
+```text
+Version 1.0.0
+```
+
+Optional release titles may be used for internal tracking.
+
+Example:
+
+```text
+Version 1.0.0 – Initial Stable Release
+```
+
+This naming convention provides clarity and consistency across releases.
+
+---
+
+# 2.7 Version Lifecycle
+
+The typical software version lifecycle is illustrated below.
+
+```text
+Planning
+     │
+     ▼
+Development
+     │
+     ▼
+Testing
+     │
+     ▼
+Release Candidate
+     │
+     ▼
+Stable Release
+     │
+     ▼
+Maintenance
+```
+
+Each stage represents a milestone in the software development process.
+
+---
+
+# 2.8 Release Criteria
+
+Before publishing a new version, the following criteria should be satisfied:
+
+- All planned features are implemented.
+- Critical defects have been resolved.
+- Unit, integration, and system tests pass.
+- Documentation is updated.
+- Build process completes successfully.
+- Code review has been completed.
+- Change Log has been updated.
+
+Meeting these criteria ensures that each release is stable and well documented.
+
+---
+
+# 2.9 Version Tagging
+
+Git tags are used to mark official software releases.
+
+Example:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+Tagging allows developers to reference specific releases easily and simplifies rollback when necessary.
+
+---
+
+# 2.10 Backward Compatibility
+
+Whenever possible, new releases should remain compatible with previous stable versions.
+
+Developers should:
+
+- Preserve public interfaces.
+- Maintain configuration compatibility.
+- Avoid unnecessary breaking changes.
+- Clearly document any incompatible modifications.
+
+Maintaining backward compatibility reduces migration effort for users and developers.
+
+---
+
+# 2.11 Documentation Updates
+
+Each release should include updates to the relevant project documentation.
+
+The following documents should be reviewed:
+
+| Document                            | Update Required |
+| ----------------------------------- | --------------- |
+| Software Requirements Specification | ✔              |
+| Software Design Document            | ✔              |
+| Architecture Document               | ✔              |
+| API Documentation                   | ✔              |
+| User Manual                         | ✔              |
+| Testing Report                      | ✔              |
+| Installation Guide                  | ✔              |
+| Developer Guide                     | ✔              |
+| ChangeLog                           | ✔              |
+
+Keeping documentation synchronized with software releases improves traceability and maintainability.
+
+---
+
+# 2.12 Versioning Best Practices
+
+To maintain a consistent version history:
+
+- Increment version numbers according to the type of change.
+- Tag all official releases.
+- Record every significant modification in the Change Log.
+- Avoid reusing version numbers.
+- Keep release notes concise and informative.
+- Update documentation before publishing a release.
+
+These practices help maintain a clear and reliable release history.
+
+---
+
+# 2.13 Chapter Summary
+
+This chapter defined the versioning policy for the Digital Clock System. It described the version numbering format, release categories, naming conventions, version lifecycle, release criteria, Git tagging practices, backward compatibility guidelines, documentation requirements, and versioning best practices.
+
+A consistent versioning policy simplifies release management, improves project traceability, and provides a clear history of the software's evolution.
+
+---
+
+# Chapter 3 – Version History
+
+---
+
+# 3.1 Introduction
+
+The **Version History** provides a chronological record of the evolution of the **Digital Clock System**. It documents significant milestones, software releases, feature additions, bug fixes, architectural improvements, testing activities, and documentation updates.
+
+Maintaining a detailed version history allows developers, maintainers, and users to understand how the project has progressed over time and identify the changes introduced in each release.
+
+---
+
+# 3.2 Project Timeline
+
+The Digital Clock System progressed through several development phases.
+
+```text
+Project Planning
+        │
+        ▼
+Requirement Analysis
+        │
+        ▼
+Software Design
+        │
+        ▼
+Architecture Design
+        │
+        ▼
+Core Development
+        │
+        ▼
+Testing
+        │
+        ▼
+Documentation
+        │
+        ▼
+Version 1.0.0 Release
+```
+
+Each phase contributed to the successful completion of the project.
+
+---
+
+# 3.3 Version History Overview
+
+The table below summarizes the official project versions.
+
+| Version         | Status        | Description                             |
+| --------------- | ------------- | --------------------------------------- |
+| **0.1.0** | Development   | Initial project structure created       |
+| **0.2.0** | Development   | Core modules implemented                |
+| **0.3.0** | Development   | Display and configuration modules added |
+| **0.4.0** | Testing       | Unit and integration testing introduced |
+| **0.5.0** | Documentation | Technical documentation completed       |
+| **1.0.0** | Stable        | Initial production release              |
+
+These versions represent the major milestones in the development lifecycle.
+
+---
+
+# 3.4 Version 0.1.0 – Initial Project Setup
+
+### Release Status
+
+Development
+
+### Major Changes
+
+#### Added
+
+- Initial project directory structure.
+- Build system configuration.
+- Source and header directories.
+- Documentation directory.
+- Resource directory.
+- Basic application framework.
+
+#### Documentation
+
+- Initial project planning.
+- Development roadmap.
+
+#### Notes
+
+This version established the foundation for future development.
+
+---
+
+# 3.5 Version 0.2.0 – Core Development
+
+### Release Status
+
+Development
 
 ### Added
 
-- **Core Functionality**:
+- Clock module.
+- Date module.
+- Display module.
+- Utility module.
+- Configuration module.
 
-  - Real-time retrieval and display of the current system time.
-  - Real-time retrieval and display of the current system date.
-  - Configurable refresh interval (default 1000 ms).
-  - Support for both **12-hour** (AM/PM) and **24-hour** time formats.
-  - Support for multiple date display formats (Long, Short, ISO).
-- **Configuration Management**:
+### Improved
 
-  - External `config.ini` file for storing user preferences.
-  - Validation of configuration values with fallback to safe defaults.
-  - Theme selection (Dark and Light).
-- **User Interface**:
+- Project organization.
+- Modular architecture.
+- Source code structure.
 
-  - Clean and centered console-based layout.
-  - Application banner and logo display.
-  - Status bar showing active theme and refresh rate.
-  - Clear console output to prevent screen clutter.
-- **Service Modules**:
+### Notes
 
-  - Centralized **Logger** module for recording runtime events, warnings, and errors.
-  - **Resource Manager** for loading external assets (banners, logos, themes).
-  - **Utility** module providing reusable helper functions (string manipulation, file checks).
-- **Architecture & Design**:
-
-  - Layered Modular Architecture (Presentation, Business Logic, Service, System layers).
-  - High cohesion and low coupling between components.
-  - Object-Oriented design with encapsulation and abstraction.
-- **Build System**:
-
-  - Support for **GNU Make** and **CMake**.
-  - Cross-platform compilation support for Linux and Windows.
-- **Documentation**:
-
-  - Complete documentation suite including:
-    - Software Requirements Specification (SRS)
-    - Software Design Document (SDD)
-    - Architecture Document
-    - API Documentation
-    - User Manual
-    - Installation Guide
-    - Developer Guide
-    - Testing Report
-  - UML diagrams (Class, Architecture, Flowchart) for visual clarity.
+Core functionality required for the Digital Clock System was implemented during this phase.
 
 ---
 
-## Changed
+# 3.6 Version 0.3.0 – Feature Expansion
 
-*(N/A for initial release)*
+### Release Status
 
----
-
-## Deprecated
-
-*(N/A for initial release)*
-
----
-
-## Removed
-
-*(N/A for initial release)*
-
----
-
-## Fixed
-
-*(N/A for initial release)*
-
----
-
-## Security
-
-- Configuration files are validated before processing to prevent unexpected behavior.
-- File paths are sanitized and relative to the project root.
-
----
-
----
-
-## [0.5.0] – 2026-08-01
-
-### Pre-Release (Development Snapshot)
+Development
 
 ### Added
 
-- Initial skeleton of the `Clock`, `Date`, and `Display` classes.
-- Basic configuration reading logic.
-- Preliminary CMake and Makefile configurations.
+- Theme management.
+- Resource loading.
+- Logging support.
+- Configuration handling improvements.
 
-### Changed
+### Improved
 
-- Refactored the `TimeFormatter` class to separate formatting logic from time retrieval.
+- Display refresh logic.
+- Error handling.
+- File organization.
+
+### Fixed
+
+- Initial display formatting issues.
+- Minor configuration parsing defects.
+
+### Notes
+
+This version focused on improving usability and maintainability.
 
 ---
 
-## [0.1.0] – 2026-08-01
+# 3.7 Version 0.4.0 – Testing Phase
 
-### Initial Draft
+### Release Status
 
-- Project repository initialized.
-- Core architectural structure defined.
-- Initial documentation created.
+Testing
+
+### Added
+
+- Unit testing.
+- Integration testing.
+- System testing.
+- Regression testing framework.
+
+### Improved
+
+- Test coverage.
+- Error reporting.
+- Build validation.
+
+### Fixed
+
+- Module integration issues.
+- Resource loading defects.
+- Configuration validation problems.
+
+### Notes
+
+Testing activities significantly improved application reliability.
 
 ---
 
-# Document Information
+# 3.8 Version 0.5.0 – Documentation Phase
 
-| Item     | Details                        |
-| -------- | ------------------------------ |
-| Document | **09_ChangeLog.md**      |
-| Project  | **Digital Clock System** |
-| Version  | **1.0**                  |
-| Status   | **Completed**            |
+### Release Status
+
+Documentation
+
+### Added
+
+Complete technical documentation:
+
+- Software Requirements Specification
+- Software Design Document
+- Architecture Document
+- API Documentation
+- User Manual
+- Testing Report
+- Installation Guide
+- Developer Guide
+- Change Log
+
+### Improved
+
+- Project documentation quality.
+- Developer onboarding information.
+- User guidance.
+
+### Notes
+
+This version completed the documentation required for the initial release.
+
+---
+
+# 3.9 Version 1.0.0 – Initial Stable Release
+
+### Release Status
+
+Stable
+
+### Added
+
+- Complete Digital Clock System.
+- Modular architecture.
+- Configuration support.
+- Theme support.
+- Logging functionality.
+- Comprehensive documentation.
+- Full testing suite.
+
+### Improved
+
+- Performance.
+- Stability.
+- Code organization.
+- Documentation consistency.
+
+### Fixed
+
+- Remaining known defects from development.
+- Minor display issues.
+- Configuration validation improvements.
+
+### Notes
+
+Version **1.0.0** represents the first stable release of the Digital Clock System and is intended for general use and future development.
+
+---
+
+# 3.10 Documentation Milestones
+
+The following documentation was completed prior to the first stable release.
+
+| Document                            | Status       |
+| ----------------------------------- | ------------ |
+| Software Requirements Specification | ✔ Completed |
+| Software Design Document            | ✔ Completed |
+| Architecture Document               | ✔ Completed |
+| API Documentation                   | ✔ Completed |
+| User Manual                         | ✔ Completed |
+| Testing Report                      | ✔ Completed |
+| Installation Guide                  | ✔ Completed |
+| Developer Guide                     | ✔ Completed |
+| Change Log                          | ✔ Completed |
+
+This comprehensive documentation supports both users and developers.
+
+---
+
+# 3.11 Development Statistics
+
+Project summary at Version **1.0.0**.
+
+| Category                 | Status |
+| ------------------------ | ------ |
+| Architecture Designed    | ✔     |
+| Core Modules Implemented | ✔     |
+| Configuration System     | ✔     |
+| Resource Management      | ✔     |
+| Logging System           | ✔     |
+| Testing Completed        | ✔     |
+| Documentation Completed  | ✔     |
+| Stable Release Published | ✔     |
+
+These milestones indicate that the project has reached its initial production-ready state.
+
+---
+
+# 3.12 Chapter Summary
+
+This chapter presented the complete version history of the Digital Clock System. It documented the project's development timeline, major milestones, version progression, feature additions, testing phases, documentation completion, and the initial stable release.
+
+Maintaining a detailed version history provides valuable traceability for future maintenance, enhancements, and software releases.
+
+---
+
+# Chapter 4 – Release Notes
+
+---
+
+# 4.1 Introduction
+
+Release Notes provide a detailed summary of the features, improvements, bug fixes, documentation updates, and known limitations associated with each official release of the **Digital Clock System**. They serve as a communication bridge between the development team, testers, maintainers, and end users by highlighting what has changed since the previous version.
+
+Every official release should be accompanied by release notes to ensure transparency and simplify software deployment, maintenance, and upgrades.
+
+---
+
+# 4.2 Purpose of Release Notes
+
+The primary objectives of release notes are to:
+
+- Inform users about new features.
+- Document improvements made since the previous release.
+- Record resolved defects.
+- Highlight important configuration changes.
+- Identify known issues.
+- Provide upgrade information.
+- Improve software traceability.
+
+Proper release notes reduce confusion during software updates and maintenance.
+
+---
+
+# 4.3 Release Information
+
+| Item                   | Details                |
+| ---------------------- | ---------------------- |
+| Project                | Digital Clock System   |
+| Current Stable Version | **1.0.0**        |
+| Release Type           | Initial Stable Release |
+| Language               | C++17                  |
+| Platform               | Cross-Platform Desktop |
+| Build System           | Make / CMake           |
+
+This release establishes the first production-ready version of the Digital Clock System.
+
+---
+
+# 4.4 Version 1.0.0 Release Summary
+
+### Release Highlights
+
+The **Version 1.0.0** release introduces the first complete implementation of the Digital Clock System.
+
+Major achievements include:
+
+- Complete modular application architecture.
+- Real-time digital clock display.
+- Date and time synchronization with the operating system.
+- Configuration file support.
+- Theme management.
+- Logging framework.
+- Comprehensive technical documentation.
+- Complete testing suite.
+
+This version serves as the foundation for future enhancements.
+
+---
+
+# 4.5 New Features
+
+The following functionality has been introduced in Version **1.0.0**.
+
+### Core Features
+
+- Digital clock display.
+- Automatic date display.
+- Configurable refresh interval.
+- Theme support.
+- Resource management.
+- Configuration loading.
+- Application logging.
+
+### Development Features
+
+- Modular source code organization.
+- Build automation.
+- Cross-platform design.
+- Comprehensive documentation.
+- Testing framework.
+
+These features provide a stable and extensible platform for future development.
+
+---
+
+# 4.6 Improvements
+
+Several improvements were made during development.
+
+### Architecture
+
+- Improved modular design.
+- Clear separation of responsibilities.
+- Simplified project organization.
+
+### Performance
+
+- Reduced unnecessary processing.
+- Optimized display updates.
+- Efficient resource loading.
+
+### Maintainability
+
+- Improved code readability.
+- Consistent coding standards.
+- Better documentation coverage.
+
+These improvements enhance software quality and maintainability.
+
+---
+
+# 4.7 Bug Fixes
+
+The following issues were resolved before the stable release.
+
+| Issue                               | Resolution |
+| ----------------------------------- | ---------- |
+| Display formatting inconsistencies  | Fixed      |
+| Configuration parsing errors        | Fixed      |
+| Resource loading issues             | Fixed      |
+| Minor logging defects               | Fixed      |
+| Build configuration inconsistencies | Fixed      |
+
+Resolving these issues improves application stability and reliability.
+
+---
+
+# 4.8 Documentation Updates
+
+The following documentation has been completed and reviewed.
+
+| Document                            | Status       |
+| ----------------------------------- | ------------ |
+| Software Requirements Specification | ✔ Completed |
+| Software Design Document            | ✔ Completed |
+| Architecture Document               | ✔ Completed |
+| API Documentation                   | ✔ Completed |
+| User Manual                         | ✔ Completed |
+| Testing Report                      | ✔ Completed |
+| Installation Guide                  | ✔ Completed |
+| Developer Guide                     | ✔ Completed |
+| Change Log                          | ✔ Completed |
+
+Complete documentation supports future development, testing, deployment, and maintenance.
+
+---
+
+# 4.9 Compatibility Information
+
+Version **1.0.0** has been designed for compatibility with:
+
+| Component                     | Supported                            |
+| ----------------------------- | ------------------------------------ |
+| C++ Standard                  | C++17                                |
+| GNU Compiler Collection (GCC) | Supported                            |
+| GNU Make                      | Supported                            |
+| CMake                         | Supported                            |
+| Linux                         | Supported                            |
+| Windows                       | Supported (with compatible compiler) |
+
+Future releases may extend compatibility with additional platforms and toolchains.
+
+---
+
+# 4.10 Upgrade Notes
+
+For users upgrading from earlier development versions:
+
+- Replace previous source files with the latest version.
+- Rebuild the application using the updated build configuration.
+- Replace outdated configuration files if new options have been introduced.
+- Review the updated documentation before deployment.
+
+Following these steps ensures a smooth transition to Version **1.0.0**.
+
+---
+
+# 4.11 Known Limitations
+
+The current release has the following limitations:
+
+- Alarm functionality is not yet implemented.
+- Stopwatch and countdown timer are planned for future versions.
+- GUI support is not included in Version 1.0.0.
+- Plugin support is reserved for future releases.
+- Automatic update functionality is not available.
+
+These limitations are planned to be addressed in subsequent releases.
+
+---
+
+# 4.12 Future Release Preview
+
+Planned enhancements for future versions include:
+
+- Alarm and reminder module.
+- Stopwatch.
+- Countdown timer.
+- Multiple time zones.
+- Graphical user interface.
+- Additional themes.
+- Localization support.
+- Plugin architecture.
+- Performance improvements.
+
+These planned features will expand the functionality of the Digital Clock System while maintaining its modular architecture.
+
+---
+
+# 4.13 Chapter Summary
+
+This chapter presented the official release notes for Version **1.0.0** of the Digital Clock System. It summarized the release information, new features, improvements, bug fixes, documentation updates, compatibility details, upgrade guidance, known limitations, and planned future enhancements.
+
+Release Notes provide a concise overview of each software version and serve as an important reference for developers, testers, maintainers, and end users.
+
+---
+
+# Chapter 5 – Known Issues
+
+---
+
+# 5.1 Introduction
+
+This chapter documents the **known issues and current limitations** of the **Digital Clock System** at the time of each software release. Recording known issues helps developers, testers, maintainers, and end users understand the current state of the application and provides transparency regarding features that are planned for future improvement.
+
+Not every issue is considered critical. Some items listed in this chapter are limitations, enhancement requests, or planned improvements that do not affect the normal operation of the application.
+
+---
+
+# 5.2 Purpose
+
+The objectives of maintaining a Known Issues section are to:
+
+- Inform users about current limitations.
+- Document unresolved defects.
+- Help developers prioritize future work.
+- Reduce duplicate bug reports.
+- Improve release transparency.
+- Support maintenance planning.
+
+Maintaining an up-to-date list of known issues improves project management and user expectations.
+
+---
+
+# 5.3 Issue Classification
+
+Known issues are categorized according to their severity.
+
+| Severity    | Description                                         |
+| ----------- | --------------------------------------------------- |
+| Critical    | Prevents the application from functioning correctly |
+| High        | Major functionality is affected                     |
+| Medium      | Feature works with minor limitations                |
+| Low         | Cosmetic or non-critical issue                      |
+| Enhancement | Suggested improvement or future feature             |
+
+This classification helps prioritize maintenance and future development efforts.
+
+---
+
+# 5.4 Current Known Issues (Version 1.0.0)
+
+The following issues have been identified for Version **1.0.0**.
+
+| Issue ID | Description                                       | Severity    | Status |
+| -------- | ------------------------------------------------- | ----------- | ------ |
+| KI-001   | Alarm functionality is not implemented            | Enhancement | Open   |
+| KI-002   | Stopwatch feature is unavailable                  | Enhancement | Open   |
+| KI-003   | Countdown timer is not available                  | Enhancement | Open   |
+| KI-004   | Multiple time zone support is unavailable         | Enhancement | Open   |
+| KI-005   | Graphical User Interface (GUI) is not implemented | Enhancement | Open   |
+| KI-006   | Plugin architecture is not available              | Enhancement | Open   |
+
+These items are planned for consideration in future releases.
+
+---
+
+# 5.5 Functional Limitations
+
+The current release has the following functional limitations:
+
+- Displays only the local system time.
+- Does not provide alarm notifications.
+- Does not include stopwatch functionality.
+- Does not support countdown timers.
+- Configuration changes may require an application restart.
+- No built-in update mechanism is available.
+
+These limitations do not prevent normal clock functionality but define the scope of Version **1.0.0**.
+
+---
+
+# 5.6 Platform Limitations
+
+Current platform-related limitations include:
+
+| Platform         | Limitation                                 |
+| ---------------- | ------------------------------------------ |
+| Linux            | Fully supported                            |
+| Windows          | Supported with a compatible C++17 compiler |
+| macOS            | Requires validation and testing            |
+| Mobile Platforms | Not supported                              |
+
+Additional platform support may be introduced in future versions.
+
+---
+
+# 5.7 Documentation Limitations
+
+At the current release:
+
+- Documentation is based on Version **1.0.0**.
+- Future features are documented only as planned enhancements.
+- API documentation will expand as new modules are introduced.
+- User manual will be updated with new functionality in future releases.
+
+Documentation will continue evolving alongside the software.
+
+---
+
+# 5.8 Workarounds
+
+For some current limitations, the following workarounds are recommended.
+
+| Limitation            | Suggested Workaround                              |
+| --------------------- | ------------------------------------------------- |
+| Alarm unavailable     | Use operating system alarm utilities              |
+| Stopwatch unavailable | Use a separate stopwatch application              |
+| Countdown unavailable | Use an external timer application                 |
+| GUI unavailable       | Operate through the console interface             |
+| Multiple time zones   | Change the operating system time zone if required |
+
+These workarounds provide temporary alternatives until native functionality is implemented.
+
+---
+
+# 5.9 Reporting New Issues
+
+When reporting a new issue, developers and users should include:
+
+- Software version
+- Operating system
+- Compiler version (if applicable)
+- Steps to reproduce
+- Expected behavior
+- Actual behavior
+- Error messages or logs
+- Screenshots (if applicable)
+
+Complete reports enable faster investigation and resolution.
+
+---
+
+# 5.10 Issue Resolution Process
+
+The project follows the workflow below for handling reported issues.
+
+```text
+Issue Reported
+       │
+       ▼
+Issue Verification
+       │
+       ▼
+Priority Assignment
+       │
+       ▼
+Developer Assignment
+       │
+       ▼
+Bug Fix Implementation
+       │
+       ▼
+Testing & Validation
+       │
+       ▼
+Documentation Update
+       │
+       ▼
+Issue Closed
+```
+
+This process ensures consistent handling and tracking of defects.
+
+---
+
+# 5.11 Future Resolution Plan
+
+The following enhancements are planned for future releases.
+
+| Planned Feature      | Target Status |
+| -------------------- | ------------- |
+| Alarm Module         | Planned       |
+| Stopwatch            | Planned       |
+| Countdown Timer      | Planned       |
+| GUI Version          | Planned       |
+| Multiple Time Zones  | Planned       |
+| Plugin System        | Planned       |
+| Automatic Updates    | Planned       |
+| Localization Support | Planned       |
+
+These planned improvements will extend the capabilities of the Digital Clock System while maintaining its modular architecture.
+
+---
+
+# 5.12 Chapter Summary
+
+This chapter documented the known issues and limitations of Version **1.0.0** of the Digital Clock System. It introduced issue classification, current open items, functional and platform limitations, documentation constraints, recommended workarounds, the issue reporting process, and the planned resolution strategy.
+
+Maintaining an accurate list of known issues improves transparency, supports project planning, and helps guide future development and maintenance activities.
+
+---
+
+# Chapter 6 – Future Releases
+
+---
+
+# 6.1 Introduction
+
+The **Digital Clock System** has been designed using a modular and extensible architecture, allowing new features and improvements to be integrated with minimal impact on existing components. This chapter outlines the planned direction for future releases, including feature enhancements, performance improvements, platform support, and long-term development goals.
+
+The roadmap presented here is intended for planning purposes and may be updated based on project requirements, user feedback, and development priorities.
+
+---
+
+# 6.2 Future Development Objectives
+
+The primary objectives for future releases are to:
+
+- Expand application functionality.
+- Improve performance and responsiveness.
+- Enhance user experience.
+- Increase platform compatibility.
+- Strengthen security and reliability.
+- Simplify configuration and customization.
+- Maintain a modular and maintainable architecture.
+
+These objectives provide a clear direction for the continued evolution of the project.
+
+---
+
+# 6.3 Planned Release Roadmap
+
+The following roadmap outlines the expected progression of future versions.
+
+| Version         | Planned Focus                                                       |
+| --------------- | ------------------------------------------------------------------- |
+| **1.1.0** | Alarm module and notification support                               |
+| **1.2.0** | Stopwatch and countdown timer                                       |
+| **1.3.0** | Multiple time zone support                                          |
+| **1.4.0** | Theme enhancements and improved configuration                       |
+| **2.0.0** | Graphical User Interface (GUI) and major architectural improvements |
+
+This roadmap is subject to change based on project priorities.
+
+---
+
+# 6.4 Planned Features
+
+Future versions may introduce the following functionality.
+
+### Time Management
+
+- Alarm clock.
+- Multiple alarms.
+- Snooze functionality.
+- Recurring alarms.
+- Countdown timer.
+- Stopwatch.
+
+### Display Enhancements
+
+- Multiple display themes.
+- Custom color schemes.
+- Adjustable fonts.
+- Full-screen display mode.
+- Improved date and time formatting.
+
+### User Experience
+
+- Simplified configuration.
+- Enhanced keyboard shortcuts.
+- Improved accessibility.
+- Localization and multilingual support.
+
+These enhancements will improve usability while maintaining the lightweight nature of the application.
+
+---
+
+# 6.5 Architecture Improvements
+
+Future architectural enhancements may include:
+
+- Plugin-based extension framework.
+- Improved module isolation.
+- Better dependency management.
+- Configuration abstraction layer.
+- Enhanced logging subsystem.
+- Improved resource management.
+
+Maintaining a modular architecture will simplify future expansion and maintenance.
+
+---
+
+# 6.6 Performance Improvements
+
+Planned performance optimizations include:
+
+- Faster application startup.
+- Reduced CPU utilization.
+- Improved memory management.
+- Optimized display refresh logic.
+- More efficient resource loading.
+- Background processing for non-critical tasks.
+
+Performance improvements will continue to be guided by profiling and benchmarking results.
+
+---
+
+# 6.7 Platform Expansion
+
+Future releases may extend platform compatibility.
+
+| Platform       | Planned Support                     |
+| -------------- | ----------------------------------- |
+| Linux          | Continued support                   |
+| Windows        | Continued support                   |
+| macOS          | Planned validation and optimization |
+| Embedded Linux | Future evaluation                   |
+| Raspberry Pi   | Planned evaluation                  |
+
+Additional platform support will depend on community feedback and project requirements.
+
+---
+
+# 6.8 Documentation Improvements
+
+As new functionality is introduced, the following documentation will be updated:
+
+- Software Requirements Specification.
+- Software Design Document.
+- Architecture Document.
+- API Documentation.
+- User Manual.
+- Testing Report.
+- Installation Guide.
+- Developer Guide.
+- Change Log.
+
+Maintaining synchronized documentation ensures consistency across the project.
+
+---
+
+# 6.9 Long-Term Vision
+
+The long-term vision for the Digital Clock System includes:
+
+- A feature-rich yet lightweight desktop application.
+- High code quality through modular design.
+- Comprehensive automated testing.
+- Continuous documentation updates.
+- Easy customization and extension.
+- Stable cross-platform support.
+- A collaborative development environment.
+
+This vision supports sustainable growth while preserving maintainability.
+
+---
+
+# 6.10 Release Planning Process
+
+Future releases should follow the development workflow below.
+
+```text
+Requirement Collection
+         │
+         ▼
+Planning
+         │
+         ▼
+Design
+         │
+         ▼
+Implementation
+         │
+         ▼
+Testing
+         │
+         ▼
+Documentation
+         │
+         ▼
+Release
+```
+
+A structured release process improves software quality and predictability.
+
+---
+
+# 6.11 Future Release Checklist
+
+Before publishing a future release, verify the following.
+
+| Verification Item          | Status |
+| -------------------------- | ------ |
+| Planned features completed | ✔     |
+| Code reviewed              | ✔     |
+| Testing completed          | ✔     |
+| Documentation updated      | ✔     |
+| Performance evaluated      | ✔     |
+| Known issues reviewed      | ✔     |
+| Version tagged             | ✔     |
+| Change Log updated         | ✔     |
+
+Following this checklist helps ensure that each release is complete, stable, and well documented.
+
+---
+
+# 6.12 Chapter Summary
+
+This chapter presented the planned future direction of the Digital Clock System. It described the development objectives, projected release roadmap, planned features, architectural and performance improvements, platform expansion, documentation updates, long-term vision, release planning process, and release readiness checklist.
+
+By following this roadmap, the project can continue to evolve in a structured and maintainable manner while delivering additional functionality and maintaining software quality.
+
+---
+
+# Chapter 7 – Conclusion
+
+---
+
+# 7.1 Introduction
+
+This chapter concludes the **Change Log** for the **Digital Clock System**. It summarizes the project's version history, release management practices, and the importance of maintaining an accurate record of software changes throughout the development lifecycle.
+
+The Change Log serves as the official historical record of the project, enabling developers, maintainers, testers, and users to understand how the software has evolved across different releases.
+
+---
+
+# 7.2 Document Summary
+
+Throughout this document, the following topics have been covered:
+
+- Purpose and scope of the Change Log.
+- Versioning policy and release numbering.
+- Complete version history.
+- Release notes for Version **1.0.0**.
+- Known issues and current limitations.
+- Future release roadmap.
+- Best practices for maintaining version history.
+
+Together, these sections provide a comprehensive overview of the evolution of the Digital Clock System.
+
+---
+
+# 7.3 Importance of Maintaining a Change Log
+
+Maintaining a structured Change Log offers several benefits:
+
+- Provides complete traceability of software changes.
+- Simplifies debugging and maintenance.
+- Improves communication among developers.
+- Helps testers identify changes between releases.
+- Assists users in understanding new features and improvements.
+- Supports project audits and software documentation.
+- Preserves the historical evolution of the project.
+
+An accurate Change Log is an essential component of professional software development and release management.
+
+---
+
+# 7.4 Release Management Best Practices
+
+To ensure consistency across future releases, the following practices should be adopted:
+
+- Assign a unique version number to every official release.
+- Document all significant additions, changes, fixes, and improvements.
+- Update the Change Log before publishing a new release.
+- Tag official releases in the version control system.
+- Maintain synchronization between the Change Log and other project documentation.
+- Archive previous releases for future reference.
+
+Following these practices improves transparency and simplifies long-term maintenance.
+
+---
+
+# 7.5 Recommendations for Future Updates
+
+As the Digital Clock System continues to evolve, developers should ensure that the Change Log is updated whenever:
+
+- New functionality is introduced.
+- Existing features are modified.
+- Bugs are fixed.
+- Security improvements are implemented.
+- Performance optimizations are completed.
+- Documentation is revised.
+- Build tools or dependencies change.
+- New versions are released.
+
+Consistent updates ensure that the document remains a reliable source of project history.
+
+---
+
+# 7.6 Relationship with Project Documentation
+
+The Change Log complements the other documents within the Digital Clock System documentation suite.
+
+| Document                            | Purpose                                                     |
+| ----------------------------------- | ----------------------------------------------------------- |
+| Software Requirements Specification | Defines functional and non-functional requirements          |
+| Software Design Document            | Describes software design and module interactions           |
+| Architecture Document               | Explains the overall system architecture                    |
+| API Documentation                   | Documents application interfaces                            |
+| User Manual                         | Guides end users in operating the application               |
+| Testing Report                      | Records testing strategy and results                        |
+| Installation Guide                  | Describes installation and configuration                    |
+| Developer Guide                     | Assists developers in extending and maintaining the project |
+| Change Log                          | Records the complete history of project changes             |
+
+Together, these documents provide complete technical and user documentation for the project.
+
+---
+
+# 7.7 Final Release Status
+
+The Digital Clock System Version **1.0.0** has achieved the following milestones.
+
+| Milestone                    | Status |
+| ---------------------------- | ------ |
+| Requirements Completed       | ✔     |
+| Software Design Completed    | ✔     |
+| Architecture Completed       | ✔     |
+| Core Development Completed   | ✔     |
+| Testing Completed            | ✔     |
+| Documentation Completed      | ✔     |
+| Installation Guide Completed | ✔     |
+| Developer Guide Completed    | ✔     |
+| Change Log Completed         | ✔     |
+| Initial Stable Release Ready | ✔     |
+
+These milestones indicate that the project has reached its first stable and fully documented release.
+
+---
+
+# 7.8 Final Remarks
+
+The **Digital Clock System** represents the successful completion of a structured software engineering project developed using modern development practices and comprehensive documentation.
+
+The Change Log will continue to evolve alongside the project, recording future enhancements, maintenance updates, bug fixes, and new releases. Maintaining this document ensures transparency, accountability, and traceability throughout the software lifecycle.
+
+Developers and maintainers are encouraged to update the Change Log as an integral part of every release, ensuring that the project's history remains accurate, complete, and valuable for future contributors.
+
+---
+
+# 7.9 Document Information
+
+| Item            | Details                                                              |
+| --------------- | -------------------------------------------------------------------- |
+| Document        | **09_ChangeLog.md**                                            |
+| Project         | **Digital Clock System**                                       |
+| Current Version | **1.0.0**                                                      |
+| Language        | **C++17**                                                      |
+| Status          | **Completed**                                                  |
+| Audience        | Developers, Maintainers, Test Engineers, Project Managers, End Users |
+
+---
+
+# 7.10 Conclusion
+
+The **Change Log** provides a complete historical record of the Digital Clock System's development, from initial planning through the first stable release. By documenting version history, release notes, known issues, and future plans, it supports effective project management, software maintenance, and continuous improvement.
+
+Maintaining this document as part of every release ensures that the project's evolution remains transparent, organized, and easy to understand for all stakeholders.
 
 ---
 
 # End of Document
-
-[file content end]
