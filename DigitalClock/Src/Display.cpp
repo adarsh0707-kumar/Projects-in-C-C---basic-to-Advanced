@@ -17,40 +17,51 @@ void Display::clearScreen() const
 void Display::printHeader() const
 {
     std::cout
+        << theme.style(Theme::Style::Bold)
+        << theme.foreground(Theme::Color::Cyan);
+
+    std::cout
         << "+==========================================+\n"
         << "|          DIGITAL CLOCK SYSTEM            |\n"
-        << "+==========================================+\n\n";
+        << "+==========================================+\n";
 
-    std::cout
-        << "Version : "
-        << Version::VERSION
-        << "\n";
+    std::cout << theme.reset();
 
-    std::cout
-        << "Author  : "
-        << Version::AUTHOR
-        << "\n\n";
-}
-
-void Display::printDate(const Date &date) const
-{
-    std::cout
-        << "Date : "
-        << date.getDateLong()
-        << "\n";
+    std::cout << "\nVersion : " << Version::VERSION;
+    std::cout << "\nAuthor  : " << Version::AUTHOR << "\n\n";
 }
 
 void Display::printClock(const Clock &clock) const
 {
     std::cout
+        << theme.foreground(Theme::Color::Green);
+
+    std::cout
         << "Time : "
         << clock.getTime24()
-        << "\n";
+        << '\n';
 
     std::cout
         << "12H  : "
         << clock.getTime12()
-        << "\n";
+        << '\n';
+
+    std::cout
+        << theme.reset();
+}
+
+void Display::printDate(const Date &date) const
+{
+    std::cout
+        << theme.foreground(Theme::Color::Yellow);
+
+    std::cout
+        << "Date : "
+        << date.getDateLong()
+        << '\n';
+
+    std::cout
+        << theme.reset();
 }
 
 void Display::printFooter() const

@@ -3,6 +3,7 @@
 
 #include "Clock.hpp"
 #include "Date.hpp"
+#include "Theme.hpp"
 
 class Display
 {
@@ -10,17 +11,15 @@ public:
     Display() = default;
 
     void clearScreen() const;
-
     void printHeader() const;
-
-    void printClock(const Clock &clock) const;
-
-    void printDate(const Date &date) const;
-
+    void printClock(const Clock &) const;
+    void printDate(const Date &) const;
     void printFooter() const;
 
-    void render(const Clock &clock,
-                const Date &date) const;
+    void render(const Clock &, const Date &) const;
+
+private:
+    Theme theme;
 };
 
-#endif // DISPLAY_HPP
+#endif
