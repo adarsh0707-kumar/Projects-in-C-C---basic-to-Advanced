@@ -1,32 +1,35 @@
-Build/*.o# Compiled Object files
-Obj/
+# Build directories
+Build/
+build/
+cmake-build-*/
+
+# Object files
 *.o
 *.obj
 
-# Executable
-DigitalClock
-DigitalClock.exe
+# Libraries
+*.a
+*.so
+*.dll
+*.dylib
 
-# Build directories (Make & CMake)
-Build/
-build/
+# Executables
+DigitalClock
+*.exe
+
+# CMake
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
 Makefile
-*.cmake
 
-# Runtime logs
-Logs/
+# Logs
 *.log
 
-# IDE files
+# Editors
 .vscode/
 .idea/
-*.code-workspace
-*.swp
-*.swo
-*~
 
-# MacOS system files
+# OS files
 .DS_Store
+Thumbs.db
