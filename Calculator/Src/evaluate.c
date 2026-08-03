@@ -6,6 +6,57 @@
 #include "stack.h"
 #include "functions.h"
 #include "function_info.h"
+<<<<<<< Updated upstream
+=======
+#include "../Inc/error.h"
+
+/* Last non-fatal evaluation error, set by applyOperation()/evaluatePostfix()
+   whenever they return NAN instead of a real result. Callers that loop over
+   many evaluations (e.g. plot.c sampling many x values) can check
+   isfinite(result) and, if it fails, report getLastEvalError() instead of
+   the whole process dying on a single bad sample -- see RULES.md's own
+   "never call exit() from library modules" guidance. */
+static char lastEvalError[128] = "";
+
+static void setEvalError(const char msg[])
+{
+    strncpy(lastEvalError, msg, sizeof(lastEvalError) - 1);
+    lastEvalError[sizeof(lastEvalError) - 1] = '\0';
+}
+
+const char *getLastEvalError(void)
+{
+    return lastEvalError;
+}
+
+/* Wraps stack.c's status-code pop/push so evaluatePostfix() can stay
+   written in the natural "value in, value out" style while still
+   degrading gracefully: a malformed postfix expression (e.g. one
+   with more operators than operands) now produces NAN + a recorded
+   error instead of exit()ing. NAN propagates through every
+   subsequent arithmetic op, so a single bad pop/push naturally
+   surfaces as a NAN final result without extra bookkeeping. */
+static double safePopDouble(DoubleStack *s)
+{
+    double value;
+
+    if (!popDouble(s, &value))
+    {
+        setEvalError(calculatorErrorString(calculatorGetLastError()));
+        return NAN;
+    }
+
+    return value;
+}
+
+static void safePushDouble(DoubleStack *s, double value)
+{
+    if (!pushDouble(s, value))
+    {
+        setEvalError(calculatorErrorString(calculatorGetLastError()));
+    }
+}
+>>>>>>> Stashed changes
 
 double applyOperation(double a, double b, char op)
 {
@@ -79,8 +130,13 @@ double evaluatePostfix(char postfix[])
             {
                 if (j >= (int)sizeof(function) - 1)
                 {
-                    printf("Error: Function name too long.\n");
-                    exit(EXIT_FAILURE);
+                    /* Unreachable through the normal CLI pipeline --
+                       infixToPostfix() already rejects an identifier
+                       this long before it's ever written into the
+                       postfix string. Kept as a safety net. */
+                    calculatorSetLastError(CALC_ERR_INTERNAL);
+                    setEvalError(calculatorErrorString(CALC_ERR_INTERNAL));
+                    return NAN;
                 }
 
                 function[j++] = postfix[i++];
@@ -92,16 +148,34 @@ double evaluatePostfix(char postfix[])
 
             if (argc == -1)
             {
-                printf("Unknown function '%s'\n", function);
-                exit(EXIT_FAILURE);
+                /* Unreachable through the normal CLI pipeline --
+                   infixToPostfix() only ever emits functions the
+                   registry (function_info.c) already confirmed exist.
+                   Kept as a safety net. */
+                calculatorSetLastError(CALC_ERR_INVALID_FUNCTION);
+                setEvalError(calculatorErrorString(CALC_ERR_INVALID_FUNCTION));
+                return NAN;
             }
 
             if (argc == 1)
             {
                 double a = popDouble(&s);
 
+<<<<<<< Updated upstream
                 pushDouble(&s,
                            applyFunction(function, a));
+=======
+                /* factorial() (reached via "fact") now fails
+                   gracefully on its own -- see functions.c -- so
+                   there's no need to pre-validate its argument here
+                   the way earlier revisions of this function did. */
+                double result = applyFunction(function, a);
+
+                if (!isfinite(result) && strcmp(function, "fact") == 0)
+                    setEvalError("Factorial only works for non-negative integers.");
+
+                safePushDouble(&s, result);
+>>>>>>> Stashed changes
             }
             else if (argc == 2)
             {
@@ -113,8 +187,12 @@ double evaluatePostfix(char postfix[])
             }
             else
             {
-                printf("Error: Unsupported function '%s'\n", function);
-                exit(EXIT_FAILURE);
+                /* Unreachable through the normal CLI pipeline -- every
+                   registered function takes 1 or 2 arguments. Kept as
+                   a safety net. */
+                calculatorSetLastError(CALC_ERR_INTERNAL);
+                setEvalError(calculatorErrorString(CALC_ERR_INTERNAL));
+                return NAN;
             }
 
             continue;
@@ -123,9 +201,19 @@ double evaluatePostfix(char postfix[])
         /* Factorial */
         if (postfix[i] == '!')
         {
+<<<<<<< Updated upstream
             double value = popDouble(&s);
 
             pushDouble(&s, factorial(value));
+=======
+            double value = safePopDouble(&s);
+            double result = factorial(value);
+
+            if (!isfinite(result))
+                setEvalError("Factorial only works for non-negative integers.");
+
+            safePushDouble(&s, result);
+>>>>>>> Stashed changes
 
             i++;
             continue;

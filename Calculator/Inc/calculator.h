@@ -6,8 +6,11 @@ double precedence(char op);
 double applyOperation(double a, double b, char op);
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 void infixToPostfix(char infix[], char postfix[]);
 =======
+=======
+>>>>>>> Stashed changes
 /** @brief Converts an infix expression into postfix (Reverse Polish) form.
  *  @param infix   Null-terminated input expression.
  *  @param postfix Destination buffer for the postfix form. Its
@@ -18,7 +21,6 @@ void infixToPostfix(char infix[], char postfix[]);
  *  printed to stdout and getLastEvalError()/calculatorGetLastError()
  *  describe why. */
 int infixToPostfix(char infix[], char postfix[]);
->>>>>>> Stashed changes
 
 double evaluatePostfix(char postfix[]);
 

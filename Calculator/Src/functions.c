@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#include <stdlib.h>
 #include "functions.h"
 #include "angle_mode.h"
+#include "error.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -110,9 +110,15 @@ double applyFunction(const char name[], double value)
     if (strcmp(name, "gamma") == 0)
         return tgamma(value);
 
-    printf("Unknown function: %s\n", name);
-
-    return 0;
+    /* Unreachable through the normal CLI pipeline -- evaluate.c only
+       dispatches here for names the function registry (function_info.c)
+       already confirmed exist. Kept as a safety net for any future
+       caller that skips that check: previously this silently returned
+       0 (a real, if latent, bug -- a typo'd function name would produce
+       a *wrong answer* rather than an error). Now it fails the same way
+       every other domain error in the evaluator does. */
+    calculatorSetLastError(CALC_ERR_INVALID_FUNCTION);
+    return NAN;
 }
 
 double applyBinaryFunction(const char name[],
@@ -137,16 +143,28 @@ double applyBinaryFunction(const char name[],
         return getAngleMode() == MODE_DEGREE ? toDegrees(result) : result;
     }
 
-    printf("Unknown function %s\n", name);
-    exit(EXIT_FAILURE);
+    /* Unreachable through the normal CLI pipeline, same reasoning as
+       applyFunction() above -- kept as a safety net rather than
+       exit()ing the whole process over what would, today, always be
+       an internal inconsistency rather than something a user typed. */
+    calculatorSetLastError(CALC_ERR_INVALID_FUNCTION);
+    return NAN;
 }
 
 double factorial(double n)
 {
     if (n < 0 || floor(n) != n)
     {
-        printf("Factorial only works for non-negative integers.\n");
-        exit(EXIT_FAILURE);
+        /* Still fails clearly (NAN + a retrievable reason) rather than
+           silently truncating or returning a wrong value -- it just no
+           longer takes the whole process down to do it. Every current
+           call site in evaluate.c (the postfix '!' operator and the
+           "fact" function dispatch) already pre-validates its argument
+           before ever reaching here specifically so a single bad
+           sample during e.g. plot(x!) can't crash the process; this
+           check is what protects any *other* caller that doesn't. */
+        calculatorSetLastError(CALC_ERR_DOMAIN);
+        return NAN;
     }
 
     double result = 1;
