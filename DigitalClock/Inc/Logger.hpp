@@ -1,64 +1,33 @@
-#pragma once
+#ifndef LOGGER_HPP
+#define LOGGER_HPP
 
-#include <string>
 #include <fstream>
-#include <iostream>
-#include "Utility.hpp"
+#include <string>
 
 class Logger
 {
-private:
-    std::ofstream logFile;
-    bool isInitialized = false;
-
 public:
-    ~Logger() { close(); }
-
-    bool initialize(const std::string &fileName)
+    enum class Level
     {
-        if (isInitialized)
-            return true;
-        logFile.open(fileName, std::ios::app);
-        if (logFile.is_open())
-        {
-            isInitialized = true;
-            info("Logger initialized successfully.");
-            return true;
-        }
-        return false;
-    }
+        INFO,
+        WARNING,
+        ERROR,
+        DEBUG
+    };
 
-    void info(const std::string &message)
-    {
-        if (!isInitialized)
-            return;
-        logFile << "[" << Utility::currentTimestamp() << "] [INFO] " << message << std::endl;
-        logFile.flush();
-    }
+    Logger();
+    ~Logger();
 
-    void warning(const std::string &message)
-    {
-        if (!isInitialized)
-            return;
-        logFile << "[" << Utility::currentTimestamp() << "] [WARNING] " << message << std::endl;
-        logFile.flush();
-    }
+    bool open(const std::string &filename = "Logs/application.log");
+    void close();
 
-    void error(const std::string &message)
-    {
-        if (!isInitialized)
-            return;
-        logFile << "[" << Utility::currentTimestamp() << "] [ERROR] " << message << std::endl;
-        logFile.flush();
-    }
+    void log(Level level, const std::string &message);
 
-    void close()
-    {
-        if (isInitialized && logFile.is_open())
-        {
-            info("Logger shutting down.");
-            logFile.close();
-            isInitialized = false;
-        }
-    }
+private:
+    std::ofstream file;
+
+    std::string getTimestamp() const;
+    std::string levelToString(Level level) const;
 };
+
+#endif // LOGGER_HPP
