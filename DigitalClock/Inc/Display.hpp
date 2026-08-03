@@ -5,6 +5,7 @@
 #include "Date.hpp"
 #include "Theme.hpp"
 #include "Banner.hpp"
+#include "Screen.hpp"
 
 class Display
 {
@@ -22,6 +23,7 @@ public:
 private:
     Theme theme;
     Banner banner;
+    Screen screen;
 };
 
 #endif
