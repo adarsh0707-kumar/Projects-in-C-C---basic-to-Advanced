@@ -11,7 +11,7 @@ private:
     std::map<std::string, std::string> colors;
 
 public:
-    bool load(const std::string &themeName, const std::string &themesFilePath)
+    bool load(const std::string &themeName, const std::string& /*themesFilePath*/)
     {
         // For simplicity, we mock the color parsing. In a real app, we'd parse themes.ini.
         // Hardcoded themes for demonstration.

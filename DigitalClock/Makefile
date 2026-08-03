@@ -1,21 +1,21 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic -IInc
-TARGET = Build/DigitalClock
+TARGET = DigitalClock
+OBJDIR = Obj
 SOURCES = $(wildcard Src/*.cpp)
-OBJECTS = $(SOURCES:Src/%.cpp=Build/%.o)
+OBJECTS = $(SOURCES:Src/%.cpp=$(OBJDIR)/%.o)
 
 all: $(TARGET)
 
 $(TARGET): $(OBJECTS)
-	mkdir -p Build
 	$(CXX) $(OBJECTS) -o $@
 
-Build/%.o: Src/%.cpp
-	mkdir -p Build
+$(OBJDIR)/%.o: Src/%.cpp
+	mkdir -p $(OBJDIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -rf Build/*
+	rm -rf $(OBJDIR) $(TARGET)
 
 run: $(TARGET)
 	./$(TARGET)
