@@ -4,6 +4,7 @@
 #include "Clock.hpp"
 #include "Date.hpp"
 #include "Theme.hpp"
+#include "Banner.hpp"
 
 class Display
 {
@@ -20,6 +21,7 @@ public:
 
 private:
     Theme theme;
+    Banner banner;
 };
 
 #endif

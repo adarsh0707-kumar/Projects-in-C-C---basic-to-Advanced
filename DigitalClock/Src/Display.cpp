@@ -21,14 +21,17 @@ void Display::printHeader() const
         << theme.foreground(Theme::Color::Cyan);
 
     std::cout
-        << "+==========================================+\n"
-        << "|          DIGITAL CLOCK SYSTEM            |\n"
-        << "+==========================================+\n";
+        << banner.loadBanner("Resources/banner.txt");
 
-    std::cout << theme.reset();
+    std::cout
+        << theme.reset();
 
-    std::cout << "\nVersion : " << Version::VERSION;
-    std::cout << "\nAuthor  : " << Version::AUTHOR << "\n\n";
+    std::cout << "\nVersion : "
+              << Version::VERSION;
+
+    std::cout << "\nAuthor  : "
+              << Version::AUTHOR
+              << "\n\n";
 }
 
 void Display::printClock(const Clock &clock) const
