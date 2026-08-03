@@ -1,34 +1,29 @@
-#pragma once
+#ifndef CLOCK_HPP
+#define CLOCK_HPP
 
-#include <ctime>
-#include <chrono>
+#include <string>
 
 class Clock
 {
+public:
+    Clock();
+
+    void update();
+
+    int getHour24() const;
+    int getHour12() const;
+    int getMinute() const;
+    int getSecond() const;
+
+    bool isPM() const;
+
+    std::string getTime24() const;
+    std::string getTime12() const;
+
 private:
     int hour;
     int minute;
     int second;
-
-public:
-    Clock() : hour(0), minute(0), second(0) {}
-
-    bool update()
-    {
-        auto now = std::chrono::system_clock::now();
-        std::time_t tt = std::chrono::system_clock::to_time_t(now);
-        std::tm *tm = std::localtime(&tt);
-        if (tm)
-        {
-            hour = tm->tm_hour;
-            minute = tm->tm_min;
-            second = tm->tm_sec;
-            return true;
-        }
-        return false;
-    }
-
-    int getHour() const { return hour; }
-    int getMinute() const { return minute; }
-    int getSecond() const { return second; }
 };
+
+#endif // CLOCK_HPP
