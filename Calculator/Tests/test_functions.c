@@ -2,6 +2,8 @@
 #include "tests.h"
 #include "functions.h"
 #include "angle_mode.h"
+#include "error.h"
+#include <math.h>
 
 static void test_unary_functions(void)
 {
@@ -43,26 +45,43 @@ static void test_factorial(void)
     ASSERT_DOUBLE_EQ(factorial(5), 120.0, "5! should be 120");
 }
 
-static void factorialOfNegativeCall(void)
-{
-    factorial(-3); /* should exit(EXIT_FAILURE): factorial is undefined for negatives */
-}
-
-static void factorialOfNonIntegerCall(void)
-{
-    factorial(2.5); /* should exit(EXIT_FAILURE): factorial requires an integer */
-}
-
-static void unknownBinaryFunctionCall(void)
-{
-    applyBinaryFunction("notarealfunction", 1.0, 2.0); /* should exit(EXIT_FAILURE) */
-}
-
+/*
+ * As of the Phase C error-handling migration, factorial(),
+ * applyFunction(), and applyBinaryFunction() report failure via NAN +
+ * calculatorSetLastError() instead of exit()ing -- see
+ * docs/CHANGELOG.md. These no longer need ASSERT_EXITS_NONZERO
+ * (fork+check-exit-status); a plain in-process assertion is enough,
+ * and confirms the process really does keep running afterward.
+ */
 static void test_functions_error_paths(void)
 {
-    ASSERT_EXITS_NONZERO(factorialOfNegativeCall(), "factorial(-3) should fail loudly, not return a wrong value");
-    ASSERT_EXITS_NONZERO(factorialOfNonIntegerCall(), "factorial(2.5) should fail loudly, not silently truncate");
-    ASSERT_EXITS_NONZERO(unknownBinaryFunctionCall(), "an unrecognized binary function name should fail loudly");
+    calculatorClearError();
+    ASSERT_TRUE(isnan(factorial(-3)),
+                "factorial(-3) should return NAN, not a wrong value");
+    ASSERT_TRUE(calculatorGetLastError() == CALC_ERR_DOMAIN,
+                "should record CALC_ERR_DOMAIN");
+
+    calculatorClearError();
+    ASSERT_TRUE(isnan(factorial(2.5)),
+                "factorial(2.5) should return NAN, not silently truncate");
+    ASSERT_TRUE(calculatorGetLastError() == CALC_ERR_DOMAIN,
+                "should record CALC_ERR_DOMAIN");
+
+    calculatorClearError();
+    ASSERT_TRUE(isnan(applyBinaryFunction("notarealfunction", 1.0, 2.0)),
+                "an unrecognized binary function name should return NAN");
+    ASSERT_TRUE(calculatorGetLastError() == CALC_ERR_INVALID_FUNCTION,
+                "should record CALC_ERR_INVALID_FUNCTION");
+
+    calculatorClearError();
+    ASSERT_TRUE(isnan(applyFunction("notarealfunction", 1.0)),
+                "an unrecognized unary function name should return NAN "
+                "(previously a latent bug: it silently returned 0)");
+    ASSERT_TRUE(calculatorGetLastError() == CALC_ERR_INVALID_FUNCTION,
+                "should record CALC_ERR_INVALID_FUNCTION");
+
+    /* And, just as importantly: the test process is still alive to
+       check these results at all, which is the entire point. */
 }
 
 void run_functions_tests(void)

@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include <math.h>
+#include "error.h"
 
 double readNumber(char expression[], int *index)
 {
@@ -19,8 +21,13 @@ double readNumber(char expression[], int *index)
 
         if (dotCount > 1)
         {
-            printf("Error: Invalid number format.\n");
-            exit(EXIT_FAILURE);
+            /* Unreachable through the normal CLI pipeline --
+               infixToPostfix() already rejects a number with more
+               than one decimal point before it's ever written into
+               the postfix string this function reads from. Kept as
+               a safety net for any other caller. */
+            calculatorSetLastError(CALC_ERR_INVALID_TOKEN);
+            return NAN;
         }
 
         (*index)++;

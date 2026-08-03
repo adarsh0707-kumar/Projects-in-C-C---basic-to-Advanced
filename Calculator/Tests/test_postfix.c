@@ -2,10 +2,11 @@
 #include "tests.h"
 #include "calculator.h"
 #include "variables.h"
-<<<<<<< HEAD
-=======
+<<<<<<< Updated upstream
 #include "../Inc/error.h"
->>>>>>> Calculator
+=======
+#include "error.h"
+>>>>>>> Stashed changes
 
 static void assertPostfix(const char *input, const char *expected, const char *msg)
 {
@@ -13,13 +14,8 @@ static void assertPostfix(const char *input, const char *expected, const char *m
     char out[256];
 
     strcpy(in, input);
-<<<<<<< HEAD
-    infixToPostfix(in, out);
-
-=======
 
     ASSERT_TRUE(infixToPostfix(in, out), "infixToPostfix should succeed on a valid expression");
->>>>>>> Calculator
     ASSERT_STR_EQ(out, expected, msg);
 }
 
@@ -58,11 +54,6 @@ static void test_evaluate_postfix(void)
     ASSERT_DOUBLE_EQ(evaluatePostfix(postfix3), 8.0, "pow(2,3) should evaluate to 8");
 }
 
-<<<<<<< HEAD
-void run_postfix_tests(void)
-{
-    test_infix_to_postfix();
-=======
 static void test_infix_to_postfix_error_paths(void)
 {
     char in[128];
@@ -90,7 +81,6 @@ void run_postfix_tests(void)
 {
     test_infix_to_postfix();
     test_infix_to_postfix_error_paths();
->>>>>>> Calculator
     test_operator_helpers();
     test_evaluate_postfix();
 }
