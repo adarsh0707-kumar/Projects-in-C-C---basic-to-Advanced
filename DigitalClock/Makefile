@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic -IInc
+CXXFLAGS = -std=c++17 -Wall -Wextra -Wpedantic -IInc
 TARGET = DigitalClock
 OBJDIR = Obj
 SOURCES = $(wildcard Src/*.cpp)

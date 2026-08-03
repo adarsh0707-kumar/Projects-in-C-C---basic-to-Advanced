@@ -1,13 +1,16 @@
 #include <iostream>
+#include "Version.hpp"
 
 int main()
 {
     std::cout << "=====================================\n";
-    std::cout << "      Digital Clock System v1.0      \n";
+    std::cout << "      " << Version::NAME << '\n';
     std::cout << "=====================================\n\n";
 
-    std::cout << "Project initialized successfully.\n";
-    std::cout << "Implementation starts in Sprint 2.\n";
+    std::cout << "Version : " << Version::VERSION << '\n';
+    std::cout << "Author  : " << Version::AUTHOR << '\n';
+
+    std::cout << "\nSprint 2.1 completed successfully.\n";
 
     return 0;
 }
