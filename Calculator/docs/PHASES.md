@@ -613,7 +613,208 @@ Status:
 
 ---
 
-# Phase 21 — Dynamic Data Structures
+> **Note (editorial):** Phases 21–27 below were built but never recorded
+> as their own phases at the time — `docs/CHANGELOG.md` was last updated
+> around the core-engine/v1.0 milestone and still lists statistics,
+> units, base conversion, complex numbers, matrices, and plotting as
+> "Upcoming" even though all of them shipped. Rather than guess at the
+> exact historical order, they're logged here now, after Phase 20, in
+> the numbering that was actually free. The previously-numbered Phases
+> 21–30 (all still genuinely unbuilt) were renumbered to 28–36 to make
+> room, with no change to their content.
+
+# Phase 21 — Angle Modes
+
+## Goal
+
+Let trig functions work in either degrees or radians.
+
+## Features
+
+- `mode deg` / `mode rad` / `mode` (show current mode)
+- Applies to `sin`/`cos`/`tan`/`asin`/`acos`/`atan2`; hyperbolic
+  functions are unaffected (they operate on plain reals)
+
+## Files
+
+angle_mode.c
+angle_mode.h
+
+## Deliverables
+
+Degree/radian angle mode switch.
+
+Status:
+✅ Completed
+
+---
+
+# Phase 22 — Unit Conversion
+
+## Goal
+
+Convert values between units of the same category.
+
+## Features
+
+- Length, weight, time, temperature
+- Bare form (`10km` -> prints the full conversion table) and explicit
+  target form (`10km to miles`)
+
+## Files
+
+units.c
+units.h
+
+## Deliverables
+
+Unit converter.
+
+Status:
+✅ Completed
+
+---
+
+# Phase 23 — Base Conversion
+
+## Goal
+
+Convert integers between number bases.
+
+## Features
+
+- `bin()`, `hex()`, `oct()` (decimal -> target base)
+- `dec()` (base, via a `b`/`o`/`h` suffix, -> decimal)
+- Negative integers (sign-magnitude)
+
+## Files
+
+base.c
+base.h
+
+## Deliverables
+
+Number base converter.
+
+Status:
+✅ Completed
+
+---
+
+# Phase 24 — Statistics Engine
+
+## Goal
+
+Compute descriptive statistics over a list of values.
+
+## Features
+
+- `mean`, `median`, `sum`, `min`, `max`, `count`
+- `stddev`/`variance` (sample, n-1) and `pstddev`/`pvariance`
+  (population, n)
+
+## Files
+
+stats.c
+stats.h
+
+## Deliverables
+
+Statistics function family.
+
+Status:
+✅ Completed
+
+---
+
+# Phase 25 — Complex Numbers
+
+## Goal
+
+Support complex-number arithmetic.
+
+## Features
+
+- Addition, subtraction, multiplication, division
+- `sqrt()` of negative/complex values
+- Real operator overloading (C++)
+
+## Files
+
+Complex.cpp
+Complex.hpp
+complex_eval.cpp
+complex_eval.h
+
+## Deliverables
+
+Complex-number calculator mode.
+
+Status:
+✅ Completed
+
+---
+
+# Phase 26 — Matrix Operations
+
+## Goal
+
+Support matrix arithmetic.
+
+## Features
+
+- Addition, subtraction, matrix/scalar multiplication
+- Transpose, determinant, inverse
+- Backed by `std::vector` (C++, RAII storage)
+
+## Files
+
+Matrix.cpp
+Matrix.hpp
+matrix_eval.cpp
+matrix_eval.h
+
+## Deliverables
+
+Matrix calculator mode.
+
+Status:
+✅ Completed
+
+---
+
+# Phase 27 — Graph Plotting
+
+## Goal
+
+Visualize mathematical functions.
+
+## Features
+
+- ASCII graphs (`Src/plot.c`, `plot(<expr in x>)`)
+- Function plotting over a fixed x-range, with NaN samples (e.g. the
+  asymptote in `plot(1/x)`) rendered as a gap instead of crashing
+
+## Not done (deferred to Phase 31 — GUI)
+
+- Zoom / pan (the ASCII view is a fixed x-range window)
+- Graphical (non-ASCII) 2D plots
+
+## Files
+
+plot.c
+plot.h
+
+## Deliverables
+
+Terminal ASCII graph plotting.
+
+Status:
+✅ Completed (ASCII plotting) — zoom/pan/graphical plots deferred to Phase 31
+
+---
+
+# Phase 28 — Dynamic Data Structures
 
 ## Goal
 
@@ -644,7 +845,7 @@ Status:
 
 ---
 
-# Phase 22 — Abstract Syntax Tree (AST)
+# Phase 29 — Abstract Syntax Tree (AST)
 
 ## Goal
 
@@ -675,7 +876,7 @@ Status:
 
 ---
 
-# Phase 23 — Symbolic Mathematics
+# Phase 30 — Symbolic Mathematics
 
 ## Goal
 
@@ -698,32 +899,7 @@ Status:
 
 ---
 
-# Phase 24 — Graph Plotting
-
-## Goal
-
-Visualize mathematical functions.
-
-## Features
-
-ASCII graphs
-
-2D plots
-
-Function plotting
-
-Zoom
-
-Pan
-
-Future GUI integration
-
-Status:
-🟡 Planned
-
----
-
-# Phase 25 — Graphical User Interface
+# Phase 31 — Graphical User Interface
 
 ## Goal
 
@@ -748,7 +924,7 @@ Status:
 
 ---
 
-# Phase 26 — Plugin Architecture
+# Phase 32 — Plugin Architecture
 
 ## Goal
 
@@ -769,7 +945,7 @@ Status:
 
 ---
 
-# Phase 27 — Calculator Scripting
+# Phase 33 — Calculator Scripting
 
 ## Goal
 
@@ -792,7 +968,7 @@ Status:
 
 ---
 
-# Phase 28 — Package Manager
+# Phase 34 — Package Manager
 
 ## Goal
 
@@ -813,7 +989,7 @@ Status:
 
 ---
 
-# Phase 29 — Cross Platform
+# Phase 35 — Cross Platform
 
 ## Goal
 
@@ -836,7 +1012,7 @@ Status:
 
 ---
 
-# Phase 30 — Version 2.0 Release
+# Phase 36 — Version 2.0 Release
 
 ## Goal
 

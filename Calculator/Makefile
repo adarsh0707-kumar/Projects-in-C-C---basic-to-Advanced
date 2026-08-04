@@ -111,6 +111,7 @@ CXX_OBJS = $(CXX_SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 # actual production code, not a reimplementation of it.
 # ------------------------------------------------------------------
 TEST_SRCS = $(TEST_DIR)/test_main.c \
+            $(TEST_DIR)/test_error.c \
             $(TEST_DIR)/test_stack.c \
             $(TEST_DIR)/test_tokenizer.c \
             $(TEST_DIR)/test_validator.c \

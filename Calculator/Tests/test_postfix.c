@@ -2,11 +2,7 @@
 #include "tests.h"
 #include "calculator.h"
 #include "variables.h"
-<<<<<<< Updated upstream
-#include "../Inc/error.h"
-=======
 #include "error.h"
->>>>>>> Stashed changes
 
 static void assertPostfix(const char *input, const char *expected, const char *msg)
 {

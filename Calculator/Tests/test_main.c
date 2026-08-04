@@ -8,6 +8,9 @@ int main(void)
 {
     printf("===== Running Calculator Unit Tests (Phase 20) =====\n\n");
 
+    printf("-- run_error_tests --\n");
+    run_error_tests();
+
     printf("-- run_stack_tests --\n");
     run_stack_tests();
 

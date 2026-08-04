@@ -444,18 +444,18 @@ A good issue report should include:
 
 # Future Contributions
 
-Contributions are welcome for future phases, including:
+Graph Plotting, Matrix Algebra, Complex Numbers, Statistics Engine,
+and Unit Converter have shipped (Phases 21–27). Contributions are
+welcome for the remaining future phases:
 
-- Graph Plotting
-- GTK GUI
+- Dynamic Data Structures
+- Abstract Syntax Tree (AST)
+- Symbolic Mathematics
 - Qt GUI
-- Matrix Algebra
-- Complex Numbers
-- Statistics Engine
-- Unit Converter
 - Expression Optimizer
 - Performance Improvements
 - Plugin Architecture
+- Calculator Scripting
 
 Refer to **ROADMAP.md** and **PHASES.md** before starting work on new features.
 

@@ -1,13 +1,12 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 #include "calculator.h"
 #include "stack.h"
 #include "functions.h"
 #include "function_info.h"
-<<<<<<< Updated upstream
-=======
 #include "../Inc/error.h"
 
 /* Last non-fatal evaluation error, set by applyOperation()/evaluatePostfix()
@@ -56,7 +55,6 @@ static void safePushDouble(DoubleStack *s, double value)
         setEvalError(calculatorErrorString(calculatorGetLastError()));
     }
 }
->>>>>>> Stashed changes
 
 double applyOperation(double a, double b, char op)
 {
@@ -74,22 +72,33 @@ double applyOperation(double a, double b, char op)
     case '/':
         if (b == 0.0)
         {
-            printf("Error: Division by zero!\n");
-            exit(EXIT_FAILURE);
+            calculatorSetLastError(CALC_ERR_DIVIDE_BY_ZERO);
+            return NAN;
         }
         return a / b;
 
     case '%':
+        /* Modulus is only meaningful for integer operands. */
+        if (floor(a) != a || floor(b) != b)
+        {
+            calculatorSetLastError(CALC_ERR_DOMAIN);
+            return NAN;
+        }
 
-        printf("Error: Modulus is supported only for integers.\n");
-        exit(EXIT_FAILURE);
+        if (b == 0.0)
+        {
+            calculatorSetLastError(CALC_ERR_DIVIDE_BY_ZERO);
+            return NAN;
+        }
+
+        return fmod(a, b);
 
     case '^':
         return pow(a, b);
 
     default:
-        printf("Error: Invalid operator '%c'\n", op);
-        exit(EXIT_FAILURE);
+        calculatorSetLastError(CALC_ERR_INVALID_TOKEN);
+        return NAN;
     }
 }
 
@@ -116,7 +125,7 @@ double evaluatePostfix(char postfix[])
              (isdigit(postfix[i + 1]) || postfix[i + 1] == '.')))
         {
             double number = readNumber(postfix, &i);
-            pushDouble(&s, number);
+            safePushDouble(&s, number);
             continue;
         }
 
@@ -159,12 +168,8 @@ double evaluatePostfix(char postfix[])
 
             if (argc == 1)
             {
-                double a = popDouble(&s);
+                double a = safePopDouble(&s);
 
-<<<<<<< Updated upstream
-                pushDouble(&s,
-                           applyFunction(function, a));
-=======
                 /* factorial() (reached via "fact") now fails
                    gracefully on its own -- see functions.c -- so
                    there's no need to pre-validate its argument here
@@ -175,15 +180,14 @@ double evaluatePostfix(char postfix[])
                     setEvalError("Factorial only works for non-negative integers.");
 
                 safePushDouble(&s, result);
->>>>>>> Stashed changes
             }
             else if (argc == 2)
             {
-                double b = popDouble(&s);
-                double a = popDouble(&s);
+                double b = safePopDouble(&s);
+                double a = safePopDouble(&s);
 
-                pushDouble(&s,
-                           applyBinaryFunction(function, a, b));
+                safePushDouble(&s,
+                               applyBinaryFunction(function, a, b));
             }
             else
             {
@@ -201,11 +205,6 @@ double evaluatePostfix(char postfix[])
         /* Factorial */
         if (postfix[i] == '!')
         {
-<<<<<<< Updated upstream
-            double value = popDouble(&s);
-
-            pushDouble(&s, factorial(value));
-=======
             double value = safePopDouble(&s);
             double result = factorial(value);
 
@@ -213,22 +212,24 @@ double evaluatePostfix(char postfix[])
                 setEvalError("Factorial only works for non-negative integers.");
 
             safePushDouble(&s, result);
->>>>>>> Stashed changes
 
             i++;
             continue;
         }
 
         /* Binary operator */
-        double b = popDouble(&s);
-        double a = popDouble(&s);
+        double b = safePopDouble(&s);
+        double a = safePopDouble(&s);
 
         double result = applyOperation(a, b, postfix[i]);
 
-        pushDouble(&s, result);
+        if (!isfinite(result))
+            setEvalError(calculatorErrorString(calculatorGetLastError()));
+
+        safePushDouble(&s, result);
 
         i++;
     }
 
-    return popDouble(&s);
+    return safePopDouble(&s);
 }

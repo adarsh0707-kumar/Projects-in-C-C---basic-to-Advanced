@@ -938,11 +938,16 @@ glib
 
 boost
 
-STL
-
 GTK (until GUI phase)
 
 Qt (until GUI phase)
+
+STL: allowed only inside the C++-only complex-number and matrix
+modules (`Src/Complex.cpp`, `Src/Matrix.cpp`, `Src/complex_eval.cpp`,
+`Src/matrix_eval.cpp`), which already use `std::vector`, `std::string`,
+and exceptions deliberately — see `docs/ARCHITECTURE.md`'s rationale
+for the C/C++ split. Not allowed in the C core engine (`Src/*.c`),
+which stays plain C11.
 
 Error handling rules:-
 

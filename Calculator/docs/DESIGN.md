@@ -168,14 +168,10 @@ can be reused in other projects.
 
 The calculator should support future additions without changing existing code.
 
-Future modules include:
-
-- Statistics
-- Matrix
-- Complex Numbers
-- Plotting
-- GUI
-- Unit Conversion
+Statistics, Matrix, Complex Numbers, Plotting, and Unit Conversion
+were all added later without disrupting the existing modules — direct
+evidence the design goal holds. GUI (Qt) is the next module to be
+added this way; see `docs/ROADMAP.md` Phase 31.
 
 ---
 
@@ -430,21 +426,11 @@ min
 hypot
 ```
 
-Future
-
-```
-mean
-
-median
-
-gamma
-
-fact
-
-matrix
-
-complex
-```
+Also implemented, in their own dedicated modules rather than the core
+Function Engine: `gamma`/`fact` (still core scientific functions, in
+`functions.c`); `mean`/`median`/... (`stats.c`, Phase 24);
+`matrix` operations (`Matrix.cpp`, Phase 26); `complex` arithmetic
+(`Complex.cpp`, Phase 25).
 
 ---
 
@@ -898,14 +884,14 @@ without redesigning the core engine.
 
 # Future Design Enhancements
 
-Planned improvements
+Matrix engine and Complex number engine shipped (Phases 25–26) and are
+no longer "future" — see `docs/PHASES.md`. Remaining planned
+improvements:
 
 - Dynamic stacks
 - Hash-table based variables
 - Function registry
 - Plugin architecture
-- Matrix engine
-- Complex number engine
 - Expression optimizer
 - Symbolic algebra
 - Multi-threaded evaluation

@@ -2,7 +2,7 @@
 # Calculator Project Memory
 
 Version: 2.0
-Status: Phase 20 Completed
+Status: Phase 27 Completed (CLI v1.0) — see docs/PHASES.md
 Language: C/C++
 Architecture: Modular
 Build System: Makefile
@@ -902,57 +902,39 @@ Documentation
 
 Complete
 
+Angle Mode, Unit Conversion, Base Conversion, Statistics, Complex
+Numbers, Matrix Operations, Graph Plotting
+
+Complete (Phases 21–27)
+
 ---
 
 # Remaining Roadmap
 
-Phase 21
+This section used to list Angle Mode, Statistics, Matrix Support,
+Complex Numbers, Base Conversion, Unit Conversion, and Graph Plotting
+as remaining work under a phase numbering that never matched
+`docs/PHASES.md`. All seven shipped (Phases 21–27). Current source of
+truth for phase status is `docs/PHASES.md`; summary in
+`docs/ROADMAP.md`. What's actually still remaining:
 
-Angle Mode
+Phase 28 — Dynamic Data Structures
 
-Phase 22
+Phase 29 — Abstract Syntax Tree (AST)
 
-Statistics
+Phase 30 — Symbolic Mathematics
 
-Phase 23
+Phase 31 — Graphical User Interface (Qt)
 
-Matrix Support
+Phase 32 — Plugin Architecture
 
-Phase 24
+Phase 33 — Calculator Scripting
 
-Complex Numbers
+Phase 34 — Package Manager
 
-Phase 25
+Phase 35 — Cross Platform
 
-Base Conversion
-
-Phase 26
-
-Unit Conversion
-
-Phase 27
-
-Expression History Commands
-
-Phase 28
-
-Dynamic Memory Optimization
-
-Phase 29
-
-Comprehensive Unit Testing
-
-Phase 30
-
-GTK/Qt GUI
-
-Phase 31
-
-Graph Plotting
-
-Phase 32
-
-Plugin Architecture
+Phase 36 — Version 2.0 Release
 
 ---
 
@@ -992,4 +974,7 @@ PASS
 
 Overall Project Status
 
-Approximately 85–90% of the planned core scientific calculator is complete. The remaining phases focus on advanced capabilities (statistics, matrices, complex numbers, GUI, graphing, and optimization) rather than fixing the existing architecture.
+v1.0 (CLI engine) is complete: Phases 1–27, including statistics,
+matrices, complex numbers, and graphing — see `docs/PHASES.md`. The
+remaining phases (28–36) are GUI and beyond, not fixes to the existing
+architecture.

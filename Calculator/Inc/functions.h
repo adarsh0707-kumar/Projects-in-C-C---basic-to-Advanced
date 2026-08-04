@@ -1,10 +1,6 @@
 #ifndef FUNCTIONS_H
 #define FUNCTIONS_H
 
-<<<<<<< Updated upstream
-double applyFunction(const char name[], double value);
-
-=======
 /** @brief Applies a named unary function to a value (e.g. "sqrt", "sin",
  *  "fact"). Trig functions respect the current angle mode -- see
  *  angle_mode.h.
@@ -23,13 +19,10 @@ double applyFunction(const char name[], double value);
  *  @param b    Second argument.
  *  @return The function's result, or NAN if @p name isn't recognized
  *  -- see applyFunction()'s note above; the same reasoning applies. */
->>>>>>> Stashed changes
 double applyBinaryFunction(const char name[],
                            double a,
                            double b);
 
-<<<<<<< Updated upstream
-=======
 /** @brief Computes n! for a non-negative integer n.
  *
  *  Returns NAN (with a reason recorded via calculatorSetLastError(),
@@ -42,7 +35,6 @@ double applyBinaryFunction(const char name[],
  *  what protects any *other* caller that doesn't.
  *  @param n Must be a non-negative integer.
  *  @return n!, or NAN on invalid input. */
->>>>>>> Stashed changes
 double factorial(double n);
 
 #endif

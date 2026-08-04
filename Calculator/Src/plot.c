@@ -148,9 +148,6 @@ int evaluatePlotExpression(const char input[], char errorMsg[], size_t errorSize
         setVariable("x", x);
 
         char postfix[400];
-<<<<<<< HEAD
-        infixToPostfix(processed, postfix);
-=======
 
         if (!infixToPostfix(processed, postfix))
         {
@@ -162,7 +159,6 @@ int evaluatePlotExpression(const char input[], char errorMsg[], size_t errorSize
                instead of repeating it once per sample (61 times). */
             return 0;
         }
->>>>>>> Calculator
 
         double y = evaluatePostfix(postfix);
 

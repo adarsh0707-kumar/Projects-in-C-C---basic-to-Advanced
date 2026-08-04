@@ -1,6 +1,7 @@
 #ifndef TESTS_H
 #define TESTS_H
 
+void run_error_tests(void);
 void run_stack_tests(void);
 void run_tokenizer_tests(void);
 void run_validator_tests(void);

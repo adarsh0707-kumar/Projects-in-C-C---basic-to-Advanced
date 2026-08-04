@@ -237,9 +237,9 @@ TokenType
 
 ### angle_mode.h
 
-Future module.
+Implemented (Phase 21). Global degree/radian mode for trig functions.
 
-Stores
+Modes
 
 ```
 DEG
@@ -251,49 +251,45 @@ RAD
 
 ### stats.h
 
-Statistics engine.
+Implemented (Phase 24). Statistics engine.
 
-Future support
+Supports
 
 ```
 mean
 
 median
 
-variance
+sum, min, max, count
 
-stddev
+stddev, variance     (sample, divides by n-1)
 
-mode
+pstddev, pvariance   (population, divides by n)
 ```
 
 ---
 
 ### units.h
 
-Unit conversion engine.
+Implemented (Phase 22). Unit conversion engine.
 
 Supports
 
 ```
 Length
 
-Mass
+Weight
 
 Temperature
 
 Time
-
-Area
-
-Volume
 ```
 
 ---
 
 ### base.h
 
-Number base conversion.
+Implemented (Phase 23). Number base conversion.
 
 Supports
 
@@ -311,25 +307,23 @@ Hexadecimal
 
 ### plot.h
 
-ASCII graph plotting.
-
-Later GTK plotting.
+Implemented (Phase 27). ASCII terminal graph plotting. A graphical
+(GUI) plot view is future work, tracked under Phase 31 (GUI), not a
+separate plotting phase.
 
 ---
 
 ### Complex.hpp
 
-Complex number implementation.
-
-Future C++ module.
+Implemented (Phase 25). Complex number implementation (C++ class with
+operator overloading).
 
 ---
 
 ### Matrix.hpp
 
-Matrix class.
-
-Future C++ module.
+Implemented (Phase 26). Matrix class, backed by
+`std::vector<std::vector<double>>`.
 
 ---
 
@@ -543,7 +537,7 @@ Build/history.txt
 
 ## angle_mode.c
 
-Future implementation.
+Implemented.
 
 Responsible for
 
@@ -557,19 +551,19 @@ Radians
 
 ## stats.c
 
-Future statistics engine.
+Implemented. Statistics engine.
 
 ---
 
 ## units.c
 
-Future unit conversion.
+Implemented. Unit conversion.
 
 ---
 
 ## base.c
 
-Future number system conversions.
+Implemented. Number base conversion.
 
 ---
 
@@ -915,27 +909,25 @@ Errors detected include:
 - Invalid Parentheses
 - Misplaced Commas
 
-Fatal errors terminate using:
-
-```c
-exit(EXIT_FAILURE);
-```
+As of the 2026-08-04 error-handling migration (see
+`docs/CHANGELOG.md`), there are **zero `exit()` calls anywhere in
+`Src/`** — every error path above returns a status code (`0`/`NAN`
++ `calculatorSetLastError()`) instead of terminating the process. This
+replaces an earlier version of this document that described fatal
+errors as calling `exit(EXIT_FAILURE)`, which was true of the code at
+one point but is not anymore.
 
 ---
 
 # Future Architecture
 
-Upcoming modules include:
+Angle Mode, Statistics, Matrix, Complex Number, Unit Conversion, Base
+Conversion, and the ASCII Graph Plotter are all implemented (Phases
+21–27 — see `docs/PHASES.md`). Genuinely upcoming modules:
 
-- Angle Mode Manager
-- Statistics Engine
-- Matrix Engine
-- Complex Number Engine
-- Unit Conversion Engine
-- Base Conversion Engine
-- ASCII Graph Plotter
-- GTK GUI
-- Plugin System
+- GUI (Qt — Phase 31)
+- Plugin System (Phase 32)
+- Scripting (Phase 33)
 
 The modular architecture allows these features to be added with minimal changes to the existing codebase.
 
@@ -952,7 +944,7 @@ The modular architecture allows these features to be added with minimal changes 
 | Version Control  | Git                                     |
 | Testing          | Custom Unit Test Framework              |
 | Documentation    | Markdown                                |
-| Future GUI       | GTK4 / Qt                               |
+| Future GUI       | Qt (Phase 31)                           |
 | Platform         | Linux (Primary), Cross-platform capable |
 
 ---

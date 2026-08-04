@@ -3,14 +3,12 @@
 
 double precedence(char op);
 
+/** @brief Returns 1 if @p ch is one of the recognized operator
+ *  characters (+ - * / % ^ !), 0 otherwise. */
+int isOperator(char ch);
+
 double applyOperation(double a, double b, char op);
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-void infixToPostfix(char infix[], char postfix[]);
-=======
-=======
->>>>>>> Stashed changes
 /** @brief Converts an infix expression into postfix (Reverse Polish) form.
  *  @param infix   Null-terminated input expression.
  *  @param postfix Destination buffer for the postfix form. Its
@@ -24,6 +22,11 @@ int infixToPostfix(char infix[], char postfix[]);
 
 double evaluatePostfix(char postfix[]);
 
+/** @brief Returns a human-readable description of the most recent
+ *  recoverable error from infixToPostfix()/evaluatePostfix(), or an
+ *  empty string if the last call succeeded. */
+const char *getLastEvalError(void);
+
 int validateParentheses(char expression[]);
 
 double readNumber(char expression[], int *index);
@@ -31,7 +34,5 @@ double readNumber(char expression[], int *index);
 int validateExpression(char expression[]);
 
 void insertImplicitMultiplication(char input[], char output[]);
-
-void infixToPostfix(char infix[], char postfix[]);
 
 #endif

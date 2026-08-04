@@ -17,8 +17,8 @@
 
 int main(void)
 {
-    char infix[256];
-    char postfix[256];
+    char infix[512];
+    char postfix[1024];
 
     char variableName[32];
     char expression[256];
@@ -201,6 +201,18 @@ int main(void)
             if (equal != NULL)
             {
                 int len = equal - infix;
+
+                if (len <= 0)
+                {
+                    printf("Error: Missing variable name before '='.\n");
+                    break;
+                }
+
+                if (len >= (int)sizeof(variableName))
+                {
+                    printf("Error: Variable name too long.\n");
+                    break;
+                }
 
                 strncpy(variableName, infix, len);
                 variableName[len] = '\0';

@@ -108,12 +108,6 @@ int previousNonSpace(char expression[], int index)
     return index;
 }
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-void infixToPostfix(char infix[], char postfix[])
-=======
-=======
->>>>>>> Stashed changes
 /* Both of these "should never happen" given how infixToPostfix() drives
    the stack (it never pops/peeks without having just confirmed the
    stack isn't empty, and never pushes more tokens than there are
@@ -204,19 +198,9 @@ int infixToPostfix(char infix[], char postfix[])
 
             if (infix[temp] == '(' && isFunction(identifier))
             {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-                pushToken(&operators, makeFunctionToken(identifier));
-=======
                 if (!pushToken(&operators, makeFunctionToken(identifier)))
                     return reportTooComplex();
 
->>>>>>> Stashed changes
-=======
-                if (!pushToken(&operators, makeFunctionToken(identifier)))
-                    return reportTooComplex();
-
->>>>>>> Stashed changes
                 i = temp;
                 continue;
             }
@@ -280,19 +264,9 @@ int infixToPostfix(char infix[], char postfix[])
 
         if (infix[i] == '(')
         {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-            pushToken(&operators, makeLeftParenToken());
-=======
             if (!pushToken(&operators, makeLeftParenToken()))
                 return reportTooComplex();
 
->>>>>>> Stashed changes
-=======
-            if (!pushToken(&operators, makeLeftParenToken()))
-                return reportTooComplex();
-
->>>>>>> Stashed changes
             i++;
             continue;
         }
@@ -305,35 +279,16 @@ int infixToPostfix(char infix[], char postfix[])
         {
             while (!isEmptyTokenStack(&operators))
             {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-                Token top = peekToken(&operators);
-=======
-=======
->>>>>>> Stashed changes
                 Token top;
 
                 if (!peekToken(&operators, &top))
                     return reportInternalStackError();
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 
                 if (top.type == TOKEN_LEFT_PAREN)
                     break;
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-                top = popToken(&operators);
-=======
                 if (!popToken(&operators, &top))
                     return reportInternalStackError();
->>>>>>> Stashed changes
-=======
-                if (!popToken(&operators, &top))
-                    return reportInternalStackError();
->>>>>>> Stashed changes
 
                 j += sprintf(&postfix[j], "%s ", top.text);
             }
@@ -346,33 +301,13 @@ int infixToPostfix(char infix[], char postfix[])
             }
 
             /* Remove '(' */
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-            popToken(&operators);
-=======
             Token discarded;
             if (!popToken(&operators, &discarded))
                 return reportInternalStackError();
->>>>>>> Stashed changes
-=======
-            Token discarded;
-            if (!popToken(&operators, &discarded))
-                return reportInternalStackError();
->>>>>>> Stashed changes
 
             /* If a function is on top, output it */
             if (!isEmptyTokenStack(&operators))
             {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-                Token top = peekToken(&operators);
-
-                if (top.type == TOKEN_FUNCTION)
-                {
-                    top = popToken(&operators);
-=======
-=======
->>>>>>> Stashed changes
                 Token top;
 
                 if (!peekToken(&operators, &top))
@@ -383,10 +318,6 @@ int infixToPostfix(char infix[], char postfix[])
                     if (!popToken(&operators, &top))
                         return reportInternalStackError();
 
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
                     j += sprintf(&postfix[j], "%s ", top.text);
                 }
             }
@@ -400,39 +331,19 @@ int infixToPostfix(char infix[], char postfix[])
         {
             while (!isEmptyTokenStack(&operators))
             {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-                Token top = peekToken(&operators);
-=======
-=======
->>>>>>> Stashed changes
                 Token top;
 
                 if (!peekToken(&operators, &top))
                     return reportInternalStackError();
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 
                 if (top.type != TOKEN_OPERATOR)
                     break;
 
                 if (precedence(top.text[0]) >= precedence('!'))
                 {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-                    top = popToken(&operators);
-=======
                     if (!popToken(&operators, &top))
                         return reportInternalStackError();
 
->>>>>>> Stashed changes
-=======
-                    if (!popToken(&operators, &top))
-                        return reportInternalStackError();
-
->>>>>>> Stashed changes
                     j += sprintf(&postfix[j], "%s ", top.text);
                 }
                 else
@@ -441,17 +352,8 @@ int infixToPostfix(char infix[], char postfix[])
                 }
             }
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-            pushToken(&operators, makeOperatorToken('!'));
-=======
             if (!pushToken(&operators, makeOperatorToken('!')))
                 return reportTooComplex();
->>>>>>> Stashed changes
-=======
-            if (!pushToken(&operators, makeOperatorToken('!')))
-                return reportTooComplex();
->>>>>>> Stashed changes
 
             i++;
             continue;
@@ -464,35 +366,16 @@ int infixToPostfix(char infix[], char postfix[])
         {
             while (!isEmptyTokenStack(&operators))
             {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-                Token top = peekToken(&operators);
-=======
-=======
->>>>>>> Stashed changes
                 Token top;
 
                 if (!peekToken(&operators, &top))
                     return reportInternalStackError();
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 
                 if (top.type == TOKEN_LEFT_PAREN)
                     break;
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-                top = popToken(&operators);
-=======
                 if (!popToken(&operators, &top))
                     return reportInternalStackError();
->>>>>>> Stashed changes
-=======
-                if (!popToken(&operators, &top))
-                    return reportInternalStackError();
->>>>>>> Stashed changes
 
                 j += sprintf(&postfix[j],
                              "%s ",
@@ -518,20 +401,10 @@ int infixToPostfix(char infix[], char postfix[])
 
         while (!isEmptyTokenStack(&operators))
         {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-            Token top = peekToken(&operators);
-=======
-=======
->>>>>>> Stashed changes
             Token top;
 
             if (!peekToken(&operators, &top))
                 return reportInternalStackError();
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 
             if (top.type != TOKEN_OPERATOR)
                 break;
@@ -542,19 +415,9 @@ int infixToPostfix(char infix[], char postfix[])
                 (precedence(topOp) == precedence(current.text[0]) &&
                  current.text[0] != '^'))
             {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-                top = popToken(&operators);
-=======
                 if (!popToken(&operators, &top))
                     return reportInternalStackError();
 
->>>>>>> Stashed changes
-=======
-                if (!popToken(&operators, &top))
-                    return reportInternalStackError();
-
->>>>>>> Stashed changes
                 j += sprintf(&postfix[j], "%s ", top.text);
             }
             else
@@ -563,19 +426,9 @@ int infixToPostfix(char infix[], char postfix[])
             }
         }
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-        pushToken(&operators, current);
-=======
         if (!pushToken(&operators, current))
             return reportTooComplex();
 
->>>>>>> Stashed changes
-=======
-        if (!pushToken(&operators, current))
-            return reportTooComplex();
-
->>>>>>> Stashed changes
         i++;
     }
 
@@ -583,20 +436,10 @@ int infixToPostfix(char infix[], char postfix[])
 
     while (!isEmptyTokenStack(&operators))
     {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-        Token top = popToken(&operators);
-=======
-=======
->>>>>>> Stashed changes
         Token top;
 
         if (!popToken(&operators, &top))
             return reportInternalStackError();
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 
         if (top.type == TOKEN_LEFT_PAREN)
             continue;

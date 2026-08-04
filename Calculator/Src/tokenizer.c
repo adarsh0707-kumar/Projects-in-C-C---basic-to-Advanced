@@ -36,6 +36,14 @@ double readNumber(char expression[], int *index)
     char temp[64];
     int len = *index - start;
 
+    if (len >= (int)sizeof(temp))
+    {
+        /* Unreachable through the normal CLI pipeline -- numbers this
+           long can't occur in valid input. Kept as a safety net. */
+        calculatorSetLastError(CALC_ERR_INVALID_TOKEN);
+        return NAN;
+    }
+
     for (int i = 0; i < len; i++)
         temp[i] = expression[start + i];
 
