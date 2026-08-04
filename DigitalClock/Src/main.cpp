@@ -28,11 +28,25 @@ int main()
     Logger logger;
     Screen screen;
 
-    if (!logger.open())
+
+    if (!logger.open("Logs/application.log"))
     {
-        std::cerr << "Unable to open log file.\n";
+        std::cerr
+            << "Unable to open log file.\n";
+
         return 1;
     }
+
+    /*
+    ------------------------------------------------------------
+    Logger Configuration
+    ------------------------------------------------------------
+    */
+
+    logger.setConsoleOutput(false);
+
+    logger.setMinimumLevel(
+        Logger::Level::INFO);
 
     logger.log(Logger::Level::INFO,
                "Logger initialized successfully.");
