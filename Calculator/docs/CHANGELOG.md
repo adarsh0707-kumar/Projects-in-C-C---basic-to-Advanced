@@ -8,6 +8,34 @@ The format is based on **Keep a Changelog** and follows **Semantic Versioning** 
 
 # [Unreleased]
 
+## 2026-08-04 (2) — Close the test-coverage gaps flagged in TEST_PLAN.md
+
+### Added
+
+- `Tests/test_units.c`, `test_stats.c`, `test_base.c`, `test_plot.c`
+  covering `units.c`, `stats.c`, `base.c`, `plot.c` — previously zero
+  automated coverage, only exercised manually through the CLI.
+- `Tests/test_complex.c`, `test_matrix.c` covering the C++ engine
+  (`Complex.cpp`/`complex_eval.cpp`, `Matrix.cpp`/`matrix_eval.cpp`)
+  via their `extern "C"` entry points, so the test files themselves
+  stay plain C. The Makefile's test target now also builds
+  `$(CXX_SRCS)` into the test binary (`TESTED_CXX_OBJS`) and links
+  with `g++` instead of `gcc`, since linking C++ objects (STL,
+  exceptions) needs libstdc++ — same reasoning as the main
+  `$(TARGET)` link rule. Test suite: 271 -> 433 cases.
+- `plot(1/x)`'s asymptote-doesn't-crash behavior — the exact
+  regression this project's docs call out by name — now has a
+  dedicated test asserting the overall call succeeds despite the
+  x=0 sample, not just manual verification.
+
+### Found while writing tests (no code changes)
+
+- `parseValueWithUnit()` (`units.h`) is fully implemented but never
+  called anywhere in the actual CLI pipeline (`main.c`'s unit
+  converter only calls `parseConversion()`). Left as-is — plausible
+  future-GUI use — but now flagged in `docs/TEST_PLAN.md` rather than
+  silently unreferenced.
+
 ## 2026-08-04 — Repository repair, security fixes, and documentation sync
 
 ### Fixed

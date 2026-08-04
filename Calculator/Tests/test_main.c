@@ -38,6 +38,24 @@ int main(void)
     printf("-- run_memory_tests --\n");
     run_memory_tests();
 
+    printf("-- run_units_tests --\n");
+    run_units_tests();
+
+    printf("-- run_stats_tests --\n");
+    run_stats_tests();
+
+    printf("-- run_base_tests --\n");
+    run_base_tests();
+
+    printf("-- run_plot_tests --\n");
+    run_plot_tests();
+
+    printf("-- run_complex_tests --\n");
+    run_complex_tests();
+
+    printf("-- run_matrix_tests --\n");
+    run_matrix_tests();
+
     printf("\n=====================================================\n");
 
     if (testsFailed == 0)

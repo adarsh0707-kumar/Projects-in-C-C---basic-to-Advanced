@@ -49,7 +49,7 @@ table to match.
 **v1.0 (CLI engine): shipped.** All of Phases 1–27 are complete — the
 full expression engine, scientific functions, variables/memory/history,
 statistics, unit and base conversion, complex numbers, matrices, and
-ASCII graph plotting, backed by 271 passing unit tests (clean under
+ASCII graph plotting, backed by 433 passing unit tests (clean under
 AddressSanitizer/UndefinedBehaviorSanitizer).
 
 | Phase(s) | Area                                        | Status        |

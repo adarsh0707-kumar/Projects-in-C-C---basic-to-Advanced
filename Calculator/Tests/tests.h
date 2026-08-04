@@ -11,5 +11,11 @@ void run_functions_tests(void);
 void run_variables_tests(void);
 void run_history_tests(void);
 void run_memory_tests(void);
+void run_units_tests(void);
+void run_stats_tests(void);
+void run_base_tests(void);
+void run_plot_tests(void);
+void run_complex_tests(void);
+void run_matrix_tests(void);
 
 #endif

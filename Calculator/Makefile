@@ -120,14 +120,24 @@ TEST_SRCS = $(TEST_DIR)/test_main.c \
             $(TEST_DIR)/test_functions.c \
             $(TEST_DIR)/test_variables.c \
             $(TEST_DIR)/test_history.c \
-            $(TEST_DIR)/test_memory.c
+            $(TEST_DIR)/test_memory.c \
+            $(TEST_DIR)/test_units.c \
+            $(TEST_DIR)/test_stats.c \
+            $(TEST_DIR)/test_base.c \
+            $(TEST_DIR)/test_plot.c \
+            $(TEST_DIR)/test_complex.c \
+            $(TEST_DIR)/test_matrix.c
 
 # Every module under test, EXCEPT main.c (Tests/test_main.c supplies
 # main() instead).
 TESTED_SRCS = $(filter-out $(SRC_DIR)/main.c,$(SRCS))
 
-TEST_OBJS      = $(TEST_SRCS:$(TEST_DIR)/%.c=$(TEST_OBJ_DIR)/test_%.o)
-TESTED_OBJS    = $(TESTED_SRCS:$(SRC_DIR)/%.c=$(TEST_OBJ_DIR)/%.o)
+TEST_OBJS       = $(TEST_SRCS:$(TEST_DIR)/%.c=$(TEST_OBJ_DIR)/test_%.o)
+TESTED_OBJS     = $(TESTED_SRCS:$(SRC_DIR)/%.c=$(TEST_OBJ_DIR)/%.o)
+# test_complex.c/test_matrix.c call the extern "C" entry points into
+# Complex.cpp/Matrix.cpp/complex_eval.cpp/matrix_eval.cpp, so those
+# four C++ objects need to be in the test binary too.
+TESTED_CXX_OBJS = $(CXX_SRCS:$(SRC_DIR)/%.cpp=$(TEST_OBJ_DIR)/%.o)
 
 # ------------------------------------------------------------------
 # Primary targets
@@ -170,14 +180,20 @@ run: $(TARGET)
 test: $(TEST_TARGET)
 	./$(TEST_TARGET)
 
-$(TEST_TARGET): $(TEST_OBJS) $(TESTED_OBJS)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+# Linked with g++ (not gcc) because $(TESTED_CXX_OBJS) pulls in
+# libstdc++ (std::vector, std::string, exceptions) -- same reasoning
+# as the main $(TARGET) link rule above.
+$(TEST_TARGET): $(TEST_OBJS) $(TESTED_OBJS) $(TESTED_CXX_OBJS)
+	$(CXX) -o $@ $^ $(LDFLAGS)
 
 $(TEST_OBJ_DIR)/test_%.o: $(TEST_DIR)/%.c | $(TEST_OBJ_DIR)
 	$(CC) $(CFLAGS) -I$(TEST_DIR) -c $< -o $@
 
 $(TEST_OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(TEST_OBJ_DIR)
 	$(CC) $(CFLAGS) -I$(TEST_DIR) -c $< -o $@
+
+$(TEST_OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(TEST_OBJ_DIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(TEST_OBJ_DIR):
 	mkdir -p $(TEST_OBJ_DIR)

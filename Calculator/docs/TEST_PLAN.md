@@ -20,7 +20,7 @@ make asan && make BUILD=asan test   # same suite under ASan + UBSan
 ```
 
 A shared pass/fail counter (`test_framework.h`) prints a running total;
-the run exits non-zero if anything failed. As of this writing: **271
+the run exits non-zero if anything failed. As of this writing: **433
 tests, all passing**, clean under AddressSanitizer and
 UndefinedBehaviorSanitizer.
 
@@ -59,6 +59,20 @@ UndefinedBehaviorSanitizer.
 | `test_variables.c`      | `variables.c`                      | Built-in constants (`pi`, `e`), their read-only enforcement, user variable set/get, undefined-variable lookup, and `ans` |
 | `test_history.c`        | `history.c`                        | Adding an entry and recalling it (`!!`), recall by number (`!N`), and clearing history |
 | `test_memory.c`         | `memory.c`                         | MS/MR/M+/M-/MC |
+| `test_units.c`          | `units.c`                          | Parsing `<value><unit>`, unit-category lookup, bare and `to <unit>` conversion forms, category-mismatch/unknown-unit error paths |
+| `test_stats.c`          | `stats.c`                          | `mean`/`median`/`sum`/`min`/`max`/`count`, sample `stddev`/`variance` (n-1) vs. population `pstddev`/`pvariance` (n), and error paths (unparseable argument list, too few values, unknown function) |
+| `test_base.c`           | `base.c`                           | `bin`/`hex`/`oct` (decimal → base, including negative sign-magnitude), `dec` (base → decimal via a b/o/h suffix), and error paths (bad digit, missing/unknown suffix) |
+| `test_plot.c`           | `plot.c`                           | Successful plotting, the `plot(1/x)` asymptote-doesn't-crash regression by name, syntax-error paths (`extractPlotArgument()`), and the undefined-variable path that intentionally leaves `errorMsg` empty |
+| `test_complex.c`        | `Complex.cpp`, `complex_eval.cpp`  | Arithmetic (`+ - * /`), `sqrt()` of a negative real, output formatting (purely real, purely imaginary, signed imaginary part), and parser error paths |
+| `test_matrix.c`         | `Matrix.cpp`, `matrix_eval.cpp`    | Addition/subtraction/scalar and matrix multiplication, `det`/`transpose`/`inverse`, and error paths (dimension mismatch, non-square, singular, ragged rows) |
+
+Closing this gap surfaced one dead function worth noting:
+`parseValueWithUnit()` (`units.h`) is fully implemented and tested,
+but nothing in the actual CLI pipeline calls it — `main.c`'s unit
+converter only ever calls `parseConversion()`. Not removed as part of
+this pass since it's plausible future-GUI code wants a
+single-value-no-"to"-clause parser, but worth knowing it's currently
+unreferenced production code.
 
 ## Coverage Gaps
 
@@ -69,16 +83,6 @@ silently go stale the way the rest of this file did before today:
   what `test_postfix.c` exercises indirectly through
   `evaluatePostfix()`. Division-by-zero, modulus on non-integers, and
   the unknown-operator path aren't asserted directly.
-- **`units.c`, `stats.c`, `base.c`, `plot.c` have no unit tests at
-  all** — they're only exercised manually through the CLI. These are
-  all string-parsing-heavy modules (see `docs/RULES.md`'s "Always
-  validate user input" rule) and are exactly the kind of code where
-  regressions are easy to miss without tests.
-- **The C++ modules (`Complex.cpp`, `Matrix.cpp`, `complex_eval.cpp`,
-  `matrix_eval.cpp`) have no automated tests.** They're only linked
-  into the CLI binary, not into `run_tests` at all — the Makefile's
-  `TESTED_SRCS` only pulls from `SRCS` (the C sources), not
-  `CXX_SRCS`.
 - **`main.c` is entirely untested** by design — `test_main.c` replaces
   it as the test binary's entry point, so its CLI-glue logic (menu
   dispatch, buffer handling, history-shortcut parsing) is only
@@ -103,3 +107,12 @@ silently go stale the way the rest of this file did before today:
 4. Add the file to `TEST_SRCS` in the Makefile.
 5. `make test` — the total test count updates automatically from the
    shared counters, nothing else to keep in sync by hand.
+
+Testing a C++ module (`Complex.cpp`/`Matrix.cpp` and friends) works
+the same way, but the test file itself stays plain C: call the
+module's `extern "C"` entry point (`complex_eval.h`/`matrix_eval.h`),
+not the C++ classes directly. This is exactly what `test_complex.c`
+and `test_matrix.c` do — see them for the pattern. The Makefile
+already builds `$(CXX_SRCS)` into the test binary
+(`TESTED_CXX_OBJS`) and links `$(TEST_TARGET)` with `g++`, so no
+Makefile changes are needed to add more C++-module tests.
