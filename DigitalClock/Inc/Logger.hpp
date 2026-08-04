@@ -1,330 +1,174 @@
 #ifndef LOGGER_HPP
 #define LOGGER_HPP
 
-/*
-============================================================
-Logger Module
-============================================================
-
-Author
-------
-Adarsh Kumar
-
-Purpose
--------
-Provides a centralized logging system for the Digital Clock
-application.
-
-Responsibilities
-----------------
-✓ Create and open log files
-✓ Write formatted log entries
-✓ Generate timestamps
-✓ Support multiple log levels
-✓ Thread-safe logging
-✓ Optional console output
-✓ Session management
-
-Features
---------
-• DEBUG
-• INFO
-• WARNING
-• ERROR
-
-Example
--------
-Logger logger;
-
-logger.open("Logs/application.log");
-
-logger.log(
-    Logger::Level::INFO,
-    "Application started."
-);
-
-============================================================
-*/
+/******************************************************************************
+ * @file Logger.hpp
+ * @brief Declaration of the Logger class.
+ * @author Adarsh Kumar
+ * @date 2026
+ *
+ * The Logger module provides a centralized logging system for the
+ * Digital Clock application. It supports formatted log messages,
+ * multiple severity levels, optional console output, and thread-safe
+ * logging operations.
+ *
+ * Responsibilities:
+ *  - Create and manage log files
+ *  - Write formatted log entries
+ *  - Generate timestamps
+ *  - Support multiple logging levels
+ *  - Provide thread-safe logging
+ *  - Enable optional console output
+ *  - Maintain logging sessions
+ ******************************************************************************/
 
 #include <fstream>
 #include <mutex>
 #include <string>
 
+/**
+ * @class Logger
+ * @brief Provides logging services for the application.
+ *
+ * The Logger class records application events into a log file
+ * while optionally displaying them on the console. It supports
+ * multiple log levels and ensures thread-safe access using a mutex.
+ */
 class Logger
 {
 public:
-    /*
-    --------------------------------------------------------
-    Log Severity Levels
-    --------------------------------------------------------
-
-    DEBUG
-        Detailed debugging information.
-
-    INFO
-        General application information.
-
-    WARNING
-        Non-critical issues.
-
-    ERROR
-        Critical failures.
-    --------------------------------------------------------
-    */
+    /**
+     * @enum Level
+     * @brief Defines the severity level of log messages.
+     */
     enum class Level
     {
-        DEBUG,
-        INFO,
-        WARNING,
-        ERROR
+        DEBUG,   /**< Detailed debugging information. */
+        INFO,    /**< General application information. */
+        WARNING, /**< Warning messages for unexpected situations. */
+        ERROR    /**< Error messages indicating failures. */
     };
 
-    /*
-    --------------------------------------------------------
-    Constructor
-
-    Initializes default logger configuration.
-
-    Default Settings
-    ----------------
-    Console Output : Enabled
-
-    Minimum Level  : DEBUG
-    --------------------------------------------------------
-    */
+    /**
+     * @brief Constructs a Logger object.
+     *
+     * Initializes the logger with default settings.
+     */
     Logger();
 
-    /*
-    --------------------------------------------------------
-    Destructor
-
-    Ensures the log file is properly closed.
-
-    Automatically flushes remaining buffered data.
-    --------------------------------------------------------
-    */
+    /**
+     * @brief Destroys the Logger object.
+     *
+     * Ensures that the log file is properly closed and
+     * any allocated resources are released.
+     */
     ~Logger();
 
-    /*
-    --------------------------------------------------------
-    Open Log File
-
-    Parameters
-    ----------
-    filename
-
-        Path to the log file.
-
-    Returns
-    -------
-    true
-
-        Successfully opened.
-
-    false
-
-        Failed to open.
-
-    Notes
-    -----
-    Opens file in append mode.
-
-    A new logging session header is automatically written.
-    --------------------------------------------------------
-    */
+    /**
+     * @brief Opens the log file.
+     *
+     * Creates or opens the specified log file for writing.
+     *
+     * @param filename Path to the log file.
+     * @return true if the file was opened successfully.
+     * @return false if the file could not be opened.
+     */
     bool open(const std::string &filename);
 
-    /*
-    --------------------------------------------------------
-    Close Log File
-
-    Flushes pending output and closes the file.
-
-    Safe to call multiple times.
-    --------------------------------------------------------
-    */
+    /**
+     * @brief Closes the log file.
+     *
+     * Safely closes the currently opened log file.
+     */
     void close();
 
-    /*
-    --------------------------------------------------------
-    Write Log Entry
-
-    Parameters
-    ----------
-    level
-
-        Log severity.
-
-    message
-
-        Text to be written.
-
-    Behaviour
-    ---------
-    1. Check minimum log level.
-    2. Generate timestamp.
-    3. Format log message.
-    4. Write to file.
-    5. Flush output.
-    6. Optionally print to console.
-
-    Thread Safety
-    -------------
-    Protected using std::mutex.
-    --------------------------------------------------------
-    */
+    /**
+     * @brief Writes a formatted log entry.
+     *
+     * Records a log message with the specified severity level.
+     * The message is written to the log file and optionally
+     * displayed on the console.
+     *
+     * @param level Severity level of the log message.
+     * @param message Message to be logged.
+     */
     void log(Level level,
              const std::string &message);
 
-    /*
-    --------------------------------------------------------
-    Enable / Disable Console Output
-
-    Parameters
-    ----------
-    enabled
-
-    true
-        Display log messages on terminal.
-
-    false
-        Write only to log file.
-    --------------------------------------------------------
-    */
+    /**
+     * @brief Enables or disables console logging.
+     *
+     * @param enabled true to display log messages on the console;
+     *                false to disable console output.
+     */
     void setConsoleOutput(bool enabled);
 
-    /*
-    --------------------------------------------------------
-    Set Minimum Log Level
-
-    Parameters
-    ----------
-    level
-
-        Lowest severity level to record.
-
-    Example
-    -------
-
-    Minimum Level = WARNING
-
-    DEBUG   -> Ignored
-
-    INFO    -> Ignored
-
-    WARNING -> Logged
-
-    ERROR   -> Logged
-    --------------------------------------------------------
-    */
+    /**
+     * @brief Sets the minimum logging level.
+     *
+     * Messages below the specified level are ignored.
+     *
+     * @param level Minimum severity level to record.
+     */
     void setMinimumLevel(Level level);
 
 private:
-    /*
-    --------------------------------------------------------
-    Output File Stream
-
-    Stores log entries.
-    --------------------------------------------------------
-    */
+    /**
+     * @brief Output file stream used for logging.
+     */
     std::ofstream file;
 
-    /*
-    --------------------------------------------------------
-    Thread Synchronization
-
-    Prevents simultaneous writes from multiple threads.
-    --------------------------------------------------------
-    */
+    /**
+     * @brief Mutex used to ensure thread-safe logging.
+     */
     std::mutex mutex;
 
-    /*
-    --------------------------------------------------------
-    Console Output Flag
-
-    true
-
-        Print logs to terminal.
-
-    false
-
-        File logging only.
-    --------------------------------------------------------
-    */
+    /**
+     * @brief Indicates whether console output is enabled.
+     */
     bool consoleOutput;
 
-    /*
-    --------------------------------------------------------
-    Current Minimum Log Level
-    --------------------------------------------------------
-    */
+    /**
+     * @brief Minimum severity level required for logging.
+     */
     Level minimumLevel;
 
-    /*
-    --------------------------------------------------------
-    Generate Timestamp
-
-    Returns current local date and time.
-
-    Format
-
-    YYYY-MM-DD HH:MM:SS
-
-    Example
-
-    2026-08-04 20:35:18
-    --------------------------------------------------------
-    */
+    /**
+     * @brief Generates the current timestamp.
+     *
+     * The timestamp is formatted as:
+     * YYYY-MM-DD HH:MM:SS
+     *
+     * @return Formatted timestamp string.
+     */
     std::string timestamp() const;
 
-    /*
-    --------------------------------------------------------
-    Convert Log Level To String
-
-    Example
-
-    INFO
-
-    WARNING
-
-    ERROR
-    --------------------------------------------------------
-    */
+    /**
+     * @brief Converts a log level into a readable string.
+     *
+     * @param level Logging level.
+     * @return String representation of the logging level.
+     */
     std::string levelToString(Level level) const;
 
-    /*
-    --------------------------------------------------------
-    Determine Whether Message Should Be Logged
-
-    Returns
-
-    true
-        Message is written.
-
-    false
-        Message is ignored.
-    --------------------------------------------------------
-    */
+    /**
+     * @brief Determines whether a message should be logged.
+     *
+     * Compares the message severity against the configured
+     * minimum logging level.
+     *
+     * @param level Severity level of the message.
+     * @return true if the message should be logged.
+     * @return false otherwise.
+     */
     bool shouldLog(Level level) const;
 
-    /*
-    --------------------------------------------------------
-    Write Session Header
-
-    Automatically called after opening the log file.
-
-    Example
-
-    =====================================================
-
-    New Logging Session
-
-    Started :
-    2026-08-04 20:35:18
-
-    =====================================================
-    --------------------------------------------------------
-    */
+    /**
+     * @brief Writes a new logging session header.
+     *
+     * Adds a separator and session information at the
+     * beginning of a new logging session.
+     */
     void writeSessionHeader();
 };
 
