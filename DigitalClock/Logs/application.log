@@ -3,3 +3,11 @@
 [2026-08-03 18:21:31] [INFO] Configuration loaded successfully.
 [2026-08-03 18:21:31] [INFO] Theme: Default
 [2026-08-03 18:21:31] [INFO] Refresh Interval: 1000 ms
+[2026-08-04 19:21:52] [INFO] Logger initialized successfully.
+[2026-08-04 19:21:52] [INFO] Digital Clock System v1.0.0 starting.
+[2026-08-04 19:21:52] [INFO] Configuration loaded successfully.
+[2026-08-04 19:21:52] [INFO] Theme: Default
+[2026-08-04 19:21:52] [INFO] Refresh Interval: 1000 ms
+[2026-08-04 19:21:59] [INFO] Shutdown requested.
+[2026-08-04 19:21:59] [INFO] Releasing resources.
+[2026-08-04 19:21:59] [INFO] Logger shutdown complete.

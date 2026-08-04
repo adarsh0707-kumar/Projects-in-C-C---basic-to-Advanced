@@ -1,4 +1,6 @@
+#include <atomic>
 #include <chrono>
+#include <csignal>
 #include <iostream>
 #include <thread>
 
@@ -9,8 +11,20 @@
 #include "Logger.hpp"
 #include "Version.hpp"
 
+std::atomic<bool> running(true);
+
+void signalHandler(int signal)
+{
+    if (signal == SIGINT)
+    {
+        running = false;
+    }
+}
+
 int main()
 {
+    std::signal(SIGINT, signalHandler);
+
     Logger logger;
 
     if (!logger.open())
@@ -29,7 +43,6 @@ int main()
         logger.log(Logger::Level::ERROR,
                    "Failed to load configuration.");
 
-        std::cerr << "Failed to load configuration.\n";
         return 1;
     }
 
@@ -59,7 +72,7 @@ int main()
     Date date;
     Display display;
 
-    while (true)
+    while (running)
     {
         clock.update();
         date.update();
@@ -71,7 +84,6 @@ int main()
                 config.getInt("REFRESH_INTERVAL", 1000)));
     }
 
-    // This code is currently unreachable.
     logger.log(Logger::Level::INFO,
                "Shutdown requested.");
 
