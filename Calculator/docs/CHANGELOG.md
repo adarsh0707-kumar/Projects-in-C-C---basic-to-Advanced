@@ -8,6 +8,60 @@ The format is based on **Keep a Changelog** and follows **Semantic Versioning** 
 
 # [Unreleased]
 
+## 2026-08-04 (3) — Phase 31 (GUI) Step 1: Qt6 arithmetic keypad
+
+### Added
+
+- `Gui/MainWindow.hpp`, `Gui/MainWindow.cpp`, `Gui/main.cpp` — a Qt6
+  Widgets window with a `QLineEdit` display and a button-grid keypad
+  (digits, `+ - * / ^ % ( ) . !`, `=`, clear, backspace). Calls the
+  existing C engine (`infixToPostfix`, `evaluatePostfix`,
+  `validateExpression`, `validateParentheses`,
+  `insertImplicitMultiplication`, `setVariable`/`setAns`,
+  `addHistory`) directly through an `extern "C"` include block in
+  `MainWindow.cpp`, rather than duplicating any parsing/evaluation
+  logic or touching the ~10 existing C headers that don't have an
+  `extern "C"` guard.
+- Makefile: `make gui` / `make run-gui` targets (Qt6, via
+  `pkg-config Qt6Widgets`), reusing the same engine objects the CLI
+  binary links (`ENGINE_OBJS_FOR_GUI`, mirroring the test target's
+  existing `TESTED_OBJS` filter-out-main.o pattern). Opt-in and
+  Qt-only — every other target (`all`, `test`, `release`, `asan`,
+  ...) is unaffected whether or not Qt is installed.
+- Two build-environment issues hit and fixed along the way, both
+  worth knowing about for anyone extending the GUI: (1) this
+  machine's default `moc` on `PATH` is Qt5's even though
+  `Qt6Widgets` is what's actually being built against — mismatched
+  moc output fails to compile against the newer headers, so the
+  Makefile now resolves Qt6's specific `moc` via
+  `qmake6 -query QT_HOST_LIBEXECS`. (2) linking a QObject subclass's
+  translation unit without `-fPIC` fails at link time ("copy
+  relocation against non-copyable protected symbol ... QObject") —
+  Qt's own qmake/CMake tooling always compiles against Qt with
+  `-fPIC` for this reason, so the GUI's compile rules now do too
+  (`moc` itself doesn't take the flag; it's compile-only).
+
+### Verified
+
+Manually, via a real X11 session (`xdotool` + `import`, screenshots
+inspected): `2+3*5` -> 17, `sqrt(16)` -> 4, `x=5` then `x+3` -> 8
+(assignment + recall), `2^10` -> 1024, `5/0` -> shows the error and
+the window stays open, all via both typed keyboard input and actual
+button clicks. `make test`/`make BUILD=asan test` (433 cases) and
+`./calculator` (CLI) confirmed unaffected — nothing in `Src/` changed.
+
+### Known limitation (not fixed this step)
+
+`validateExpression()`/`validateParentheses()` report their specific
+failure reason via `printf()` to stdout, which is fine for the CLI
+but invisible to a GUI window — the GUI currently shows a generic
+"Invalid expression."/"Mismatched parentheses." instead of the
+specific reason `validator.c` actually detected. Every other engine
+error path already returns its message in a buffer; these two are the
+exceptions. Flagged in `docs/ROADMAP.md`'s Phase 31 section as a
+candidate for Step 7 (polish) rather than fixed now, since it touches
+a stable, already-tested module (`validator.c`) for GUI-only benefit.
+
 ## 2026-08-04 (2) — Close the test-coverage gaps flagged in TEST_PLAN.md
 
 ### Added

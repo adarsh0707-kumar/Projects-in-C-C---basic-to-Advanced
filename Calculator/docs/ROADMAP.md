@@ -65,7 +65,7 @@ AddressSanitizer/UndefinedBehaviorSanitizer).
 | 28       | Dynamic data structures                      | 🟡 Planned    |
 | 29       | Abstract Syntax Tree (AST)                   | 🟡 Planned    |
 | 30       | Symbolic mathematics                         | 🟡 Planned    |
-| 31       | Graphical User Interface (Qt)                | 🟡 Planned — next up |
+| 31       | Graphical User Interface (Qt)                | 🟠 In Progress — Step 1 done |
 | 32       | Plugin architecture                          | 🟡 Planned    |
 | 33       | Calculator scripting                         | 🟡 Planned    |
 | 34       | Package manager                              | 🟡 Planned    |
@@ -76,23 +76,49 @@ See `docs/PHASES.md` for the full breakdown of every phase above.
 
 ---
 
-# Next Up: Phase 31 — GUI (Qt)
+# In Progress: Phase 31 — GUI (Qt)
 
-The chosen toolkit is **Qt**, matching what `docs/RULES.md` and this
-roadmap have anticipated since the CLI-only rule was written. Rough
-shape of the work, to be broken into its own sub-plan when picked up:
+The chosen toolkit is **Qt6** (`Qt6Widgets`, via `pkg-config`),
+matching what `docs/RULES.md` and this roadmap anticipated. Being
+built step by step, each step its own commit, CLI kept working
+throughout — the GUI is an additional front end, not a replacement.
 
-- Extract the CLI's per-mode logic (`Src/main.c`'s `switch` cases) into
-  functions the GUI can call directly, instead of `scanf`/`fgets`-driven
-  I/O — the GUI and CLI should share the same engine calls
-  (`infixToPostfix`, `evaluatePostfix`, `evaluateComplexExpression`,
-  etc.), not duplicate parsing logic.
-- Scientific keypad, history panel, variable manager, memory panel
-  (mirrors the CLI's existing menu options 1–10)
-- Plotting mode reuses `Src/plot.c`'s sampling logic, rendered as an
-  actual line plot instead of ASCII
-- Keep the CLI (`make run`) working throughout — the GUI is an
-  additional front end, not a replacement
+**Step 1 (done):** `Gui/MainWindow.{hpp,cpp}` + `Gui/main.cpp`, a
+basic arithmetic keypad calling the existing engine directly
+(`insertImplicitMultiplication`, `validateExpression`,
+`validateParentheses`, `infixToPostfix`, `evaluatePostfix`,
+`setVariable`/`setAns`, `addHistory`) through an `extern "C"` include
+block, exactly the CLI's case-1 logic minus the text-shortcut commands
+(`!!`, `mode deg`) that don't make sense for a keypad. `make gui`/
+`make run-gui` added to the Makefile — Qt-only, opt-in, every other
+target unaffected whether or not Qt is installed. Verified: `2+3*5`,
+`sqrt(16)`, `x=5` then `x+3` (assignment + recall), `2^10`, and
+`5/0` (shows the error, window stays open) all work via both
+keyboard and button clicks.
+
+**Known Step 1 limitation:** `validateExpression()`/
+`validateParentheses()` report their specific failure reason via
+`printf()` to stdout (fine for the CLI, invisible to a GUI window) —
+the GUI currently shows a generic "Invalid expression."/"Mismatched
+parentheses." instead of the specific reason. Every other error path
+(`infixToPostfix`, `evaluatePostfix`, the stats/units/base/complex/
+matrix modules) already returns its message in a buffer and doesn't
+have this gap.
+
+**Remaining steps** (each its own later commit, not all at once):
+
+2. History panel (reuse `history.c`), click-to-recall.
+3. Variable manager panel (reuse `variables.c`).
+4. Memory panel (MS/MR/M+/M-/MC, reuse `memory.c`).
+5. Tabs for Complex / Matrix / Statistics / Units / Base — each a thin
+   form calling the existing `evaluate*Expression()` entry points.
+6. Real graphical plotting: a custom `QWidget::paintEvent` sampling
+   the expression the same way `plot.c` does, drawn with `QPainter`
+   instead of ASCII.
+7. Polish: theme, icon, error styling; consider fixing the Step 1
+   validator-message limitation above (would need
+   `validateExpression()`/`validateParentheses()` to return a message
+   into a buffer like every other module already does).
 
 Phases 28–30 (dynamic data structures, AST, symbolic math) are
 foundational rewrites of the evaluation engine itself and are

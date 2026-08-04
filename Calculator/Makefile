@@ -34,9 +34,11 @@ SRC_DIR  = Src
 INC_DIR  = Inc
 TEST_DIR = Tests
 DOCS_DIR = docs
+GUI_DIR  = Gui
 
 TARGET      = calculator
 TEST_TARGET = run_tests
+GUI_TARGET  = calculator-gui
 
 # ------------------------------------------------------------------
 # Build type configuration
@@ -61,6 +63,7 @@ endif
 
 OBJ_DIR      = Obj/$(BUILD)
 TEST_OBJ_DIR = Obj/$(BUILD)-tests
+GUI_OBJ_DIR  = Obj/$(BUILD)-gui
 
 WARN_FLAGS = -Wall -Wextra
 DEPFLAGS   = -MMD -MP
@@ -68,6 +71,20 @@ DEPFLAGS   = -MMD -MP
 CFLAGS   = $(WARN_FLAGS) -std=c11   -I$(INC_DIR) $(OPT_FLAGS) $(SAN_FLAGS) $(DEPFLAGS)
 CXXFLAGS = $(WARN_FLAGS) -std=c++17 -I$(INC_DIR) $(OPT_FLAGS) $(SAN_FLAGS) $(DEPFLAGS)
 LDFLAGS  = -lm $(SAN_FLAGS)
+
+# ------------------------------------------------------------------
+# Phase 31 -- GUI (Qt6). Only resolved/used by the gui/run-gui
+# targets below; every other target is unaffected whether or not Qt
+# is installed.
+# ------------------------------------------------------------------
+QT_CFLAGS := $(shell pkg-config --cflags Qt6Widgets 2>/dev/null)
+QT_LIBS   := $(shell pkg-config --libs Qt6Widgets 2>/dev/null)
+# A system's default `moc` on PATH may belong to Qt5 even when Qt6
+# headers/libs are what pkg-config resolves above (that's the case on
+# this machine) -- using a mismatched moc produces meta-object code
+# that fails to compile against the newer headers. qmake6's
+# QT_HOST_LIBEXECS reliably points at the matching Qt6 moc.
+MOC := $(shell qmake6 -query QT_HOST_LIBEXECS 2>/dev/null)/moc
 
 # ------------------------------------------------------------------
 # Sources
@@ -140,9 +157,29 @@ TESTED_OBJS     = $(TESTED_SRCS:$(SRC_DIR)/%.c=$(TEST_OBJ_DIR)/%.o)
 TESTED_CXX_OBJS = $(CXX_SRCS:$(SRC_DIR)/%.cpp=$(TEST_OBJ_DIR)/%.o)
 
 # ------------------------------------------------------------------
+# Phase 31 -- GUI (Qt6)
+#
+# Gui/*.cpp calls straight into the existing C engine (Inc/
+# calculator.h etc.) through an extern "C" include block -- see
+# Gui/MainWindow.cpp -- instead of duplicating any parsing/evaluation
+# logic. The engine objects it links against are the same $(OBJS)/
+# $(CXX_OBJS) the CLI binary uses (minus main.o, which Gui/main.cpp
+# replaces with its own), so `make gui` builds/reuses them from
+# $(OBJ_DIR) rather than recompiling the engine a third time.
+# ------------------------------------------------------------------
+GUI_SRCS      = $(GUI_DIR)/MainWindow.cpp $(GUI_DIR)/main.cpp
+MOC_HEADERS   = $(GUI_DIR)/MainWindow.hpp
+MOC_GEN_SRCS  = $(MOC_HEADERS:$(GUI_DIR)/%.hpp=$(GUI_OBJ_DIR)/moc_%.cpp)
+
+GUI_OBJS = $(GUI_SRCS:$(GUI_DIR)/%.cpp=$(GUI_OBJ_DIR)/%.o) \
+           $(MOC_GEN_SRCS:$(GUI_OBJ_DIR)/%.cpp=$(GUI_OBJ_DIR)/%.o)
+
+ENGINE_OBJS_FOR_GUI = $(filter-out $(OBJ_DIR)/main.o,$(OBJS)) $(CXX_OBJS)
+
+# ------------------------------------------------------------------
 # Primary targets
 # ------------------------------------------------------------------
-.PHONY: all debug release asan ubsan run test docs clean distclean rebuild
+.PHONY: all debug release asan ubsan run test docs clean distclean rebuild gui run-gui
 
 all: $(TARGET)
 
@@ -173,6 +210,36 @@ $(OBJ_DIR):
 
 run: $(TARGET)
 	./$(TARGET)
+
+# ------------------------------------------------------------------
+# GUI (Qt6) -- see the "Phase 31" comment above for how this reuses
+# the engine objects. Requires Qt6Widgets (pkg-config); every other
+# target works with or without Qt installed.
+# ------------------------------------------------------------------
+gui: $(OBJS) $(CXX_OBJS) $(GUI_TARGET)
+
+$(GUI_TARGET): $(GUI_OBJS)
+	$(CXX) -o $@ $(ENGINE_OBJS_FOR_GUI) $(GUI_OBJS) $(LDFLAGS) $(QT_LIBS)
+
+# -fPIC (compile-only; moc, below, doesn't take it -- it parses -f as
+# its own "-f<file>" option): omitting it fails at link time with
+# "copy relocation against non-copyable protected symbol ... QObject".
+# Qt's own qmake/CMake tooling always compiles against Qt with -fPIC
+# for exactly this reason, so this matches that convention.
+$(GUI_OBJ_DIR)/%.o: $(GUI_DIR)/%.cpp | $(GUI_OBJ_DIR)
+	$(CXX) $(CXXFLAGS) $(QT_CFLAGS) -fPIC -c $< -o $@
+
+$(GUI_OBJ_DIR)/moc_%.cpp: $(GUI_DIR)/%.hpp | $(GUI_OBJ_DIR)
+	$(MOC) $(QT_CFLAGS) $< -o $@
+
+$(GUI_OBJ_DIR)/moc_%.o: $(GUI_OBJ_DIR)/moc_%.cpp
+	$(CXX) $(CXXFLAGS) $(QT_CFLAGS) -fPIC -c $< -o $@
+
+$(GUI_OBJ_DIR):
+	mkdir -p $(GUI_OBJ_DIR)
+
+run-gui: gui
+	./$(GUI_TARGET)
 
 # ------------------------------------------------------------------
 # Tests
@@ -208,10 +275,10 @@ docs:
 # Housekeeping
 # ------------------------------------------------------------------
 clean:
-	rm -rf $(OBJ_DIR) $(TEST_OBJ_DIR) $(TARGET) $(TEST_TARGET)
+	rm -rf $(OBJ_DIR) $(TEST_OBJ_DIR) $(GUI_OBJ_DIR) $(TARGET) $(TEST_TARGET) $(GUI_TARGET)
 
 distclean:
-	rm -rf Obj $(TARGET) $(TEST_TARGET)
+	rm -rf Obj $(TARGET) $(TEST_TARGET) $(GUI_TARGET)
 	rm -rf $(DOCS_DIR)/html $(DOCS_DIR)/latex
 
 rebuild: clean all
@@ -219,3 +286,4 @@ rebuild: clean all
 # Pull in auto-generated header dependencies, if any exist yet.
 -include $(wildcard $(OBJ_DIR)/*.d)
 -include $(wildcard $(TEST_OBJ_DIR)/*.d)
+-include $(wildcard $(GUI_OBJ_DIR)/*.d)

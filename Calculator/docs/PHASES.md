@@ -907,20 +907,33 @@ Desktop scientific calculator.
 
 ## Features
 
-Qt GUI
+- Qt6 GUI (`Gui/MainWindow.{hpp,cpp}`, `Gui/main.cpp`) — **Step 1
+  done:** basic arithmetic keypad, calling the same engine functions
+  as the CLI (`infixToPostfix`, `evaluatePostfix`,
+  `validateExpression`, `setVariable`/`setAns`, `addHistory`) rather
+  than duplicating any parsing logic. `make gui` / `make run-gui`.
+- Scientific keypad — done (Step 1: digits, `+ - * / ^ % ( ) . !`,
+  `=`, clear, backspace)
+- History panel — not yet (Step 2)
+- Variable manager — not yet (Step 3)
+- Memory panel — not yet (Step 4)
+- Theme support — not yet (Step 7)
 
-Scientific keypad
+## Files
 
-History panel
+Gui/MainWindow.hpp
+Gui/MainWindow.cpp
+Gui/main.cpp
 
-Variable manager
+## Deliverables
 
-Memory panel
-
-Theme support
+Step 1: a working Qt6 arithmetic calculator window, verified against
+`2+3*5`, `sqrt(16)`, variable assignment/recall, `2^10`, and graceful
+division-by-zero handling — via both keyboard and button-click input.
 
 Status:
-🟡 Planned
+🟠 In Progress — Step 1 (of 7 planned steps; see `docs/ROADMAP.md`'s
+"In Progress: Phase 31" section for the full breakdown) complete
 
 ---
 
