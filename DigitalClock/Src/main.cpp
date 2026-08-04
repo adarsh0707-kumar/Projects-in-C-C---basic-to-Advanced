@@ -26,6 +26,7 @@ int main()
     std::signal(SIGINT, signalHandler);
 
     Logger logger;
+    Screen screen;
 
     if (!logger.open())
     {
@@ -83,6 +84,8 @@ int main()
             std::chrono::milliseconds(
                 config.getInt("REFRESH_INTERVAL", 1000)));
     }
+
+    screen.showCursor();
 
     logger.log(Logger::Level::INFO,
                "Shutdown requested.");

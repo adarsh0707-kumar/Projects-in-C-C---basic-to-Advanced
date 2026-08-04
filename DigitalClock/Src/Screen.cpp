@@ -2,21 +2,63 @@
 
 #include <iostream>
 
-#ifdef _WIN32
-#include <cstdlib>
-#endif
+/*
+------------------------------------------------------------
+Clear console screen.
 
+ANSI Escape Sequence
+
+2J  -> Clear entire screen
+H   -> Move cursor to home
+------------------------------------------------------------
+*/
 void Screen::clear() const
 {
-#ifdef _WIN32
-    std::system("cls");
-#else
     std::cout << "\033[2J\033[H";
-    std::cout.flush();
-#endif
 }
 
-void Screen::moveCursorHome() const
+/*
+------------------------------------------------------------
+Move cursor to home position.
+------------------------------------------------------------
+*/
+void Screen::home() const
 {
     std::cout << "\033[H";
+}
+
+/*
+------------------------------------------------------------
+Hide console cursor.
+
+ANSI:
+?25l
+------------------------------------------------------------
+*/
+void Screen::hideCursor() const
+{
+    std::cout << "\033[?25l";
+}
+
+/*
+------------------------------------------------------------
+Show console cursor.
+
+ANSI:
+?25h
+------------------------------------------------------------
+*/
+void Screen::showCursor() const
+{
+    std::cout << "\033[?25h";
+}
+
+/*
+------------------------------------------------------------
+Immediately flush console output.
+------------------------------------------------------------
+*/
+void Screen::flush() const
+{
+    std::cout.flush();
 }
