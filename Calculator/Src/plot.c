@@ -129,9 +129,6 @@ int evaluatePlotExpression(const char input[], char errorMsg[], size_t errorSize
     if (!validateExpression(processed, errorMsg, errorSize))
         return 0;
 
-    if (!validateParentheses(processed, errorMsg, errorSize))
-        return 0;
-
     double ys[PLOT_WIDTH];
     int valid[PLOT_WIDTH];
     double ymin = INFINITY;

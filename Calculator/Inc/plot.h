@@ -4,7 +4,7 @@
  *
  * The expression inside `plot(...)` is evaluated by resampling the
  * *existing* pipeline (insertImplicitMultiplication ->
- * validateExpression -> validateParentheses -> infixToPostfix ->
+ * validateExpression -> infixToPostfix ->
  * evaluatePostfix) once per x sample, setting the variable "x" via
  * setVariable() before each conversion. This reuses every existing
  * function/operator for free -- `plot(sqrt(x)+1)` or

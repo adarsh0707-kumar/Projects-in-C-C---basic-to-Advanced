@@ -269,10 +269,15 @@ the nesting outruns the `CharStack` -- so callers no longer have to
 print one generic message for all three. Cleared to an empty string
 when the parentheses balance.
 
-Note that in the CLI/GUI pipeline `validateExpression()` runs first and
-rejects every unbalanced expression on its own, so this call is a
-backstop for direct callers rather than the usual source of the message
-a user sees.
+**Not part of the evaluation pipeline.** `validateExpression()` tracks
+`(` / `)` with the same rules — it has to, to know where a function's
+argument list ends — and rejects every unbalanced expression on its
+own, so calling this after it can only ever agree with it. That was
+confirmed over 8M random inputs (~421k of which passed
+`validateExpression()`), none of which failed here. The CLI, the GUI,
+and `evaluatePlotExpression()` therefore call `validateExpression()`
+alone. Use this when you want the parenthesis check *without* a full
+syntax check.
 
 Returns
 

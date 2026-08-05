@@ -8,6 +8,51 @@ The format is based on **Keep a Changelog** and follows **Semantic Versioning** 
 
 # [Unreleased]
 
+## 2026-08-05 (6) — Drop the redundant validateParentheses() call from the pipeline
+
+### Changed
+
+- `Src/main.c`, `Src/plot.c`, `Gui/MainWindow.cpp`: every one of the
+  six `validateExpression()` → `validateParentheses()` pairs is now a
+  single `validateExpression()` call. The second check could never
+  fire: `validateExpression()` tracks `(` / `)` with the same rules —
+  it has to, to know where a function's argument list ends — and
+  rejects every unbalanced expression on its own, so the six error
+  branches behind it were unreachable code (including, awkwardly, the
+  three specific messages added in the previous entry).
+- `Inc/calculator.h`, `docs/API.md`: `validateParentheses()` is kept
+  and still tested — it's a reasonable standalone check for a caller
+  that wants parens verified *without* a full syntax check — but is
+  now documented as not being part of the evaluation pipeline, so the
+  calls don't get "restored" later as a fix for a bug they can't
+  prevent.
+
+### Verified
+
+Rather than relying on reading the state machine, this was checked by
+fuzzing the two functions against each other over **8M random inputs**
+across two alphabets (one general, one parenthesis-dense), of which
+~421k passed `validateExpression()`: **zero** were rejected by
+`validateParentheses()`. Both harnesses ran under
+AddressSanitizer/UBSan with no findings. The CLI produces byte-identical
+output before and after for `sin(2,3)`, `(()`, `)(`, `2+3*4`,
+`sqrt(16)`, and `plot(sin(x))`. 471 tests pass in both the normal and
+`BUILD=asan` builds; `make all`/`gui`/`test` clean under `-Wall
+-Wextra`.
+
+### Known issue found while verifying this (not fixed here)
+
+`infixToPostfix()` is lenient about an unclosed `(` in a way its own
+`Inc/calculator.h` doc contradicts: that doc says it returns 0 on
+"mismatched parentheses", and it does for a surplus `)` (`2+3)`, `)(`),
+but for an unclosed `(` it returns **1** and silently drops it —
+`(2+3` converts to `2 3 +`, `sin(2` to `2 sin`, and `(()` to an empty
+postfix string. No memory-safety issue (confirmed under ASan/UBSan);
+`validateExpression()` rejects all of these long before they reach it,
+so no user-visible behavior depends on this today. Worth fixing on its
+own merits, since the contract is documented and a direct caller of
+`infixToPostfix()` would be misled.
+
 ## 2026-08-05 (5) — Phase 31 (GUI) Step 7 complete: application icon
 
 ### Added

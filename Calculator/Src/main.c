@@ -243,12 +243,6 @@ int main(void)
                     break;
                 }
 
-                if (!validateParentheses(processed, validationError, sizeof(validationError)))
-                {
-                    printf("%s\n", validationError);
-                    break;
-                }
-
                 if (!infixToPostfix(processed, postfix))
                 {
                     /* infixToPostfix() already printed a specific
@@ -285,12 +279,11 @@ int main(void)
                 break;
             }
 
-            /* Validate parentheses */
-            if (!validateParentheses(infix, validationError, sizeof(validationError)))
-            {
-                printf("%s\n", validationError);
-                break;
-            }
+            /* No separate validateParentheses() call: validateExpression()
+               above tracks '(' / ')' with the same rules (it has to, for
+               function-argument frames) and rejects every unbalanced
+               expression on its own, so a second check can only ever
+               agree with it. See Inc/calculator.h. */
 
             /* Convert infix to postfix */
             if (!infixToPostfix(infix, postfix))

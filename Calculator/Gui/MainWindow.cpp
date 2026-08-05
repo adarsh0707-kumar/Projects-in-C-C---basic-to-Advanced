@@ -36,8 +36,8 @@
 extern "C"
 {
 #include "calculator.h" /* insertImplicitMultiplication, validateExpression,
-                            validateParentheses, infixToPostfix,
-                            evaluatePostfix, getLastEvalError */
+                            infixToPostfix, evaluatePostfix,
+                            getLastEvalError */
 #include "variables.h"  /* setVariable, getVariable, setAns,
                             getVariableCount, getVariableByIndex */
 #include "history.h"    /* addHistory, clearHistory, getHistoryCount,
@@ -474,7 +474,7 @@ MainWindow::MainWindow(QWidget *parent)
     /* Plot panel (Step 6): real QPainter graphics instead of Step 1-5's
        ASCII-in-a-label approach. Sampling logic mirrors Src/plot.c's
        own pipeline (insertImplicitMultiplication -> validateExpression
-       -> validateParentheses -> per-sample infixToPostfix/
+       -> per-sample infixToPostfix/
        evaluatePostfix with setVariable("x", ...)), but builds (x, y,
        valid) arrays for PlotWidget to draw instead of an ASCII canvas.
        Unlike plot.c's CLI syntax, the expression here is typed bare
@@ -638,12 +638,6 @@ void MainWindow::evaluate()
             return;
         }
 
-        if (!validateParentheses(processed, validationError, sizeof(validationError)))
-        {
-            m_errorLabel->setText(QString("%1 (right of '=')").arg(validationError));
-            return;
-        }
-
         if (!infixToPostfix(processed, postfix))
         {
             m_errorLabel->setText(QString("Error: %1").arg(getLastEvalError()));
@@ -675,11 +669,8 @@ void MainWindow::evaluate()
         return;
     }
 
-    if (!validateParentheses(infix, validationError, sizeof(validationError)))
-    {
-        m_errorLabel->setText(validationError);
-        return;
-    }
+    /* No separate validateParentheses() call -- validateExpression()
+       already rejects every unbalanced expression; see Inc/calculator.h. */
 
     if (!infixToPostfix(infix, postfix))
     {
@@ -881,13 +872,6 @@ void MainWindow::plotCurrentExpression()
     /* Syntax only needs checking once -- it doesn't depend on x's
        value, exactly as Src/plot.c's own comment notes. */
     if (!validateExpression(processed, validationError, sizeof(validationError)))
-    {
-        m_plotError->setText(validationError);
-        m_plotWidget->clearPlot();
-        return;
-    }
-
-    if (!validateParentheses(processed, validationError, sizeof(validationError)))
     {
         m_plotError->setText(validationError);
         m_plotWidget->clearPlot();
