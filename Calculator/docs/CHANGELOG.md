@@ -8,6 +8,44 @@ The format is based on **Keep a Changelog** and follows **Semantic Versioning** 
 
 # [Unreleased]
 
+## 2026-08-04 (5) — Phase 31 (GUI) Step 3: variable manager panel
+
+### Added
+
+- `Src/variables.c`/`Inc/variables.h`: `getVariableCount()` and
+  `getVariableByIndex()`, mirroring the module's existing style
+  exactly (same as Step 2's history additions) -- no existing function
+  could enumerate variables programmatically for a GUI table; the
+  existing accessors either look up a single variable by name or
+  print directly to stdout. Covered by a new
+  `test_variable_enumeration()` in `Tests/test_variables.c`. Test
+  suite: 441 -> 449 cases.
+- `Gui/MainWindow`: the side panel is now a `QTabWidget` (History /
+  Variables) instead of a single widget next to the keypad, so Steps
+  4-5's additional panels (Memory, Complex/Matrix/Stats/Units/Base)
+  have somewhere to go without the window growing wider indefinitely.
+  The Variables tab is a read-only `QTableWidget` (Name, Value)
+  populated from the two functions above. Creating/updating a
+  variable goes through a name/value field pair and a "Set" button
+  (calling the existing `setVariable()`) rather than in-place table
+  cell editing, which would need signal-blocking to stop
+  `refreshVariables()`'s own repopulation from re-triggering the edit
+  handler. The name field is validated against the same identifier
+  rule the expression parser uses (`postfix.c`: starts with a letter,
+  then letters/digits/`_`), so a variable created here is actually
+  usable once typed into an expression, not just storable.
+
+### Verified
+
+Manually, via a real X11 session (`xdotool` + `import`, screenshots
+inspected): `pi`/`e`/`ans` populate the table on launch; setting
+`myvar = 42.5` via the fields adds a row and clears the fields;
+`myvar+7.5` on the keypad correctly evaluates to `50`, and `ans`'s row
+updates live to match; attempting to set `pi` is rejected with a
+visible error message and `pi`'s row is unchanged. `make test`/
+`make BUILD=asan test` (449 cases) and `./calculator` confirmed
+unaffected by the GUI changes.
+
 ## 2026-08-04 (4) — Phase 31 (GUI) Step 2: history panel
 
 ### Added

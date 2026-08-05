@@ -919,7 +919,13 @@ Desktop scientific calculator.
   `getHistoryLineByNumber()`, added to that module and covered by
   `Tests/test_history.c`; click-to-recall via the existing
   `getHistoryExpressionByNumber()`; a "Clear History" button)
-- Variable manager — not yet (Step 3)
+- Variable manager — done (Step 3: read-only `QTableWidget` populated
+  from two new functions, `getVariableCount()` and
+  `getVariableByIndex()`, added to `variables.c` and covered by
+  `Tests/test_variables.c`; create/update via name+value fields and a
+  "Set" button calling the existing `setVariable()`; the side panel
+  is now a `QTabWidget` (History / Variables) instead of a single
+  widget, to leave room for Steps 4–5's additional panels)
 - Memory panel — not yet (Step 4)
 - Theme support — not yet (Step 7)
 
@@ -930,6 +936,8 @@ Gui/MainWindow.cpp
 Gui/main.cpp
 Inc/history.h (2 new functions)
 Src/history.c (2 new functions)
+Inc/variables.h (2 new functions)
+Src/variables.c (2 new functions)
 
 ## Deliverables
 
@@ -941,8 +949,14 @@ Step 2: a history side panel sharing the CLI's on-disk history file,
 verified for populate-on-launch, append-on-calculate, click-to-recall,
 and Clear History — via a real X11 session.
 
+Step 3: a variable manager tab, verified for populate-on-launch,
+setting a new variable and using it in a calculation (`myvar = 42.5`
+then `myvar+7.5` -> `50`), live update of `ans`'s row, and rejection
+of writes to read-only constants (`pi`) with a visible error — via a
+real X11 session.
+
 Status:
-🟠 In Progress — Steps 1–2 (of 7 planned steps; see
+🟠 In Progress — Steps 1–3 (of 7 planned steps; see
 `docs/ROADMAP.md`'s "In Progress: Phase 31" section for the full
 breakdown) complete
 

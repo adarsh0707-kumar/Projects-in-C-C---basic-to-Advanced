@@ -4,7 +4,7 @@
 ![Platform](https://img.shields.io/badge/Platform-Linux-green)
 ![Compiler](https://img.shields.io/badge/Compiler-GCC%2FG%2B%2B-orange)
 ![Build](https://img.shields.io/badge/Build-Make-red)
-![Tests](<https://img.shields.io/badge/Tests-441%20passing-brightgreen>)
+![Tests](<https://img.shields.io/badge/Tests-449%20passing-brightgreen>)
 ![CI](https://github.com/adarsh0707-kumar/Projects-in-C-C---basic-to-Advanced/actions/workflows/ci.yml/badge.svg)
 ![License](https://img.shields.io/badge/License-MIT-brightgreen)
 
@@ -44,7 +44,7 @@ It supports:
 - Statistics, unit conversion, and number-base conversion
 - Complex numbers and matrix algebra (C++)
 - ASCII graph plotting from the terminal
-- A modular architecture with 441 automated unit tests and zero exit() calls in the engine (every error path degrades gracefully instead of terminating the process)
+- A modular architecture with 449 automated unit tests and zero exit() calls in the engine (every error path degrades gracefully instead of terminating the process)
 
 ---
 
@@ -115,7 +115,7 @@ Calculator/
 ├── Inc/                       # Public headers (Doxygen-documented)
 ├── Src/                        # Implementation (.c and .cpp)
 ├── Gui/                        # Qt6 GUI front end (Phase 31, in progress) -- calls the same engine as the CLI
-├── Tests/                      # 441 unit tests (Tests/test_main.c is the test runner's entry point)
+├── Tests/                      # 449 unit tests (Tests/test_main.c is the test runner's entry point)
 ├── docs/
 │   ├── Doxyfile               # `make docs` config
 │   ├── API.md  ARCHITECTURE.md  CHANGELOG.md  CONTRIBUTING.md
@@ -276,7 +276,7 @@ Run `./calculator` (or `make run`) and pick an option from the menu. A few examp
 make test
 ```
 
-Runs all **441** unit tests covering: error reporting, stack, tokenizer, validator, parser, postfix conversion, functions, variables, history, memory, unit conversion, statistics, base conversion, plotting, complex numbers, and matrices. All tests also pass cleanly under AddressSanitizer and UndefinedBehaviorSanitizer (`make asan && make BUILD=asan test`).
+Runs all **449** unit tests covering: error reporting, stack, tokenizer, validator, parser, postfix conversion, functions, variables, history, memory, unit conversion, statistics, base conversion, plotting, complex numbers, and matrices. All tests also pass cleanly under AddressSanitizer and UndefinedBehaviorSanitizer (`make asan && make BUILD=asan test`).
 
 ---
 
@@ -321,7 +321,7 @@ make docs
 **v1.0 (this CLI calculator) is complete** — Phases 1–27: the core
 engine, scientific functions, variables/memory/history, statistics,
 unit/base conversion, complex numbers, matrix algebra, and ASCII graph
-plotting, all backed by the 441-test suite above.
+plotting, all backed by the 449-test suite above.
 
 The calculator is planned across **36 development phases** in total.
 Phases 28–36 are future work — a GUI (Qt, next up), dynamic data

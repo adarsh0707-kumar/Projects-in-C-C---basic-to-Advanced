@@ -101,3 +101,20 @@ void showVariables(void)
                variables[i].value);
     }
 }
+
+int getVariableCount(void)
+{
+    return variableCount;
+}
+
+int getVariableByIndex(int index, char outName[], int outSize, double *outValue)
+{
+    if (index < 0 || index >= variableCount)
+        return 0;
+
+    strncpy(outName, variables[index].name, (size_t)outSize - 1);
+    outName[outSize - 1] = '\0';
+    *outValue = variables[index].value;
+
+    return 1;
+}

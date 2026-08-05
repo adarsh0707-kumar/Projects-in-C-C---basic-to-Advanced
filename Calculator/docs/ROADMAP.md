@@ -49,7 +49,7 @@ table to match.
 **v1.0 (CLI engine): shipped.** All of Phases 1–27 are complete — the
 full expression engine, scientific functions, variables/memory/history,
 statistics, unit and base conversion, complex numbers, matrices, and
-ASCII graph plotting, backed by 441 passing unit tests (clean under
+ASCII graph plotting, backed by 449 passing unit tests (clean under
 AddressSanitizer/UndefinedBehaviorSanitizer).
 
 | Phase(s) | Area                                        | Status        |
@@ -65,7 +65,7 @@ AddressSanitizer/UndefinedBehaviorSanitizer).
 | 28       | Dynamic data structures                      | 🟡 Planned    |
 | 29       | Abstract Syntax Tree (AST)                   | 🟡 Planned    |
 | 30       | Symbolic mathematics                         | 🟡 Planned    |
-| 31       | Graphical User Interface (Qt)                | 🟠 In Progress — Steps 1–2 done |
+| 31       | Graphical User Interface (Qt)                | 🟠 In Progress — Steps 1–3 done |
 | 32       | Plugin architecture                          | 🟡 Planned    |
 | 33       | Calculator scripting                         | 🟡 Planned    |
 | 34       | Package manager                              | 🟡 Planned    |
@@ -112,6 +112,27 @@ existing history entries populate on launch, a new calculation
 appends and auto-scrolls, clicking an entry recalls its expression,
 Clear History empties the panel — all via a real X11 session.
 
+**Step 3 (done):** variable manager panel. The side panel is now a
+`QTabWidget` (History / Variables) instead of a single widget next to
+the keypad — set up this way so Steps 4–5's additional panels (Memory,
+Complex/Matrix/Stats/Units/Base) have somewhere to go without the
+window growing wider indefinitely. The Variables tab is a read-only
+`QTableWidget` (Name, Value) populated from two new functions added to
+`variables.h`/`variables.c` (mirroring its existing style, same as
+Step 2's history additions): `getVariableCount()` and
+`getVariableByIndex()`. Creating/updating a variable goes through a
+name/value field pair and a "Set" button — deliberately not in-place
+table cell editing, which would need signal-blocking to stop
+`refreshVariables()`'s own repopulation from re-triggering the edit
+handler. The name field is validated against the same identifier rule
+the expression parser uses (`postfix.c`: starts with a letter, then
+letters/digits/`_`), so a variable created here is actually usable
+once typed into an expression. Test coverage in
+`Tests/test_variables.c`. Verified: `pi`/`e`/`ans` populate on launch;
+setting `myvar = 42.5` adds a row, and `myvar+7.5` on the keypad
+correctly evaluates to `50`, updating `ans`'s row live; attempting to
+set `pi` is rejected with a visible error, `pi` unchanged.
+
 **Known Step 1 limitation (unchanged):** `validateExpression()`/
 `validateParentheses()` report their specific failure reason via
 `printf()` to stdout (fine for the CLI, invisible to a GUI window) —
@@ -123,7 +144,6 @@ have this gap.
 
 **Remaining steps** (each its own later commit, not all at once):
 
-3. Variable manager panel (reuse `variables.c`).
 4. Memory panel (MS/MR/M+/M-/MC, reuse `memory.c`).
 5. Tabs for Complex / Matrix / Statistics / Units / Base — each a thin
    form calling the existing `evaluate*Expression()` entry points.

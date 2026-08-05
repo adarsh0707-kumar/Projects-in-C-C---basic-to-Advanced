@@ -4,16 +4,22 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QSplitter>
+#include <QTabWidget>
 #include <QLineEdit>
 #include <QLabel>
 #include <QPushButton>
 #include <QListWidget>
 #include <QListWidgetItem>
+#include <QTableWidget>
+#include <QHeaderView>
+#include <QAbstractItemView>
+#include <QTableWidgetItem>
 #include <QWidget>
 #include <QString>
 
 #include <cmath>
 #include <cstring>
+#include <cctype>
 
 /* Inc/calculator.h, variables.h, and history.h are plain C headers,
    without an extern "C" guard (unlike error.h/complex_eval.h/
@@ -26,7 +32,8 @@ extern "C"
 #include "calculator.h" /* insertImplicitMultiplication, validateExpression,
                             validateParentheses, infixToPostfix,
                             evaluatePostfix, getLastEvalError */
-#include "variables.h"  /* setVariable, getVariable, setAns */
+#include "variables.h"  /* setVariable, getVariable, setAns,
+                            getVariableCount, getVariableByIndex */
 #include "history.h"    /* addHistory, clearHistory, getHistoryCount,
                             getHistoryLineByNumber, getHistoryExpressionByNumber */
 }
@@ -50,7 +57,8 @@ QString trimmed(const char *s)
 } // namespace
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), m_display(nullptr), m_errorLabel(nullptr), m_historyList(nullptr)
+    : QMainWindow(parent), m_display(nullptr), m_errorLabel(nullptr), m_historyList(nullptr),
+      m_variablesTable(nullptr), m_newVarName(nullptr), m_newVarValue(nullptr), m_variablesError(nullptr)
 {
     setWindowTitle("Scientific Calculator");
 
@@ -147,15 +155,62 @@ MainWindow::MainWindow(QWidget *parent)
     connect(clearHistoryButton, &QPushButton::clicked, this, &MainWindow::clearHistoryPanel);
     historyLayout->addWidget(clearHistoryButton);
 
+    /* Variable manager panel (Step 3): reuses variables.c's in-memory
+       table via the same read-then-display pattern as the history
+       panel above. The table itself is read-only -- editing/creating
+       a variable goes through the name/value fields and Set button
+       below it, which is exactly what setVariable() already supports
+       (create-or-update), rather than wiring up in-place cell editing
+       (and the signal-blocking that'd need, to avoid refreshVariables()
+       triggering itself). */
+    auto *variablesPanel = new QWidget(this);
+    auto *variablesLayout = new QVBoxLayout(variablesPanel);
+
+    m_variablesTable = new QTableWidget(0, 2, variablesPanel);
+    m_variablesTable->setHorizontalHeaderLabels({"Name", "Value"});
+    m_variablesTable->horizontalHeader()->setStretchLastSection(true);
+    m_variablesTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_variablesTable->setSelectionMode(QAbstractItemView::NoSelection);
+    variablesLayout->addWidget(m_variablesTable);
+
+    auto *newVarLayout = new QHBoxLayout();
+    m_newVarName = new QLineEdit(variablesPanel);
+    m_newVarName->setPlaceholderText("name");
+    m_newVarName->setMaxLength(kVariableNameMax - 1);
+    newVarLayout->addWidget(m_newVarName);
+
+    m_newVarValue = new QLineEdit(variablesPanel);
+    m_newVarValue->setPlaceholderText("value");
+    newVarLayout->addWidget(m_newVarValue);
+
+    auto *setVarButton = new QPushButton("Set", variablesPanel);
+    connect(setVarButton, &QPushButton::clicked, this, &MainWindow::setVariableFromFields);
+    newVarLayout->addWidget(setVarButton);
+
+    connect(m_newVarName, &QLineEdit::returnPressed, this, &MainWindow::setVariableFromFields);
+    connect(m_newVarValue, &QLineEdit::returnPressed, this, &MainWindow::setVariableFromFields);
+
+    variablesLayout->addLayout(newVarLayout);
+
+    m_variablesError = new QLabel(variablesPanel);
+    m_variablesError->setStyleSheet("color: #c0392b;");
+    m_variablesError->setWordWrap(true);
+    variablesLayout->addWidget(m_variablesError);
+
+    auto *sidePanel = new QTabWidget(this);
+    sidePanel->addTab(historyPanel, "History");
+    sidePanel->addTab(variablesPanel, "Variables");
+
     auto *splitter = new QSplitter(Qt::Horizontal, this);
     splitter->addWidget(calculatorPanel);
-    splitter->addWidget(historyPanel);
+    splitter->addWidget(sidePanel);
     splitter->setStretchFactor(0, 2);
     splitter->setStretchFactor(1, 1);
 
     setCentralWidget(splitter);
 
     refreshHistory();
+    refreshVariables();
 }
 
 void MainWindow::appendToDisplay(const QString &text)
@@ -263,6 +318,7 @@ void MainWindow::evaluate()
         setAns(result);
         addHistory(infix, result);
         refreshHistory();
+        refreshVariables();
 
         m_display->setText(QString("%1 = %2").arg(varName).arg(result, 0, 'g', 6));
         return;
@@ -297,6 +353,7 @@ void MainWindow::evaluate()
     setAns(result);
     addHistory(infix, result);
     refreshHistory();
+    refreshVariables();
 
     m_display->setText(QString::number(result, 'g', 6));
 }
@@ -336,4 +393,79 @@ void MainWindow::clearHistoryPanel()
 {
     clearHistory();
     refreshHistory();
+}
+
+void MainWindow::refreshVariables()
+{
+    m_variablesTable->setRowCount(0);
+
+    int count = getVariableCount();
+    char name[kVariableNameMax];
+    double value;
+
+    for (int i = 0; i < count; ++i)
+    {
+        if (!getVariableByIndex(i, name, sizeof(name), &value))
+            continue;
+
+        int row = m_variablesTable->rowCount();
+        m_variablesTable->insertRow(row);
+        m_variablesTable->setItem(row, 0, new QTableWidgetItem(QString::fromUtf8(name)));
+        m_variablesTable->setItem(row, 1, new QTableWidgetItem(QString::number(value, 'g', 6)));
+    }
+}
+
+void MainWindow::setVariableFromFields()
+{
+    m_variablesError->clear();
+
+    QString name = m_newVarName->text().trimmed();
+
+    if (name.isEmpty())
+    {
+        m_variablesError->setText("Error: Enter a variable name.");
+        return;
+    }
+
+    /* Matches the identifier rule the expression parser itself uses
+       (postfix.c: starts with a letter, then letters/digits/'_') --
+       a variable this panel creates has to actually be usable when
+       typed into an expression, not just storable. */
+    QByteArray nameBytes = name.toUtf8();
+    const char *nameData = nameBytes.constData();
+
+    if (!std::isalpha(static_cast<unsigned char>(nameData[0])))
+    {
+        m_variablesError->setText("Error: A variable name must start with a letter.");
+        return;
+    }
+
+    for (int i = 1; i < nameBytes.size(); ++i)
+    {
+        unsigned char c = static_cast<unsigned char>(nameData[i]);
+        if (!std::isalnum(c) && c != '_')
+        {
+            m_variablesError->setText("Error: A variable name may only contain letters, digits, and '_'.");
+            return;
+        }
+    }
+
+    bool ok = false;
+    double value = m_newVarValue->text().trimmed().toDouble(&ok);
+
+    if (!ok)
+    {
+        m_variablesError->setText("Error: Enter a valid numeric value.");
+        return;
+    }
+
+    if (!setVariable(nameData, value))
+    {
+        m_variablesError->setText(QString("Error: '%1' is a read-only constant, or the variable table is full.").arg(name));
+        return;
+    }
+
+    m_newVarName->clear();
+    m_newVarValue->clear();
+    refreshVariables();
 }

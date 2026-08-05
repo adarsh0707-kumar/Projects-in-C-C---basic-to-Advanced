@@ -38,4 +38,17 @@ int getVariable(const char name[], double *value);
 /** @brief Prints every currently-defined variable to stdout. */
 void showVariables(void);
 
+/** @brief Returns the number of variables currently defined (always
+ *  includes the built-ins "ans", "pi", "e"). */
+int getVariableCount(void);
+
+/** @brief Writes the name and value of variable #index (0-indexed,
+ *  same order as showVariables()) into outName/outValue.
+ *  @param index    0-indexed position.
+ *  @param outName  Destination buffer for the name.
+ *  @param outSize  Size of outName in bytes.
+ *  @param outValue Out-parameter set to the variable's value.
+ *  @return 1 on success, 0 if index is out of range. */
+int getVariableByIndex(int index, char outName[], int outSize, double *outValue);
+
 #endif

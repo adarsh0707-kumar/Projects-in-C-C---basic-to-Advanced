@@ -4,6 +4,7 @@
  * (Inc/calculator.h etc.) -- see docs/ROADMAP.md's "In Progress:
  * Phase 31 -- GUI (Qt)" for the step-by-step plan this follows.
  * Step 1: basic arithmetic keypad. Step 2: history panel.
+ * Step 3: variable manager panel.
  */
 #ifndef MAINWINDOW_HPP
 #define MAINWINDOW_HPP
@@ -14,6 +15,7 @@ class QLineEdit;
 class QLabel;
 class QListWidget;
 class QListWidgetItem;
+class QTableWidget;
 
 class MainWindow : public QMainWindow
 {
@@ -35,14 +37,22 @@ private slots:
     void recallHistoryItem(QListWidgetItem *item);
     /** Clears history.c's on-disk log and this panel's list. */
     void clearHistoryPanel();
+    /** Creates/updates a variable from the name/value fields below the table. */
+    void setVariableFromFields();
 
 private:
     /** Repopulates the history list from history.c's on-disk log. */
     void refreshHistory();
+    /** Repopulates the variables table from variables.c's in-memory table. */
+    void refreshVariables();
 
     QLineEdit *m_display;
     QLabel *m_errorLabel;
     QListWidget *m_historyList;
+    QTableWidget *m_variablesTable;
+    QLineEdit *m_newVarName;
+    QLineEdit *m_newVarValue;
+    QLabel *m_variablesError;
 };
 
 #endif
