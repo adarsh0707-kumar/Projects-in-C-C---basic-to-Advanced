@@ -115,7 +115,7 @@ Calculator/
 ├── Inc/                       # Public headers (Doxygen-documented)
 ├── Src/                        # Implementation (.c and .cpp)
 ├── Gui/                        # Qt6 GUI front end (Phase 31, in progress) -- calls the same engine as the CLI
-├── Tests/                      # 460 unit tests (Tests/test_main.c is the test runner's entry point)
+├── Tests/                      # 471 unit tests (Tests/test_main.c is the test runner's entry point)
 ├── docs/
 │   ├── Doxyfile               # `make docs` config
 │   ├── API.md  ARCHITECTURE.md  CHANGELOG.md  CONTRIBUTING.md

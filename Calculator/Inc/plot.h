@@ -26,10 +26,10 @@
 /** @brief Parses, validates, samples, and renders an ASCII plot of
  *  the expression inside `plot(...)`.
  *  @param input     Full input line, e.g. "plot(sin(x))".
- *  @param errorMsg  Destination buffer for an error message. Left
- *  empty if validateExpression()/validateParentheses() already
- *  printed their own message for the inner expression, in which case
- *  the caller shouldn't print anything further.
+ *  @param errorMsg  Destination buffer for an error message (from
+ *  parsing the plot(...) syntax itself, or from validateExpression()
+ *  for the inner expression) if invalid; cleared to an empty string
+ *  if valid.
  *  @param errorSize Size of @p errorMsg in bytes.
  *  @return 1 on success (the graph has already been printed to
  *  stdout), 0 on failure. */

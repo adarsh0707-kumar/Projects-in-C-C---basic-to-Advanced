@@ -220,7 +220,7 @@ Supports
 ## validateExpression()
 
 ```c
-int validateExpression(char expression[]);
+int validateExpression(char expression[], char errorMsg[], size_t errorSize);
 ```
 
 Checks expression syntax.
@@ -232,6 +232,12 @@ Detects
 - malformed numbers
 - misplaced commas
 - invalid function syntax
+
+Writes its diagnostic (e.g. `Error: Operand expected.`) into `errorMsg`
+instead of printing it, so a caller that isn't a terminal -- the Qt GUI,
+or `evaluatePlotExpression()` forwarding it to its own buffer -- can
+display the specific reason rather than a generic one. `errorMsg` is
+cleared to an empty string when the expression is valid.
 
 Returns
 
@@ -252,10 +258,21 @@ Invalid
 ## validateParentheses()
 
 ```c
-int validateParentheses(char expression[]);
+int validateParentheses(char expression[], char errorMsg[], size_t errorSize);
 ```
 
 Checks matching parentheses.
+
+Writes the specific reason into `errorMsg` -- `Error: Unclosed '('.`,
+`Error: Too many ')'.`, or `Error: Too many nested parentheses.` when
+the nesting outruns the `CharStack` -- so callers no longer have to
+print one generic message for all three. Cleared to an empty string
+when the parentheses balance.
+
+Note that in the CLI/GUI pipeline `validateExpression()` runs first and
+rejects every unbalanced expression on its own, so this call is a
+backstop for direct callers rather than the usual source of the message
+a user sees.
 
 Returns
 

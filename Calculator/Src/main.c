@@ -23,6 +23,7 @@ int main(void)
     char variableName[32];
     char expression[256];
     char processed[512];
+    char validationError[128];
 
     int choice;
 
@@ -236,12 +237,15 @@ int main(void)
 
                 insertImplicitMultiplication(expression, processed);
 
-                if (!validateExpression(processed))
-                    break;
-
-                if (!validateParentheses(processed))
+                if (!validateExpression(processed, validationError, sizeof(validationError)))
                 {
-                    printf("Error: Mismatched parentheses.\n");
+                    printf("%s\n", validationError);
+                    break;
+                }
+
+                if (!validateParentheses(processed, validationError, sizeof(validationError)))
+                {
+                    printf("%s\n", validationError);
                     break;
                 }
 
@@ -275,15 +279,16 @@ int main(void)
 
             /* Normal expression */
 
-            if (!validateExpression(infix))
+            if (!validateExpression(infix, validationError, sizeof(validationError)))
             {
+                printf("%s\n", validationError);
                 break;
             }
 
             /* Validate parentheses */
-            if (!validateParentheses(infix))
+            if (!validateParentheses(infix, validationError, sizeof(validationError)))
             {
-                printf("Error: Mismatched parentheses.\n");
+                printf("%s\n", validationError);
                 break;
             }
 

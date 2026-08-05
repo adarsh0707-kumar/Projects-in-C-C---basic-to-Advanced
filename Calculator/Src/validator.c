@@ -22,8 +22,10 @@ typedef struct
     char funcName[32]; /* for the error message */
 } ParenFrame;
 
-int validateExpression(char expression[])
+int validateExpression(char expression[], char errorMsg[], size_t errorSize)
 {
+    errorMsg[0] = '\0';
+
     ParserState state = EXPECT_OPERAND;
 
     int i = 0;
@@ -57,7 +59,7 @@ int validateExpression(char expression[])
 
                     if (dotCount > 1)
                     {
-                        printf("Error: Invalid number format.\n");
+                        snprintf(errorMsg, errorSize, "Error: Invalid number format.");
                         return 0;
                     }
 
@@ -78,7 +80,7 @@ int validateExpression(char expression[])
                 {
                     if (k >= (int)sizeof(identifier) - 1)
                     {
-                        printf("Error: Identifier name too long.\n");
+                        snprintf(errorMsg, errorSize, "Error: Identifier name too long.");
                         return 0;
                     }
 
@@ -97,7 +99,7 @@ int validateExpression(char expression[])
 
                     if (balance >= MAX_PAREN_DEPTH)
                     {
-                        printf("Error: Too many nested parentheses.\n");
+                        snprintf(errorMsg, errorSize, "Error: Too many nested parentheses.");
                         return 0;
                     }
 
@@ -128,7 +130,7 @@ int validateExpression(char expression[])
 
                 if (balance >= MAX_PAREN_DEPTH)
                 {
-                    printf("Error: Too many nested parentheses.\n");
+                    snprintf(errorMsg, errorSize, "Error: Too many nested parentheses.");
                     return 0;
                 }
 
@@ -138,7 +140,7 @@ int validateExpression(char expression[])
                 continue;
             }
 
-            printf("Error: Operand expected.\n");
+            snprintf(errorMsg, errorSize, "Error: Operand expected.");
             return 0;
 
         case AFTER_OPERAND:
@@ -147,7 +149,7 @@ int validateExpression(char expression[])
             {
                 if (balance == 0)
                 {
-                    printf("Error: Too many ')'\n");
+                    snprintf(errorMsg, errorSize, "Error: Too many ')'.");
                     return 0;
                 }
 
@@ -158,10 +160,11 @@ int validateExpression(char expression[])
 
                     if (actualArgs != expectedArgs)
                     {
-                        printf("Error: Function '%s' expects %d argument(s), got %d.\n",
-                               frames[balance].funcName,
-                               expectedArgs,
-                               actualArgs);
+                        snprintf(errorMsg, errorSize,
+                                 "Error: Function '%s' expects %d argument(s), got %d.",
+                                 frames[balance].funcName,
+                                 expectedArgs,
+                                 actualArgs);
                         return 0;
                     }
                 }
@@ -183,7 +186,7 @@ int validateExpression(char expression[])
             {
                 if (balance == 0 || !frames[balance].isFunctionCall)
                 {
-                    printf("Error: ',' used outside of a function call.\n");
+                    snprintf(errorMsg, errorSize, "Error: ',' used outside of a function call.");
                     return 0;
                 }
 
@@ -207,20 +210,20 @@ int validateExpression(char expression[])
                 continue;
             }
 
-            printf("Error: Operator expected.\n");
+            snprintf(errorMsg, errorSize, "Error: Operator expected.");
             return 0;
         }
     }
 
     if (balance != 0)
     {
-        printf("Error: Mismatched parentheses.\n");
+        snprintf(errorMsg, errorSize, "Error: Mismatched parentheses.");
         return 0;
     }
 
     if (state == EXPECT_OPERAND)
     {
-        printf("Error: Expression cannot end with an operator.\n");
+        snprintf(errorMsg, errorSize, "Error: Expression cannot end with an operator.");
         return 0;
     }
 

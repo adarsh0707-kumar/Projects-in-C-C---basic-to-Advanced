@@ -8,6 +8,70 @@ The format is based on **Keep a Changelog** and follows **Semantic Versioning** 
 
 # [Unreleased]
 
+## 2026-08-05 (4) — Phase 31 (GUI) Step 7 remainder: validators report their own errors
+
+### Changed
+
+- `Src/validator.c`, `Inc/validator.h`, `Inc/calculator.h`:
+  `validateExpression()` now takes `char errorMsg[]` / `size_t
+  errorSize` and writes its diagnostic there via `snprintf()` instead
+  of `printf()`-ing it to stdout. This closes the limitation flagged
+  in the previous entry: the Qt GUI could see only the return value,
+  so it had to show a generic "Invalid expression." no matter which of
+  the eight specific reasons (`Operand expected.`, `Function 'sin'
+  expects 1 argument(s), got 2.`, ...) actually fired. The buffer is
+  cleared to `""` on entry, so a caller can also use "is it empty" as
+  the success test.
+- `Src/parser.c`: `validateParentheses()` gained the same
+  `errorMsg`/`errorSize` pair. It never printed anything — it just
+  returned 0 for all three of its failure modes, leaving every caller
+  to print one hardcoded "Mismatched parentheses." It now distinguishes
+  `Error: Unclosed '('.`, `Error: Too many ')'.`, and `Error: Too many
+  nested parentheses.` (the `CharStack` overflow path that gives up
+  mid-walk rather than exiting the process).
+- `Src/main.c`, `Src/plot.c`, `Gui/MainWindow.cpp`: all eight call
+  sites updated. `evaluatePlotExpression()` forwards its own
+  `errorMsg` buffer straight into both validators, so a bad inner
+  expression now surfaces the real reason instead of the buffer being
+  left empty on the assumption the validator had already printed it —
+  and `plot.c` no longer needs its own hardcoded mismatched-parens
+  message. The GUI's assignment path appends `(right of '=')` to
+  preserve the context its old message carried, which is always
+  accurate since only the right-hand side reaches a validator.
+- `Inc/plot.h`, `Inc/validator.h`: the doc comments claimed `errorMsg`
+  was "left untouched if valid"; both functions actually clear it, and
+  the comments now say so.
+- `docs/API.md`: both signatures were still documented in their
+  one-argument form.
+
+### Note
+
+`errorSize` is `size_t` in both signatures, matching
+`evaluatePlotExpression()`, so forwarding a buffer between them needs
+no cast.
+
+In the CLI/GUI pipeline `validateExpression()` runs first and rejects
+every unbalanced expression on its own (it tracks `balance` with the
+same rules and a shallower depth cap), so `validateParentheses()`'s new
+messages are a backstop for direct callers rather than something a user
+will normally see — confirmed by feeding `(()` and `)(` through
+`./calculator`, which report `Error: Operand expected.` from the
+expression validator. They're covered by direct unit tests instead.
+
+### Verified
+
+`make all`, `make gui`, and `make test` all clean under `-Wall
+-Wextra` with zero warnings; **471 tests pass** (up from 466 —
+`test_validator.c` gained `test_error_messages()` and
+`test_parser.c` gained `test_validate_parentheses_messages()`,
+covering the exact message text for each failure mode, the empty
+buffer on success, and null-termination when the caller's buffer is
+too small to hold the message). The four CLI error paths (arity
+mismatch, missing operator, trailing operator, malformed `plot(...)`)
+each print their specific message exactly once — previously the plot
+path printed from inside the validator and returned an empty buffer.
+The GUI launches cleanly under `QT_QPA_PLATFORM=offscreen`.
+
 ## 2026-08-05 (3) — Phase 31 (GUI) Step 7 follow-up: menu-driven layout
 
 ### Added

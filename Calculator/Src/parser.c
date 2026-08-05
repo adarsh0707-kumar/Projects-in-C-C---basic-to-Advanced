@@ -1,4 +1,5 @@
 #include <ctype.h>
+#include <stdio.h>
 #include <string.h>
 #include "stack.h"
 #include "calculator.h"
@@ -21,8 +22,10 @@ static int isPartOfIdentifier(char input[], int i)
     return 0;
 }
 
-int validateParentheses(char expression[])
+int validateParentheses(char expression[], char errorMsg[], size_t errorSize)
 {
+    errorMsg[0] = '\0';
+
     CharStack s;
     initCharStack(&s);
 
@@ -37,6 +40,7 @@ int validateParentheses(char expression[])
                 /* Pathologically deep nesting -- can't validate, so
                    treat it as invalid rather than exiting the whole
                    program over a single malformed expression. */
+                snprintf(errorMsg, errorSize, "Error: Too many nested parentheses.");
                 return 0;
             }
         }
@@ -46,12 +50,20 @@ int validateParentheses(char expression[])
 
             if (isEmptyCharStack(&s) || !popChar(&s, &discarded))
             {
+                snprintf(errorMsg, errorSize, "Error: Too many ')'.");
                 return 0;
             }
         }
         i++;
     }
-    return isEmptyCharStack(&s);
+
+    if (!isEmptyCharStack(&s))
+    {
+        snprintf(errorMsg, errorSize, "Error: Unclosed '('.");
+        return 0;
+    }
+
+    return 1;
 }
 
 void insertImplicitMultiplication(char input[], char output[])

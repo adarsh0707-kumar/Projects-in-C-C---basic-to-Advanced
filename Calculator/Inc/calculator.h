@@ -1,6 +1,8 @@
 #ifndef CALCULATOR_H
 #define CALCULATOR_H
 
+#include <stddef.h>
+
 double precedence(char op);
 
 /** @brief Returns 1 if @p ch is one of the recognized operator
@@ -27,11 +29,22 @@ double evaluatePostfix(char postfix[]);
  *  empty string if the last call succeeded. */
 const char *getLastEvalError(void);
 
-int validateParentheses(char expression[]);
+/** @brief Checks that every '(' in @p expression has a matching ')'.
+ *  @param expression Null-terminated expression to check.
+ *  @param errorMsg   Destination buffer for the specific reason the
+ *  parentheses don't balance -- an unclosed '(', a ')' with nothing
+ *  open, or nesting deeper than the CharStack can hold -- if invalid;
+ *  cleared to an empty string if valid. Must be non-NULL.
+ *  @param errorSize  Size of @p errorMsg in bytes.
+ *  @return 1 if balanced; 0 if not. */
+int validateParentheses(char expression[], char errorMsg[], size_t errorSize);
 
 double readNumber(char expression[], int *index);
 
-int validateExpression(char expression[]);
+/** @brief See validator.h for the full doc comment (duplicated here so
+ *  every existing caller of calculator.h doesn't also need
+ *  validator.h). */
+int validateExpression(char expression[], char errorMsg[], size_t errorSize);
 
 void insertImplicitMultiplication(char input[], char output[]);
 

@@ -68,6 +68,11 @@ constexpr int kInfixMax = 512;
 constexpr int kPostfixMax = 1024;
 constexpr int kVariableNameMax = 32;
 
+/* Destination for validateExpression()'s diagnostic. Same size as
+   Src/main.c's validationError buffer, so the GUI and the CLI can't
+   truncate the same message differently. */
+constexpr int kValidationErrorMax = 128;
+
 /* Matches Src/plot.c's PLOT_XMIN/PLOT_XMAX exactly, so the GUI plots
    the same domain the CLI's ASCII plot does. Sample count is much
    higher than plot.c's 61 columns since a QPainter line plot benefits
@@ -587,6 +592,7 @@ void MainWindow::evaluate()
     char processed[kInfixMax];
     char infix[kInfixMax];
     char postfix[kPostfixMax];
+    char validationError[kValidationErrorMax];
 
     insertImplicitMultiplication(expression, processed);
     std::strncpy(infix, processed, sizeof(infix) - 1);
@@ -623,15 +629,18 @@ void MainWindow::evaluate()
 
         insertImplicitMultiplication(rhs, processed);
 
-        if (!validateExpression(processed))
+        /* Only the right-hand side reaches the validator -- the name on
+           the left is checked above -- so the diagnostic is always about
+           the RHS, and saying so keeps the old message's context. */
+        if (!validateExpression(processed, validationError, sizeof(validationError)))
         {
-            m_errorLabel->setText("Error: Invalid expression on the right of '='.");
+            m_errorLabel->setText(QString("%1 (right of '=')").arg(validationError));
             return;
         }
 
-        if (!validateParentheses(processed))
+        if (!validateParentheses(processed, validationError, sizeof(validationError)))
         {
-            m_errorLabel->setText("Error: Mismatched parentheses.");
+            m_errorLabel->setText(QString("%1 (right of '=')").arg(validationError));
             return;
         }
 
@@ -660,15 +669,15 @@ void MainWindow::evaluate()
         return;
     }
 
-    if (!validateExpression(infix))
+    if (!validateExpression(infix, validationError, sizeof(validationError)))
     {
-        m_errorLabel->setText("Error: Invalid expression.");
+        m_errorLabel->setText(validationError);
         return;
     }
 
-    if (!validateParentheses(infix))
+    if (!validateParentheses(infix, validationError, sizeof(validationError)))
     {
-        m_errorLabel->setText("Error: Mismatched parentheses.");
+        m_errorLabel->setText(validationError);
         return;
     }
 
@@ -866,20 +875,21 @@ void MainWindow::plotCurrentExpression()
     expression[sizeof(expression) - 1] = '\0';
 
     char processed[kInfixMax];
+    char validationError[kValidationErrorMax];
     insertImplicitMultiplication(expression, processed);
 
     /* Syntax only needs checking once -- it doesn't depend on x's
        value, exactly as Src/plot.c's own comment notes. */
-    if (!validateExpression(processed))
+    if (!validateExpression(processed, validationError, sizeof(validationError)))
     {
-        m_plotError->setText("Error: Invalid expression.");
+        m_plotError->setText(validationError);
         m_plotWidget->clearPlot();
         return;
     }
 
-    if (!validateParentheses(processed))
+    if (!validateParentheses(processed, validationError, sizeof(validationError)))
     {
-        m_plotError->setText("Error: Mismatched parentheses.");
+        m_plotError->setText(validationError);
         m_plotWidget->clearPlot();
         return;
     }

@@ -49,7 +49,7 @@ table to match.
 **v1.0 (CLI engine): shipped.** All of Phases 1–27 are complete — the
 full expression engine, scientific functions, variables/memory/history,
 statistics, unit and base conversion, complex numbers, matrices, and
-ASCII graph plotting, backed by 460 passing unit tests (clean under
+ASCII graph plotting, backed by 471 passing unit tests (clean under
 AddressSanitizer/UndefinedBehaviorSanitizer).
 
 | Phase(s) | Area                                        | Status        |
@@ -270,21 +270,19 @@ shows the QWERTY grid; checking "Functions & History (Advanced)"
 opens the dock beside the keypad with History pre-populated and
 correctly styled.
 
-**Known Step 1 limitation (unchanged):** `validateExpression()`/
-`validateParentheses()` report their specific failure reason via
-`printf()` to stdout (fine for the CLI, invisible to a GUI window) —
-the GUI currently shows a generic "Invalid expression."/"Mismatched
-parentheses." instead of the specific reason. Every other error path
+**Known Step 1 limitation (fixed 2026-08-05):** `validateExpression()`
+reported its specific failure reason via `printf()` to stdout (fine for
+the CLI, invisible to a GUI window) and `validateParentheses()` reported
+nothing at all, so the GUI showed a generic "Invalid expression."/
+"Mismatched parentheses." instead of the reason actually detected. Both
+now take an `errorMsg`/`errorSize` buffer like every other error path
 (`infixToPostfix`, `evaluatePostfix`, the stats/units/base/complex/
-matrix modules) already returns its message in a buffer and doesn't
-have this gap.
+matrix modules), and the CLI, the GUI, and `evaluatePlotExpression()`
+all display what they write.
 
 **Remaining steps** (each its own later commit, not all at once):
 
-- Step 7 (remainder): an application icon, and fixing the
-  validator-message limitation above (would need
-  `validateExpression()`/`validateParentheses()` to return a message
-  into a buffer like every other module already does).
+- Step 7 (remainder): an application icon.
 
 Phases 28–30 (dynamic data structures, AST, symbolic math) are
 foundational rewrites of the evaluation engine itself and are

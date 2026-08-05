@@ -126,14 +126,11 @@ int evaluatePlotExpression(const char input[], char errorMsg[], size_t errorSize
     insertImplicitMultiplication(innerExpr, processed);
 
     /* Syntax only needs checking once -- it doesn't depend on x's value. */
-    if (!validateExpression(processed))
-        return 0; /* validateExpression() already printed its own message */
-
-    if (!validateParentheses(processed))
-    {
-        snprintf(errorMsg, errorSize, "Error: Mismatched parentheses in plot(...).");
+    if (!validateExpression(processed, errorMsg, errorSize))
         return 0;
-    }
+
+    if (!validateParentheses(processed, errorMsg, errorSize))
+        return 0;
 
     double ys[PLOT_WIDTH];
     int valid[PLOT_WIDTH];
