@@ -8,6 +8,57 @@ The format is based on **Keep a Changelog** and follows **Semantic Versioning** 
 
 # [Unreleased]
 
+## 2026-08-05 (5) — Phase 31 (GUI) Step 7 complete: application icon
+
+### Added
+
+- `Gui/icon.svg`: the icon source, drawn entirely from plain rectangles
+  in the same palette as the GUI's own stylesheet (`#21222f` display
+  well, `#2d2f45` body, `#33354c` keys, `#5468ff` accent on the "="
+  key, `#eab876` display text) so the icon matches the window it opens.
+  No SVG `<text>` element anywhere: `rsvg-convert` would otherwise need
+  the right font installed to reproduce the PNGs, and `make icons` is
+  meant to produce identical bytes on any machine (verified by
+  regenerating and diffing checksums).
+- `Gui/icons/calculator-{16,24,32,48,64,128,256}.png`: committed
+  renders, so a normal build needs neither `rsvg-convert` nor a
+  generation step. `make icons` re-renders them and is the only target
+  that needs librsvg.
+- `Gui/resources.qrc` + a `rcc` rule in the Makefile: the PNGs are
+  compiled into `calculator-gui` rather than read from disk, so the
+  icon appears no matter which directory the binary is launched from
+  and without installing anything. `RCC` is located via
+  `qmake6 -query QT_HOST_LIBEXECS` for the same Qt5/Qt6 mismatch reason
+  the existing `MOC` line documents.
+- `Gui/main.cpp`: sets the application name, display name, and
+  `setDesktopFileName("calculator-gui")` (what lets a Wayland/GNOME
+  session match the running window to its launcher entry), then builds
+  one `QIcon` holding *every* embedded size. A window manager picks the
+  closest match and scales it, and a 16 px title-bar icon downscaled
+  from the 256 px render loses the keypad grid that makes the shape
+  read as a calculator at all.
+- `Gui/calculator-gui.desktop.in` + `make install-desktop` /
+  `make uninstall-desktop`: an optional per-user launcher entry
+  (`~/.local/share`, never root) plus hicolor icons at every size and
+  the SVG in `scalable/`. `Exec` is substituted with this build tree's
+  absolute path, so the entry works without installing the binary
+  anywhere -- and is quoted, since a project path containing a space
+  would otherwise be split into arguments by the desktop spec.
+
+### Verified
+
+`desktop-file-validate` passes with no warnings. The embedded
+resources were checked by linking `qrc_resources.o` into a small
+harness that reads each path back out of the resource system: all
+seven resolve, the composed `QIcon` is non-null, `availableSizes()`
+reports all seven, and a 16 px request returns a native 16x16 pixmap
+rather than a downscale of the 256 px one. `make gui` is clean under
+`-Wall -Wextra`, the binary launches under `QT_QPA_PLATFORM=offscreen`,
+and `make test` still passes 471 cases (nothing in `Src/` changed).
+
+**This completes Phase 31.** All 7 steps are done; `docs/ROADMAP.md`
+and `docs/PHASES.md` updated accordingly.
+
 ## 2026-08-05 (4) — Phase 31 (GUI) Step 7 remainder: validators report their own errors
 
 ### Changed

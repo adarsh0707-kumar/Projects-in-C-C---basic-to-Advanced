@@ -1,0 +1,21 @@
+<!DOCTYPE RCC>
+<!--
+  Compiled into the binary by rcc (see the Makefile's qrc_%.cpp rule)
+  rather than loaded from disk at runtime, so calculator-gui shows its
+  icon no matter what directory it's started from or whether it has
+  been installed anywhere.
+
+  Paths are relative to this file; the PNGs are generated from
+  Gui/icon.svg by `make icons` and committed alongside it.
+-->
+<RCC version="1.0">
+  <qresource prefix="/">
+    <file>icons/calculator-16.png</file>
+    <file>icons/calculator-24.png</file>
+    <file>icons/calculator-32.png</file>
+    <file>icons/calculator-48.png</file>
+    <file>icons/calculator-64.png</file>
+    <file>icons/calculator-128.png</file>
+    <file>icons/calculator-256.png</file>
+  </qresource>
+</RCC>

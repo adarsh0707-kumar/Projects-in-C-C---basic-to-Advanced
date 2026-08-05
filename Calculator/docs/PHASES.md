@@ -1040,10 +1040,16 @@ checking "Alpha Keyboard" shows the QWERTY grid; checking "Functions
 & History (Advanced)" opens a dock beside the keypad with History
 pre-populated.
 
+Step 7 (remainder): an application icon, drawn in the GUI's own
+palette and compiled into the binary via `rcc` so it survives being
+launched from anywhere, plus an optional per-user desktop entry
+(`make install-desktop`). Verified by loading every embedded size back
+out of the resource system and confirming a 16 px request returns the
+native 16 px render rather than a downscale of the 256 px one.
+
 Status:
-🟠 In Progress — Steps 1–6 complete, Step 7 partial (of 7 planned
-steps; see `docs/ROADMAP.md`'s "In Progress: Phase 31" section for the
-full breakdown)
+✅ Completed — all 7 steps (see `docs/ROADMAP.md`'s "Completed: Phase
+31" section for the full breakdown)
 
 ---
 

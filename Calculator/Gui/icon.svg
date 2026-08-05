@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Application icon source. Every colour here is lifted from the GUI
+  stylesheet in Gui/MainWindow.cpp so the icon matches the window it
+  opens: #21222f (display well), #2d2f45 (body), #33354c (keys),
+  #5468ff (accent key), #eab876 (display text).
+
+  Deliberately built from plain shapes rather than an SVG text element:
+  rsvg-convert would otherwise need the right font installed to
+  reproduce the PNGs, and `make icons` is meant to give the same bytes
+  on any machine.
+
+  Regenerate the PNGs in Gui/icons/ with `make icons` after editing.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+
+  <!-- Calculator body -->
+  <rect x="24" y="12" width="208" height="232" rx="32"
+        fill="#2d2f45" stroke="#33354c" stroke-width="4"/>
+
+  <!-- Display well, with an amber entry and a dimmer result above it -->
+  <rect x="48" y="36" width="160" height="52" rx="12" fill="#21222f"/>
+  <rect x="150" y="48" width="42" height="8" rx="4" fill="#5468ff" opacity="0.55"/>
+  <rect x="112" y="64" width="80" height="14" rx="7" fill="#eab876"/>
+
+  <!-- Keypad: 3x3, 40x32 keys on a 20/16 gutter -->
+  <g fill="#33354c">
+    <rect x="48"  y="104" width="40" height="32" rx="10"/>
+    <rect x="108" y="104" width="40" height="32" rx="10"/>
+    <rect x="168" y="104" width="40" height="32" rx="10"/>
+
+    <rect x="48"  y="152" width="40" height="32" rx="10"/>
+    <rect x="108" y="152" width="40" height="32" rx="10"/>
+    <rect x="168" y="152" width="40" height="32" rx="10"/>
+
+    <rect x="48"  y="200" width="40" height="32" rx="10"/>
+    <rect x="108" y="200" width="40" height="32" rx="10"/>
+  </g>
+
+  <!-- The '=' key, in the same accent the GUI uses for its own -->
+  <rect x="168" y="200" width="40" height="32" rx="10" fill="#5468ff"/>
+  <rect x="177" y="210" width="22" height="4" rx="2" fill="#f2f2fa"/>
+  <rect x="177" y="218" width="22" height="4" rx="2" fill="#f2f2fa"/>
+</svg>

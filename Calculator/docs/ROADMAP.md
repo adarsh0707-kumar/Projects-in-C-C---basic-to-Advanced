@@ -65,7 +65,7 @@ AddressSanitizer/UndefinedBehaviorSanitizer).
 | 28       | Dynamic data structures                      | 🟡 Planned    |
 | 29       | Abstract Syntax Tree (AST)                   | 🟡 Planned    |
 | 30       | Symbolic mathematics                         | 🟡 Planned    |
-| 31       | Graphical User Interface (Qt)                | 🟠 In Progress — Steps 1–6 done, Step 7 partial |
+| 31       | Graphical User Interface (Qt)                | ✅ Completed  |
 | 32       | Plugin architecture                          | 🟡 Planned    |
 | 33       | Calculator scripting                         | 🟡 Planned    |
 | 34       | Package manager                              | 🟡 Planned    |
@@ -76,7 +76,7 @@ See `docs/PHASES.md` for the full breakdown of every phase above.
 
 ---
 
-# In Progress: Phase 31 — GUI (Qt)
+# Completed: Phase 31 — GUI (Qt)
 
 The chosen toolkit is **Qt6** (`Qt6Widgets`, via `pkg-config`),
 matching what `docs/RULES.md` and this roadmap anticipated. Being
@@ -280,9 +280,20 @@ now take an `errorMsg`/`errorSize` buffer like every other error path
 matrix modules), and the CLI, the GUI, and `evaluatePlotExpression()`
 all display what they write.
 
-**Remaining steps** (each its own later commit, not all at once):
+**Step 7 (done — application icon):** `Gui/icon.svg` is the source of
+truth, drawn from plain shapes in the same palette as the GUI's own
+stylesheet, and rendered to PNGs at 16/24/32/48/64/128/256 px by
+`make icons` (needs `rsvg-convert`; the PNGs are committed, so a
+normal build doesn't). They're compiled into the binary through
+`Gui/resources.qrc` via `rcc` rather than read from disk, so the icon
+appears no matter where `calculator-gui` is launched from. Every size
+goes into one `QIcon` because a 16 px title-bar icon downscaled from
+256 px loses the keypad grid that makes the shape legible at all.
+`make install-desktop` additionally installs a per-user `.desktop`
+entry plus the hicolor icons so the app shows up in the desktop
+launcher; `make uninstall-desktop` reverses it.
 
-- Step 7 (remainder): an application icon.
+**Phase 31 is complete.** All 7 steps are done.
 
 Phases 28–30 (dynamic data structures, AST, symbolic math) are
 foundational rewrites of the evaluation engine itself and are

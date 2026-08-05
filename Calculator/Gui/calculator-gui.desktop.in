@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Calculator
+GenericName=Scientific Calculator
+Comment=Scientific calculator with variables, matrices, complex numbers, and plotting
+Exec="@EXEC@"
+Icon=calculator-gui
+Terminal=false
+Categories=Utility;Calculator;
+Keywords=calculator;scientific;math;plot;matrix;complex;
+StartupNotify=true
+StartupWMClass=calculator-gui

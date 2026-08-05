@@ -85,6 +85,9 @@ QT_LIBS   := $(shell pkg-config --libs Qt6Widgets 2>/dev/null)
 # that fails to compile against the newer headers. qmake6's
 # QT_HOST_LIBEXECS reliably points at the matching Qt6 moc.
 MOC := $(shell qmake6 -query QT_HOST_LIBEXECS 2>/dev/null)/moc
+# Same story for rcc, which compiles Gui/resources.qrc (the app icon)
+# into a C++ source file.
+RCC := $(shell qmake6 -query QT_HOST_LIBEXECS 2>/dev/null)/rcc
 
 # ------------------------------------------------------------------
 # Sources
@@ -173,15 +176,27 @@ GUI_SRCS      = $(GUI_DIR)/MainWindow.cpp $(GUI_DIR)/PlotWidget.cpp $(GUI_DIR)/m
 MOC_HEADERS   = $(GUI_DIR)/MainWindow.hpp
 MOC_GEN_SRCS  = $(MOC_HEADERS:$(GUI_DIR)/%.hpp=$(GUI_OBJ_DIR)/moc_%.cpp)
 
+# The app icon, embedded rather than read from disk -- see Gui/resources.qrc.
+QRC_FILES     = $(GUI_DIR)/resources.qrc
+QRC_GEN_SRCS  = $(QRC_FILES:$(GUI_DIR)/%.qrc=$(GUI_OBJ_DIR)/qrc_%.cpp)
+
 GUI_OBJS = $(GUI_SRCS:$(GUI_DIR)/%.cpp=$(GUI_OBJ_DIR)/%.o) \
-           $(MOC_GEN_SRCS:$(GUI_OBJ_DIR)/%.cpp=$(GUI_OBJ_DIR)/%.o)
+           $(MOC_GEN_SRCS:$(GUI_OBJ_DIR)/%.cpp=$(GUI_OBJ_DIR)/%.o) \
+           $(QRC_GEN_SRCS:$(GUI_OBJ_DIR)/%.cpp=$(GUI_OBJ_DIR)/%.o)
+
+# Rendered from Gui/icon.svg by `make icons`. Committed, so a normal
+# build needs neither rsvg-convert nor a regeneration step.
+ICON_SVG   = $(GUI_DIR)/icon.svg
+ICON_SIZES = 16 24 32 48 64 128 256
+ICON_PNGS  = $(foreach s,$(ICON_SIZES),$(GUI_DIR)/icons/calculator-$(s).png)
 
 ENGINE_OBJS_FOR_GUI = $(filter-out $(OBJ_DIR)/main.o,$(OBJS)) $(CXX_OBJS)
 
 # ------------------------------------------------------------------
 # Primary targets
 # ------------------------------------------------------------------
-.PHONY: all debug release asan ubsan run test docs clean distclean rebuild gui run-gui
+.PHONY: all debug release asan ubsan run test docs clean distclean rebuild gui run-gui icons \
+        install-desktop uninstall-desktop
 
 all: $(TARGET)
 
@@ -237,11 +252,69 @@ $(GUI_OBJ_DIR)/moc_%.cpp: $(GUI_DIR)/%.hpp | $(GUI_OBJ_DIR)
 $(GUI_OBJ_DIR)/moc_%.o: $(GUI_OBJ_DIR)/moc_%.cpp
 	$(CXX) $(CXXFLAGS) $(QT_CFLAGS) -fPIC -c $< -o $@
 
+# rcc reads the <file> paths in the .qrc relative to the .qrc itself,
+# so it runs from $(GUI_DIR); the generated .cpp still lands in the
+# build directory like every other generated source.
+$(GUI_OBJ_DIR)/qrc_%.cpp: $(GUI_DIR)/%.qrc $(ICON_PNGS) | $(GUI_OBJ_DIR)
+	$(RCC) $< -o $@
+
+$(GUI_OBJ_DIR)/qrc_%.o: $(GUI_OBJ_DIR)/qrc_%.cpp
+	$(CXX) $(CXXFLAGS) $(QT_CFLAGS) -fPIC -c $< -o $@
+
 $(GUI_OBJ_DIR):
 	mkdir -p $(GUI_OBJ_DIR)
 
 run-gui: gui
 	./$(GUI_TARGET)
+
+# ------------------------------------------------------------------
+# Icons -- only needed after editing Gui/icon.svg. The PNGs are
+# committed, so this is not part of any build target; it needs
+# rsvg-convert (librsvg), which the build itself does not.
+# ------------------------------------------------------------------
+icons:
+	@command -v rsvg-convert >/dev/null || \
+		{ echo "rsvg-convert not found -- install librsvg to regenerate icons"; exit 1; }
+	@mkdir -p $(GUI_DIR)/icons
+	@for s in $(ICON_SIZES); do \
+		rsvg-convert -w $$s -h $$s $(ICON_SVG) -o $(GUI_DIR)/icons/calculator-$$s.png && \
+		echo "  generated $(GUI_DIR)/icons/calculator-$$s.png"; \
+	done
+
+# ------------------------------------------------------------------
+# Desktop entry -- the icon is compiled into the binary, so the window
+# already has it while running; this is what additionally puts the app
+# in the desktop's launcher/menu. Per-user (no root), and undone by
+# `make uninstall-desktop`. Exec is substituted with the absolute path
+# of the binary in this build tree, so it works without installing the
+# binary anywhere.
+# ------------------------------------------------------------------
+DESKTOP_DIR   = $(HOME)/.local/share/applications
+HICOLOR_DIR   = $(HOME)/.local/share/icons/hicolor
+DESKTOP_ENTRY = $(DESKTOP_DIR)/calculator-gui.desktop
+
+install-desktop: gui
+	@mkdir -p $(DESKTOP_DIR)
+	@sed 's|@EXEC@|$(CURDIR)/$(GUI_TARGET)|' $(GUI_DIR)/calculator-gui.desktop.in > $(DESKTOP_ENTRY)
+	@for s in $(ICON_SIZES); do \
+		mkdir -p $(HICOLOR_DIR)/$${s}x$${s}/apps; \
+		cp $(GUI_DIR)/icons/calculator-$$s.png $(HICOLOR_DIR)/$${s}x$${s}/apps/calculator-gui.png; \
+	done
+	@mkdir -p $(HICOLOR_DIR)/scalable/apps
+	@cp $(ICON_SVG) $(HICOLOR_DIR)/scalable/apps/calculator-gui.svg
+	@command -v update-desktop-database >/dev/null && update-desktop-database $(DESKTOP_DIR) || true
+	@command -v gtk-update-icon-cache >/dev/null && gtk-update-icon-cache -qtf $(HICOLOR_DIR) || true
+	@echo "Installed $(DESKTOP_ENTRY) -> $(CURDIR)/$(GUI_TARGET)"
+
+uninstall-desktop:
+	@rm -f $(DESKTOP_ENTRY)
+	@for s in $(ICON_SIZES); do \
+		rm -f $(HICOLOR_DIR)/$${s}x$${s}/apps/calculator-gui.png; \
+	done
+	@rm -f $(HICOLOR_DIR)/scalable/apps/calculator-gui.svg
+	@command -v update-desktop-database >/dev/null && update-desktop-database $(DESKTOP_DIR) || true
+	@command -v gtk-update-icon-cache >/dev/null && gtk-update-icon-cache -qtf $(HICOLOR_DIR) || true
+	@echo "Removed the desktop entry and its icons"
 
 # ------------------------------------------------------------------
 # Tests

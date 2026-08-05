@@ -114,7 +114,10 @@ Calculator/
 │       └── ci.yml            # see the "Continuous Integration" note below
 ├── Inc/                       # Public headers (Doxygen-documented)
 ├── Src/                        # Implementation (.c and .cpp)
-├── Gui/                        # Qt6 GUI front end (Phase 31, in progress) -- calls the same engine as the CLI
+├── Gui/                        # Qt6 GUI front end -- calls the same engine as the CLI
+│   ├── icon.svg               # app icon source; `make icons` renders icons/*.png
+│   ├── icons/                 # committed PNG renders, embedded via resources.qrc
+│   └── calculator-gui.desktop.in  # launcher entry template (`make install-desktop`)
 ├── Tests/                      # 471 unit tests (Tests/test_main.c is the test runner's entry point)
 ├── docs/
 │   ├── Doxyfile               # `make docs` config
@@ -199,8 +202,13 @@ make asan            # + AddressSanitizer + UBSan       -> ./calculator
 make ubsan           # + UndefinedBehaviorSanitizer only -> ./calculator
 
 make run             # build (debug) and run
-make gui             # build the Qt6 GUI (Phase 31, in progress) -> ./calculator-gui
+make gui             # build the Qt6 GUI -> ./calculator-gui
 make run-gui         # build (debug) and run the GUI
+
+make install-desktop # add a per-user launcher entry + icons (no root)
+make uninstall-desktop
+make icons           # re-render Gui/icons/*.png from Gui/icon.svg
+
 make clean           # remove the current BUILD's objects/binaries
 make distclean       # remove every build type's objects/binaries + generated docs
 make rebuild         # clean + all
@@ -209,7 +217,9 @@ make docs            # generate Doxygen HTML docs into docs/html/
 
 Header dependencies are tracked automatically (`-MMD -MP`), so editing any header correctly triggers a rebuild of exactly the files that include it.
 
-`make gui`/`make run-gui` require Qt6 (`Qt6Widgets` via `pkg-config`, plus a matching `moc` — see the Makefile's Phase 31 section for how it locates one even if the system's default `moc` on `PATH` belongs to Qt5). Every other target works with or without Qt installed.
+`make gui`/`make run-gui` require Qt6 (`Qt6Widgets` via `pkg-config`, plus a matching `moc`/`rcc` — see the Makefile's Phase 31 section for how it locates them even if the system's default `moc` on `PATH` belongs to Qt5). Every other target works with or without Qt installed.
+
+The application icon is compiled into `calculator-gui` from `Gui/resources.qrc`, so the window shows it wherever the binary is launched from and nothing needs installing. `make install-desktop` is only for getting the app into your desktop's launcher/menu; it writes to `~/.local/share` (never root) and `make uninstall-desktop` reverses it. `make icons` regenerates the committed PNGs from `Gui/icon.svg` and is the one target that needs `rsvg-convert` — a normal build does not.
 
 ---
 
