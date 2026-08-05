@@ -926,7 +926,13 @@ Desktop scientific calculator.
   "Set" button calling the existing `setVariable()`; the side panel
   is now a `QTabWidget` (History / Variables) instead of a single
   widget, to leave room for Steps 4–5's additional panels)
-- Memory panel — not yet (Step 4)
+- Memory panel — done (Step 4: MS/MR/M+/M-/MC as a fourth tab, calling
+  `memory.c` directly — no new engine functions needed since it's a
+  single register, unlike Steps 2–3's lists. MS/M+/M- operate on the
+  most recently evaluated result (`m_lastResult`, tracked in the GUI),
+  extending the CLI's own MS convention to M+/M- too rather than the
+  CLI's separate scanf-prompt behavior for those two, which doesn't
+  translate to a modal-free GUI)
 - Theme support — not yet (Step 7)
 
 ## Files
@@ -955,8 +961,13 @@ then `myvar+7.5` -> `50`), live update of `ans`'s row, and rejection
 of writes to read-only constants (`pi`) with a visible error — via a
 real X11 session.
 
+Step 4: a memory tab, verified end to end for MS (store `100`), M+
+(`+50` -> `150`), M- (`-50` -> `100`), MR (recall the stored value
+into the display without changing it), and MC (-> `0`) — via a real
+X11 session.
+
 Status:
-🟠 In Progress — Steps 1–3 (of 7 planned steps; see
+🟠 In Progress — Steps 1–4 (of 7 planned steps; see
 `docs/ROADMAP.md`'s "In Progress: Phase 31" section for the full
 breakdown) complete
 

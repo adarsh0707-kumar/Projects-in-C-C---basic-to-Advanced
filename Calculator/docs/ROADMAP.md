@@ -65,7 +65,7 @@ AddressSanitizer/UndefinedBehaviorSanitizer).
 | 28       | Dynamic data structures                      | 🟡 Planned    |
 | 29       | Abstract Syntax Tree (AST)                   | 🟡 Planned    |
 | 30       | Symbolic mathematics                         | 🟡 Planned    |
-| 31       | Graphical User Interface (Qt)                | 🟠 In Progress — Steps 1–3 done |
+| 31       | Graphical User Interface (Qt)                | 🟠 In Progress — Steps 1–4 done |
 | 32       | Plugin architecture                          | 🟡 Planned    |
 | 33       | Calculator scripting                         | 🟡 Planned    |
 | 34       | Package manager                              | 🟡 Planned    |
@@ -133,6 +133,20 @@ setting `myvar = 42.5` adds a row, and `myvar+7.5` on the keypad
 correctly evaluates to `50`, updating `ans`'s row live; attempting to
 set `pi` is rejected with a visible error, `pi` unchanged.
 
+**Step 4 (done):** memory panel, as a fourth tab. Unlike Steps 2–3,
+this needed no new engine-side function at all — `memory.c` is a
+single register, not a list, and `memoryRecall()` already gives the
+panel everything it needs to display. MS/M+/M- operate on the most
+recently evaluated result (`m_lastResult`, a new member tracked in
+`evaluate()`), deliberately extending the CLI's own MS convention
+(`Src/main.c`: `memoryStore(lastResult)`) to M+/M- too, rather than
+the CLI's separate scanf-prompt behavior for those two specifically —
+a modal-free GUI has no natural equivalent to "prompt for a fresh
+value," and reusing the already-visible result is the more calculator-
+like behavior anyway. Verified end to end: MS stores `100`, M+ makes
+it `150`, M- brings it back to `100`, MR recalls it into the display
+without changing it, MC resets it to `0`.
+
 **Known Step 1 limitation (unchanged):** `validateExpression()`/
 `validateParentheses()` report their specific failure reason via
 `printf()` to stdout (fine for the CLI, invisible to a GUI window) —
@@ -144,7 +158,6 @@ have this gap.
 
 **Remaining steps** (each its own later commit, not all at once):
 
-4. Memory panel (MS/MR/M+/M-/MC, reuse `memory.c`).
 5. Tabs for Complex / Matrix / Statistics / Units / Base — each a thin
    form calling the existing `evaluate*Expression()` entry points.
 6. Real graphical plotting: a custom `QWidget::paintEvent` sampling

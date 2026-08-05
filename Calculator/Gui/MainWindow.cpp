@@ -36,6 +36,8 @@ extern "C"
                             getVariableCount, getVariableByIndex */
 #include "history.h"    /* addHistory, clearHistory, getHistoryCount,
                             getHistoryLineByNumber, getHistoryExpressionByNumber */
+#include "memory.h"     /* memoryStore, memoryRecall, memoryAdd,
+                            memorySubtract, memoryClear */
 }
 
 namespace
@@ -58,7 +60,8 @@ QString trimmed(const char *s)
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), m_display(nullptr), m_errorLabel(nullptr), m_historyList(nullptr),
-      m_variablesTable(nullptr), m_newVarName(nullptr), m_newVarValue(nullptr), m_variablesError(nullptr)
+      m_variablesTable(nullptr), m_newVarName(nullptr), m_newVarValue(nullptr), m_variablesError(nullptr),
+      m_memoryLabel(nullptr), m_lastResult(0.0)
 {
     setWindowTitle("Scientific Calculator");
 
@@ -197,9 +200,46 @@ MainWindow::MainWindow(QWidget *parent)
     m_variablesError->setWordWrap(true);
     variablesLayout->addWidget(m_variablesError);
 
+    /* Memory panel (Step 4): memory.c is a single register (not a
+       list), so unlike Steps 2-3 this needed no new engine-side
+       enumeration function -- memoryRecall() already gives the panel
+       everything it needs to display. */
+    auto *memoryPanel = new QWidget(this);
+    auto *memoryLayout = new QVBoxLayout(memoryPanel);
+
+    m_memoryLabel = new QLabel(memoryPanel);
+    QFont memoryFont = m_memoryLabel->font();
+    memoryFont.setPointSize(memoryFont.pointSize() + 4);
+    m_memoryLabel->setFont(memoryFont);
+    m_memoryLabel->setAlignment(Qt::AlignCenter);
+    memoryLayout->addWidget(m_memoryLabel);
+
+    auto *msButton = new QPushButton("MS", memoryPanel);
+    connect(msButton, &QPushButton::clicked, this, &MainWindow::memoryStoreSlot);
+    memoryLayout->addWidget(msButton);
+
+    auto *mrButton = new QPushButton("MR", memoryPanel);
+    connect(mrButton, &QPushButton::clicked, this, &MainWindow::memoryRecallSlot);
+    memoryLayout->addWidget(mrButton);
+
+    auto *mPlusButton = new QPushButton("M+", memoryPanel);
+    connect(mPlusButton, &QPushButton::clicked, this, &MainWindow::memoryAddSlot);
+    memoryLayout->addWidget(mPlusButton);
+
+    auto *mMinusButton = new QPushButton("M-", memoryPanel);
+    connect(mMinusButton, &QPushButton::clicked, this, &MainWindow::memorySubtractSlot);
+    memoryLayout->addWidget(mMinusButton);
+
+    auto *mcButton = new QPushButton("MC", memoryPanel);
+    connect(mcButton, &QPushButton::clicked, this, &MainWindow::memoryClearSlot);
+    memoryLayout->addWidget(mcButton);
+
+    memoryLayout->addStretch(1);
+
     auto *sidePanel = new QTabWidget(this);
     sidePanel->addTab(historyPanel, "History");
     sidePanel->addTab(variablesPanel, "Variables");
+    sidePanel->addTab(memoryPanel, "Memory");
 
     auto *splitter = new QSplitter(Qt::Horizontal, this);
     splitter->addWidget(calculatorPanel);
@@ -211,6 +251,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     refreshHistory();
     refreshVariables();
+    refreshMemory();
 }
 
 void MainWindow::appendToDisplay(const QString &text)
@@ -317,6 +358,7 @@ void MainWindow::evaluate()
         setVariable(varNameBytes.constData(), result);
         setAns(result);
         addHistory(infix, result);
+        m_lastResult = result;
         refreshHistory();
         refreshVariables();
 
@@ -352,6 +394,7 @@ void MainWindow::evaluate()
 
     setAns(result);
     addHistory(infix, result);
+    m_lastResult = result;
     refreshHistory();
     refreshVariables();
 
@@ -468,4 +511,39 @@ void MainWindow::setVariableFromFields()
     m_newVarName->clear();
     m_newVarValue->clear();
     refreshVariables();
+}
+
+void MainWindow::refreshMemory()
+{
+    m_memoryLabel->setText(QString("Memory: %1").arg(memoryRecall(), 0, 'g', 6));
+}
+
+void MainWindow::memoryStoreSlot()
+{
+    memoryStore(m_lastResult);
+    refreshMemory();
+}
+
+void MainWindow::memoryRecallSlot()
+{
+    m_errorLabel->clear();
+    m_display->setText(QString::number(memoryRecall(), 'g', 6));
+}
+
+void MainWindow::memoryAddSlot()
+{
+    memoryAdd(m_lastResult);
+    refreshMemory();
+}
+
+void MainWindow::memorySubtractSlot()
+{
+    memorySubtract(m_lastResult);
+    refreshMemory();
+}
+
+void MainWindow::memoryClearSlot()
+{
+    memoryClear();
+    refreshMemory();
 }

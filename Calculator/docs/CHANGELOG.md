@@ -8,6 +8,33 @@ The format is based on **Keep a Changelog** and follows **Semantic Versioning** 
 
 # [Unreleased]
 
+## 2026-08-04 (6) — Phase 31 (GUI) Step 4: memory panel
+
+### Added
+
+- `Gui/MainWindow`: a fourth tab, "Memory", with MS/MR/M+/M-/MC
+  buttons and a label showing the current register value. Unlike
+  Steps 2-3, this needed **no new engine-side function** -- `memory.c`
+  is a single register, not a list, and the existing `memoryRecall()`
+  already gives the panel everything it needs to display.
+- `MainWindow::m_lastResult`: a new member tracking the most recently
+  evaluated result, set in both of `evaluate()`'s success paths. MS/
+  M+/M- operate on it, deliberately extending the CLI's own MS
+  convention (`Src/main.c`: `memoryStore(lastResult)`) to M+/M- too --
+  the CLI instead prompts for a fresh value via `scanf()` for those
+  two, which has no natural equivalent in a modal-free GUI, and
+  reusing the already-visible result is the more calculator-like
+  behavior anyway.
+
+### Verified
+
+Manually, via a real X11 session (`xdotool` + `import`, screenshots
+inspected): MS stores `100`; M+ makes it `150`; M- brings it back to
+`100`; MR recalls it into the display without changing it; MC resets
+it to `0`. `make test`/`make BUILD=asan test` (449 cases, unchanged --
+no engine code touched this step) and `./calculator` confirmed
+unaffected.
+
 ## 2026-08-04 (5) — Phase 31 (GUI) Step 3: variable manager panel
 
 ### Added
