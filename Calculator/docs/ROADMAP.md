@@ -49,7 +49,7 @@ table to match.
 **v1.0 (CLI engine): shipped.** All of Phases 1–27 are complete — the
 full expression engine, scientific functions, variables/memory/history,
 statistics, unit and base conversion, complex numbers, matrices, and
-ASCII graph plotting, backed by 449 passing unit tests (clean under
+ASCII graph plotting, backed by 460 passing unit tests (clean under
 AddressSanitizer/UndefinedBehaviorSanitizer).
 
 | Phase(s) | Area                                        | Status        |
@@ -65,7 +65,7 @@ AddressSanitizer/UndefinedBehaviorSanitizer).
 | 28       | Dynamic data structures                      | 🟡 Planned    |
 | 29       | Abstract Syntax Tree (AST)                   | 🟡 Planned    |
 | 30       | Symbolic mathematics                         | 🟡 Planned    |
-| 31       | Graphical User Interface (Qt)                | 🟠 In Progress — Steps 1–4 done |
+| 31       | Graphical User Interface (Qt)                | 🟠 In Progress — Steps 1–5 done |
 | 32       | Plugin architecture                          | 🟡 Planned    |
 | 33       | Calculator scripting                         | 🟡 Planned    |
 | 34       | Package manager                              | 🟡 Planned    |
@@ -147,6 +147,30 @@ like behavior anyway. Verified end to end: MS stores `100`, M+ makes
 it `150`, M- brings it back to `100`, MR recalls it into the display
 without changing it, MC resets it to `0`.
 
+**Step 5 (done):** five more tabs — Complex, Matrix, Statistics,
+Units, Base. All five wrap an `evaluate*Expression(const char*,
+char*, int)` entry point, and since that signature is identical
+across all five, one shared `buildEvalTab()` helper builds every tab
+(input line + Evaluate button + Enter-to-submit + result/error label)
+instead of five near-copies. `units.c` turned out to be the odd one
+out: `convertToSingleUnit()`/`convertAndPrint()` only printed to
+stdout, with no buffer-returning entry point like the other four
+modules already had. Added `evaluateUnitExpression()` to
+`units.c`/`units.h`, mirroring those two functions' existing logic
+(category checks, temperature special-casing, the full conversion
+table) into a buffer instead, covered by `Tests/test_units.c`. Test
+suite: 449 -> 460 cases. Verified end to end via a real X11 session:
+`(2+3i)*(4-5i)` -> `23+2i` (plus an unknown-identifier error case),
+`det([[1,2],[3,4]])` -> `-2`, `stddev(4,8,6,5,3,7)` -> `1.87083`,
+`10km to miles` -> `6.21371 miles` (plus the bare-form table and a
+parse-error case), `hex(255)` -> `FF`.
+
+**Testing note:** with 8 tabs now, the default 560px-wide window
+needs the tab bar's scroll arrows or a manual resize to reach the
+later tabs — expected given how many tabs there are, not a bug, and
+listed under Step 7 (polish) as something to reconsider (e.g. a
+narrower tab-bar font, or a different navigation widget entirely).
+
 **Known Step 1 limitation (unchanged):** `validateExpression()`/
 `validateParentheses()` report their specific failure reason via
 `printf()` to stdout (fine for the CLI, invisible to a GUI window) —
@@ -158,8 +182,6 @@ have this gap.
 
 **Remaining steps** (each its own later commit, not all at once):
 
-5. Tabs for Complex / Matrix / Statistics / Units / Base — each a thin
-   form calling the existing `evaluate*Expression()` entry points.
 6. Real graphical plotting: a custom `QWidget::paintEvent` sampling
    the expression the same way `plot.c` does, drawn with `QPainter`
    instead of ASCII.

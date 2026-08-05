@@ -82,6 +82,36 @@ static void test_convert_and_print(void)
     ASSERT_TRUE(convertAndPrint(10.0, "notaunit") == 0, "an unrecognized unit should fail");
 }
 
+/* evaluateUnitExpression() -- added for the GUI's Units tab, since
+   convertToSingleUnit()/convertAndPrint() above only print to stdout,
+   which a GUI can't rely on. Same underlying logic, built into a
+   buffer instead. */
+static void test_evaluate_unit_expression(void)
+{
+    char result[256];
+
+    ASSERT_TRUE(evaluateUnitExpression("10km to miles", result, sizeof(result)) == 1,
+                "an explicit 'to <unit>' conversion should succeed");
+    ASSERT_STR_EQ(result, "10 km = 6.21371 miles", "should format as '<value> <from> = <value> <to>'");
+
+    ASSERT_TRUE(evaluateUnitExpression("80F to C", result, sizeof(result)) == 1,
+                "temperature conversion should succeed");
+    ASSERT_STR_EQ(result, "80 F = 26.6667 C", "should convert F to C correctly");
+
+    ASSERT_TRUE(evaluateUnitExpression("10km", result, sizeof(result)) == 1,
+                "the bare '<value><unit>' form should succeed");
+    ASSERT_TRUE(strstr(result, "10 km =") == result, "should start with the source value");
+    ASSERT_TRUE(strstr(result, "6.21371 mile") != NULL, "the full table should include the mile row");
+    ASSERT_TRUE(strstr(result, "\n") != NULL, "the full table should be multi-line");
+
+    ASSERT_TRUE(evaluateUnitExpression("nope", result, sizeof(result)) == 0,
+                "an unparseable expression should fail");
+    ASSERT_TRUE(evaluateUnitExpression("10km to kg", result, sizeof(result)) == 0,
+                "a category mismatch should fail");
+    ASSERT_TRUE(evaluateUnitExpression("10notaunit", result, sizeof(result)) == 0,
+                "an unknown unit should fail");
+}
+
 void run_units_tests(void)
 {
     test_parse_value_with_unit();
@@ -89,4 +119,5 @@ void run_units_tests(void)
     test_parse_conversion();
     test_convert_to_single_unit();
     test_convert_and_print();
+    test_evaluate_unit_expression();
 }

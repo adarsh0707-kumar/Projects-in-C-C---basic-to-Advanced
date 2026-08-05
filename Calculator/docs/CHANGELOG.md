@@ -8,6 +8,55 @@ The format is based on **Keep a Changelog** and follows **Semantic Versioning** 
 
 # [Unreleased]
 
+## 2026-08-04 (7) — Phase 31 (GUI) Step 5: Complex/Matrix/Statistics/Units/Base tabs
+
+### Added
+
+- `Src/units.c`/`Inc/units.h`: `evaluateUnitExpression()`. Unlike
+  `stats.c`/`base.c`/`complex_eval.cpp`/`matrix_eval.cpp`, which all
+  already had a buffer-returning `evaluate*Expression(const char*,
+  char*, int)` entry point, `units.c`'s `convertToSingleUnit()`/
+  `convertAndPrint()` only printed to stdout -- no use to a GUI. The
+  new function mirrors both of their existing logic (category checks,
+  temperature special-casing, the full conversion table for the bare
+  form) into a buffer instead. Covered by a new
+  `test_evaluate_unit_expression()` in `Tests/test_units.c`. Test
+  suite: 449 -> 460 cases.
+- `Gui/MainWindow`: five more tabs -- Complex, Matrix, Statistics,
+  Units, Base -- each a thin input line + Evaluate button (+
+  Enter-to-submit) + result/error label around one
+  `evaluate*Expression()` call. Since all five (including the new
+  `evaluateUnitExpression()`) share the identical signature, one
+  `buildEvalTab()` helper builds every tab instead of five
+  near-identical copies -- a plain C function pointer plus a local
+  (non-slot) lambda per tab, connected via Qt's functor-based
+  `connect()`, which needs no MOC-generated machinery beyond what
+  `MainWindow` already has.
+
+### Verified
+
+Manually, via a real X11 session (`xdotool` + `import`, screenshots
+inspected): `(2+3i)*(4-5i)` -> `23+2i` and an unknown-identifier
+error case (Complex); `det([[1,2],[3,4]])` -> `-2` (Matrix);
+`stddev(4,8,6,5,3,7)` -> `1.87083` (Statistics); `10km to miles` ->
+`6.21371 miles`, the bare `10km` full table, and a parse-error case
+(Units); `hex(255)` -> `FF` (Base). `make test`/
+`make BUILD=asan test` (460 cases) and `./calculator` confirmed
+unaffected.
+
+### Testing note
+
+With 8 tabs now, the default 560px-wide window needs the tab bar's
+scroll arrows (or a manual resize) to reach the later tabs -- expected
+given the tab count, not a bug, and listed under Step 7 (polish) as
+worth reconsidering. Also: mid-session, clicks briefly stopped
+reaching the test window entirely (even on already-working buttons)
+because another window had regained OS-level focus between separate
+tool invocations -- not a Calculator bug, but worth remembering for
+future GUI testing in this environment: activate/raise the target
+window and verify focus *within the same command* as the interaction,
+since focus can be stolen between separate steps.
+
 ## 2026-08-04 (6) — Phase 31 (GUI) Step 4: memory panel
 
 ### Added

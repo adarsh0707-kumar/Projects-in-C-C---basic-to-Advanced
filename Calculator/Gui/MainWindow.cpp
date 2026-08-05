@@ -38,7 +38,17 @@ extern "C"
                             getHistoryLineByNumber, getHistoryExpressionByNumber */
 #include "memory.h"     /* memoryStore, memoryRecall, memoryAdd,
                             memorySubtract, memoryClear */
+#include "stats.h"      /* evaluateStatsExpression */
+#include "units.h"      /* evaluateUnitExpression */
+#include "base.h"       /* evaluateBaseExpression */
 }
+
+/* complex_eval.h/matrix_eval.h already carry their own extern "C"
+   guard internally (they're specifically the C-facing entry point
+   into the C++ complex/matrix engine), so they're included outside
+   the block above rather than redundantly nested inside it. */
+#include "complex_eval.h" /* evaluateComplexExpression */
+#include "matrix_eval.h"  /* evaluateMatrixExpression */
 
 namespace
 {
@@ -240,6 +250,15 @@ MainWindow::MainWindow(QWidget *parent)
     sidePanel->addTab(historyPanel, "History");
     sidePanel->addTab(variablesPanel, "Variables");
     sidePanel->addTab(memoryPanel, "Memory");
+
+    /* Step 5: five thin evaluate*Expression() tabs, all built by the
+       one buildEvalTab() helper since they share an identical
+       function signature (see MainWindow.hpp's EvalFn). */
+    sidePanel->addTab(buildEvalTab(evaluateComplexExpression, "e.g. (2+3i)*(4-5i), sqrt(-1)"), "Complex");
+    sidePanel->addTab(buildEvalTab(evaluateMatrixExpression, "e.g. det([[1,2],[3,4]])"), "Matrix");
+    sidePanel->addTab(buildEvalTab(evaluateStatsExpression, "e.g. mean(1,2,3,4), stddev(4,8,6,5,3,7)"), "Statistics");
+    sidePanel->addTab(buildEvalTab(evaluateUnitExpression, "e.g. 10km, 10km to miles, 80F to C"), "Units");
+    sidePanel->addTab(buildEvalTab(evaluateBaseExpression, "e.g. bin(25), hex(255), dec(FFh)"), "Base");
 
     auto *splitter = new QSplitter(Qt::Horizontal, this);
     splitter->addWidget(calculatorPanel);
@@ -546,4 +565,47 @@ void MainWindow::memoryClearSlot()
 {
     memoryClear();
     refreshMemory();
+}
+
+QWidget *MainWindow::buildEvalTab(EvalFn evalFn, const QString &placeholderText)
+{
+    auto *panel = new QWidget(this);
+    auto *panelLayout = new QVBoxLayout(panel);
+
+    auto *input = new QLineEdit(panel);
+    input->setPlaceholderText(placeholderText);
+    panelLayout->addWidget(input);
+
+    auto *resultLabel = new QLabel(panel);
+    resultLabel->setWordWrap(true);
+    resultLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+    panelLayout->addWidget(resultLabel);
+
+    /* A local lambda (not a declared slot) works fine here since
+       Qt's functor-based connect() doesn't need MOC-generated
+       machinery for the connection itself -- only Q_OBJECT/signals/
+       slots that cross to other objects need that. This keeps
+       MainWindow.hpp from needing five near-identical slot
+       declarations for what's really one behavior parameterized by
+       which C function to call. */
+    auto runEval = [input, resultLabel, evalFn]()
+    {
+        QByteArray exprBytes = input->text().toUtf8();
+        char result[512] = "";
+
+        int ok = evalFn(exprBytes.constData(), result, sizeof(result));
+
+        resultLabel->setStyleSheet(ok ? "" : "color: #c0392b;");
+        resultLabel->setText(QString::fromUtf8(result));
+    };
+
+    connect(input, &QLineEdit::returnPressed, this, runEval);
+
+    auto *evalButton = new QPushButton("Evaluate", panel);
+    connect(evalButton, &QPushButton::clicked, this, runEval);
+    panelLayout->addWidget(evalButton);
+
+    panelLayout->addStretch(1);
+
+    return panel;
 }

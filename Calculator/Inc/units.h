@@ -52,4 +52,18 @@ int parseConversion(const char input[], double *value, char fromUnit[16], char t
  *  mismatch (e.g. converting km to kg), 1 on success. */
 int convertToSingleUnit(double value, const char fromUnit[], const char toUnit[]);
 
+/** @brief Evaluates a unit-conversion expression such as "10km" or
+ *  "10km to miles" and writes the result into @p result: the single
+ *  converted value for an explicit "to <unit>" clause, or the full
+ *  conversion table for the bare "<value><unit>" form -- the same
+ *  behavior as convertToSingleUnit()/convertAndPrint(), just built
+ *  into a buffer instead of printed to stdout (for callers, like a
+ *  GUI, that can't rely on the CLI's stdout).
+ *  @param expr       Expression such as "10km to miles".
+ *  @param result     Destination buffer for the formatted result (on
+ *                     success) or an error message (on failure).
+ *  @param resultSize Size of @p result in bytes.
+ *  @return 1 on success, 0 on failure. */
+int evaluateUnitExpression(const char expr[], char result[], int resultSize);
+
 #endif

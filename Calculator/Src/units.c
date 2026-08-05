@@ -379,3 +379,127 @@ int convertAndPrint(double value, const char unitIn[])
 
     return 1;
 }
+
+int evaluateUnitExpression(const char expr[], char result[], int resultSize)
+{
+    double value;
+    char fromUnit[16], toUnit[16];
+
+    if (!parseConversion(expr, &value, fromUnit, toUnit))
+    {
+        snprintf(result, (size_t)resultSize,
+                 "Error: Could not parse '%s'. Expected a format like "
+                 "'10km' or '10km to miles'.",
+                 expr);
+        return 0;
+    }
+
+    /* Explicit "to <unit>" clause: same single-value logic as
+       convertToSingleUnit(), built into result instead of printed. */
+    if (toUnit[0] != '\0')
+    {
+        char from[16], to[16];
+        strncpy(from, fromUnit, sizeof(from) - 1);
+        from[sizeof(from) - 1] = '\0';
+        strncpy(to, toUnit, sizeof(to) - 1);
+        to[sizeof(to) - 1] = '\0';
+
+        if (strlen(from) == 1)
+        {
+            char upper = (char)toupper((unsigned char)from[0]);
+            if (upper == 'C' || upper == 'F' || upper == 'K')
+                from[0] = upper;
+        }
+
+        if (strlen(to) == 1)
+        {
+            char upper = (char)toupper((unsigned char)to[0]);
+            if (upper == 'C' || upper == 'F' || upper == 'K')
+                to[0] = upper;
+        }
+
+        UnitCategory catFrom = unitCategory(from);
+        UnitCategory catTo = unitCategory(to);
+
+        if (catFrom == UNIT_CAT_UNKNOWN)
+        {
+            snprintf(result, (size_t)resultSize, "Error: Unknown unit '%s'.", fromUnit);
+            return 0;
+        }
+
+        if (catTo == UNIT_CAT_UNKNOWN)
+        {
+            snprintf(result, (size_t)resultSize, "Error: Unknown unit '%s'.", toUnit);
+            return 0;
+        }
+
+        if (catFrom != catTo)
+        {
+            snprintf(result, (size_t)resultSize,
+                     "Error: Cannot convert '%s' to '%s' (different unit categories).",
+                     fromUnit, toUnit);
+            return 0;
+        }
+
+        if (catFrom == UNIT_CAT_TEMPERATURE)
+        {
+            double c = toCelsius(value, from);
+            double converted = (strcmp(to, "C") == 0) ? c : (strcmp(to, "F") == 0) ? c * 9.0 / 5.0 + 32.0
+                                                                                    : c + 273.15;
+
+            snprintf(result, (size_t)resultSize, "%g %s = %g %s", value, fromUnit, converted, toUnit);
+            return 1;
+        }
+
+        double base = value * toBaseFactor(from);
+        double converted = base / toBaseFactor(to);
+
+        snprintf(result, (size_t)resultSize, "%g %s = %g %s", value, fromUnit, converted, toUnit);
+        return 1;
+    }
+
+    /* Bare "<value><unit>": same full-table logic as convertAndPrint(). */
+    char unit[16];
+    strncpy(unit, fromUnit, sizeof(unit) - 1);
+    unit[sizeof(unit) - 1] = '\0';
+
+    if (strlen(unit) == 1)
+    {
+        char upper = (char)toupper((unsigned char)unit[0]);
+        if (upper == 'C' || upper == 'F' || upper == 'K')
+            unit[0] = upper;
+    }
+
+    UnitCategory cat = unitCategory(unit);
+
+    if (cat == UNIT_CAT_UNKNOWN)
+    {
+        snprintf(result, (size_t)resultSize, "Error: Unknown unit '%s'.", fromUnit);
+        return 0;
+    }
+
+    if (cat == UNIT_CAT_TEMPERATURE)
+    {
+        double c = toCelsius(value, unit);
+        double f = c * 9.0 / 5.0 + 32.0;
+        double k = c + 273.15;
+
+        snprintf(result, (size_t)resultSize, "%g %s = %g C = %g F = %g K", value, fromUnit, c, f, k);
+        return 1;
+    }
+
+    double base = value * toBaseFactor(unit);
+
+    int pos = snprintf(result, (size_t)resultSize, "%g %s =", value, fromUnit);
+
+    for (size_t i = 0; i < UNIT_TABLE_COUNT && pos < resultSize; i++)
+    {
+        if (unitTable[i].category == cat && unitTable[i].display)
+        {
+            pos += snprintf(result + pos, (size_t)(resultSize - pos),
+                             "\n%g %s", base / unitTable[i].toBase, unitTable[i].name);
+        }
+    }
+
+    return 1;
+}

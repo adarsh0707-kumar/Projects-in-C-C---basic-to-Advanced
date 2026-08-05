@@ -20,7 +20,7 @@ make asan && make BUILD=asan test   # same suite under ASan + UBSan
 ```
 
 A shared pass/fail counter (`test_framework.h`) prints a running total;
-the run exits non-zero if anything failed. As of this writing: **449
+the run exits non-zero if anything failed. As of this writing: **460
 tests, all passing**, clean under AddressSanitizer and
 UndefinedBehaviorSanitizer.
 
@@ -59,7 +59,7 @@ UndefinedBehaviorSanitizer.
 | `test_variables.c`      | `variables.c`                      | Built-in constants (`pi`, `e`), their read-only enforcement, user variable set/get, undefined-variable lookup, enumeration by index (added for the GUI variable manager), and `ans` |
 | `test_history.c`        | `history.c`                        | Adding an entry and recalling it (`!!`), recall by number (`!N`), entry count and full-line lookup by number (added for the GUI history panel), and clearing history |
 | `test_memory.c`         | `memory.c`                         | MS/MR/M+/M-/MC |
-| `test_units.c`          | `units.c`                          | Parsing `<value><unit>`, unit-category lookup, bare and `to <unit>` conversion forms, category-mismatch/unknown-unit error paths |
+| `test_units.c`          | `units.c`                          | Parsing `<value><unit>`, unit-category lookup, bare and `to <unit>` conversion forms, `evaluateUnitExpression()` (added for the GUI's Units tab, since the print-only conversion functions can't be used by a GUI), and category-mismatch/unknown-unit error paths |
 | `test_stats.c`          | `stats.c`                          | `mean`/`median`/`sum`/`min`/`max`/`count`, sample `stddev`/`variance` (n-1) vs. population `pstddev`/`pvariance` (n), and error paths (unparseable argument list, too few values, unknown function) |
 | `test_base.c`           | `base.c`                           | `bin`/`hex`/`oct` (decimal → base, including negative sign-magnitude), `dec` (base → decimal via a b/o/h suffix), and error paths (bad digit, missing/unknown suffix) |
 | `test_plot.c`           | `plot.c`                           | Successful plotting, the `plot(1/x)` asymptote-doesn't-crash regression by name, syntax-error paths (`extractPlotArgument()`), and the undefined-variable path that intentionally leaves `errorMsg` empty |

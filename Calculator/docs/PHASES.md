@@ -933,6 +933,16 @@ Desktop scientific calculator.
   extending the CLI's own MS convention to M+/M- too rather than the
   CLI's separate scanf-prompt behavior for those two, which doesn't
   translate to a modal-free GUI)
+- Complex / Matrix / Statistics / Units / Base tabs — done (Step 5:
+  five thin input+result forms, all built by one shared
+  `buildEvalTab()` helper since `evaluateComplexExpression()`,
+  `evaluateMatrixExpression()`, `evaluateStatsExpression()`,
+  `evaluateBaseExpression()`, and the new `evaluateUnitExpression()`
+  all share the identical `int(*)(const char*, char*, int)` signature.
+  `units.c` was the odd one out — its conversion functions only
+  printed to stdout — so `evaluateUnitExpression()` was added,
+  mirroring `convertToSingleUnit()`/`convertAndPrint()`'s existing
+  logic into a buffer instead, covered by `Tests/test_units.c`)
 - Theme support — not yet (Step 7)
 
 ## Files
@@ -944,6 +954,8 @@ Inc/history.h (2 new functions)
 Src/history.c (2 new functions)
 Inc/variables.h (2 new functions)
 Src/variables.c (2 new functions)
+Inc/units.h (1 new function)
+Src/units.c (1 new function)
 
 ## Deliverables
 
@@ -966,8 +978,15 @@ Step 4: a memory tab, verified end to end for MS (store `100`), M+
 into the display without changing it), and MC (-> `0`) — via a real
 X11 session.
 
+Step 5: five more tabs, verified via a real X11 session: Complex
+(`(2+3i)*(4-5i)` -> `23+2i`, plus an unknown-identifier error path),
+Matrix (`det([[1,2],[3,4]])` -> `-2`), Statistics
+(`stddev(4,8,6,5,3,7)` -> `1.87083`), Units (`10km to miles` ->
+`6.21371 miles`, the bare-form full table, and a parse-error path),
+and Base (`hex(255)` -> `FF`).
+
 Status:
-🟠 In Progress — Steps 1–4 (of 7 planned steps; see
+🟠 In Progress — Steps 1–5 (of 7 planned steps; see
 `docs/ROADMAP.md`'s "In Progress: Phase 31" section for the full
 breakdown) complete
 

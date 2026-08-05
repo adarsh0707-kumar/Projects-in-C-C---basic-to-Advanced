@@ -5,6 +5,7 @@
  * Phase 31 -- GUI (Qt)" for the step-by-step plan this follows.
  * Step 1: basic arithmetic keypad. Step 2: history panel.
  * Step 3: variable manager panel. Step 4: memory panel.
+ * Step 5: Complex/Matrix/Statistics/Units/Base tabs.
  */
 #ifndef MAINWINDOW_HPP
 #define MAINWINDOW_HPP
@@ -57,6 +58,16 @@ private:
     void refreshVariables();
     /** Updates the memory tab's label from memory.c's register. */
     void refreshMemory();
+    /** Signature shared by every evaluate*Expression() entry point
+     *  (complex_eval.h, matrix_eval.h, stats.h, base.h, units.h) --
+     *  Step 5's five tabs are all a thin input+result form around one
+     *  of these, so one helper builds all five instead of five
+     *  near-identical copies. */
+    using EvalFn = int (*)(const char *, char *, int);
+    /** Builds one "evaluate*Expression()" tab: an input line, an
+     *  Evaluate button (and Enter-to-submit), and a result/error
+     *  label. */
+    QWidget *buildEvalTab(EvalFn evalFn, const QString &placeholderText);
 
     QLineEdit *m_display;
     QLabel *m_errorLabel;
