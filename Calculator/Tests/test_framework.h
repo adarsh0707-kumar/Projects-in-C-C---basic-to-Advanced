@@ -4,12 +4,19 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+
+/* fork()/waitpid() are POSIX and have no Windows equivalent, so
+   ASSERT_EXITS_NONZERO below has two definitions -- see the comment
+   above it for what the Windows build gives up. */
+#if !defined(_WIN32)
 #include <unistd.h>
 #include <sys/wait.h>
+#endif
 
 /* Shared counters, defined once in test_main.c */
 extern int testsRun;
 extern int testsFailed;
+extern int testsSkipped;
 
 #define ASSERT_TRUE(cond, msg)                                      \
     do                                                              \
@@ -48,7 +55,27 @@ extern int testsFailed;
  * that the child terminated with a non-zero exit status -- i.e. it
  * confirms the failure path really does fail loudly, without taking
  * the test binary down with it.
+ *
+ * Windows has no fork(), and the alternatives (spawning the test
+ * binary again with a "run only this case" flag, or CreateProcess
+ * plumbing) would be a lot of machinery for a handful of assertions.
+ * So on Windows these cases are *skipped and reported as skipped*
+ * rather than silently passing -- a Windows run legitimately covers
+ * less than a POSIX run, and the summary should say so instead of
+ * quietly claiming the same number of passes.
  */
+#if defined(_WIN32)
+
+#define ASSERT_EXITS_NONZERO(stmt, msg)                            \
+    do                                                             \
+    {                                                              \
+        testsSkipped++;                                            \
+        printf("  SKIP [%s:%d] %s (needs fork(); not on Windows)\n", \
+               __func__, __LINE__, msg);                           \
+    } while (0)
+
+#else
+
 #define ASSERT_EXITS_NONZERO(stmt, msg)                                              \
     do                                                                               \
     {                                                                                \
@@ -75,6 +102,8 @@ extern int testsFailed;
             }                                                                        \
         }                                                                            \
     } while (0)
+
+#endif /* _WIN32 */
 
 #define RUN_SUITE(fn)              \
     do                             \

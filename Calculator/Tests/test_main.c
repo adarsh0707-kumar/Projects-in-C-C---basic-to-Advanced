@@ -3,6 +3,10 @@
 
 int testsRun = 0;
 int testsFailed = 0;
+/* Only ever incremented on Windows, where ASSERT_EXITS_NONZERO can't
+   fork() -- see Tests/test_framework.h. Reported separately so a
+   Windows run can't look like it covered as much as a POSIX one. */
+int testsSkipped = 0;
 
 int main(void)
 {
@@ -62,6 +66,9 @@ int main(void)
         printf("ALL %d TESTS PASSED\n", testsRun);
     else
         printf("%d/%d TESTS FAILED\n", testsFailed, testsRun);
+
+    if (testsSkipped > 0)
+        printf("%d SKIPPED (need fork(); unavailable on this platform)\n", testsSkipped);
 
     printf("=====================================================\n");
 

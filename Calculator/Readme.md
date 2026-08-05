@@ -193,6 +193,27 @@ See **docs/ARCHITECTURE.md** for the full write-up, including the rationale for 
 
 # Build
 
+There are two build systems, and they build the same targets from the same sources:
+
+- **CMake** — works on Linux, macOS, and Windows (MSVC, MinGW, Xcode, Ninja). Use this if you're on macOS or Windows, or packaging a release.
+- **Makefile** — the Linux development build. It carries the sanitizer configurations and the `BUILD=<type>` object-directory layout, and is what CI runs today.
+
+## CMake (any OS)
+
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+That produces `build/calculator` (CLI) and, **if Qt6 is installed**, `build/calculator-gui`. Qt6 missing is not an error — the CLI and the test suite have no external dependencies at all and build everywhere. `cmake --install build --prefix <dir>` stages a release layout.
+
+On Windows, `cmake -B build` then `cmake --build build --config Release` works with Visual Studio's own compiler; no MSYS2 or Unix shell needed.
+
+> On macOS and Windows the filesystem is case-insensitive, so a `build/` directory collides with the legacy `Build/` one. `Build/` is no longer used by anything (history moved to a per-user data directory), so deleting it is safe if you hit that.
+
+## Makefile (Linux)
+
 The Makefile supports four build configurations, each in its own object directory so switching configs never links stale objects:
 
 ```bash

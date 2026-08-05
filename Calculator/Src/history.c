@@ -1,19 +1,154 @@
 #include <stdio.h>
 #include <errno.h>
+#include <stdlib.h>
 #include <string.h>
 #include "history.h"
 
-#define HISTORY_FILE "./Build/history.txt"
+/*
+ * The history file used to be the literal path "./Build/history.txt",
+ * which only works when the calculator is launched from the project
+ * directory. A user who downloads a release binary and runs it from
+ * their Downloads folder has no ./Build, so every history operation
+ * silently failed. The path is now resolved at runtime to a per-user
+ * data directory, which is also where each platform expects an
+ * application to keep this kind of state.
+ */
+#if defined(_WIN32)
+#include <direct.h>
+#define MAKE_DIR(path) _mkdir(path)
+#define PATH_SEP "\\"
+#else
+#include <sys/stat.h>
+#include <sys/types.h>
+#define MAKE_DIR(path) mkdir((path), 0755)
+#define PATH_SEP "/"
+#endif
+
+#define HISTORY_PATH_MAX 512
+/* Deliberately smaller than HISTORY_PATH_MAX so appending the
+   separator and "history.txt" to a full-length directory provably
+   still fits, which is what -Wformat-truncation checks. */
+#define HISTORY_DIR_MAX 480
+
+/* Creates every missing component of @p path, like `mkdir -p`. An
+   already-existing component reports EEXIST, which isn't an error
+   here. Anything else is left for the caller's fopen() to report. */
+static void ensureDirectoryExists(const char path[])
+{
+    char partial[HISTORY_PATH_MAX];
+    size_t len = strlen(path);
+
+    if (len == 0 || len >= sizeof(partial))
+        return;
+
+    memcpy(partial, path, len + 1);
+
+    for (size_t i = 1; i < len; i++)
+    {
+        if (partial[i] == '/' || partial[i] == '\\')
+        {
+            char saved = partial[i];
+            partial[i] = '\0';
+            MAKE_DIR(partial);
+            partial[i] = saved;
+        }
+    }
+
+    MAKE_DIR(partial);
+}
+
+/* Set by setHistoryFilePath(); empty means "not overridden". */
+static char explicitPath[HISTORY_PATH_MAX] = "";
+
+void setHistoryFilePath(const char path[])
+{
+    if (path == NULL)
+        explicitPath[0] = '\0';
+    else
+        snprintf(explicitPath, sizeof(explicitPath), "%s", path);
+}
+
+const char *historyFilePath(void)
+{
+    static char path[HISTORY_PATH_MAX];
+    char directory[HISTORY_DIR_MAX];
+
+    /* An explicit override wins over everything. The test suite uses
+       this to keep its scratch history out of the real one. */
+    if (explicitPath[0] != '\0')
+    {
+        snprintf(path, sizeof(path), "%s", explicitPath);
+        return path;
+    }
+
+    /* Then the environment, so a user can put history wherever they
+       like without recompiling. getenv() is ISO C; setenv() is not,
+       which is why the override above is a function rather than the
+       test suite setting this variable. */
+    const char *override = getenv("CALCULATOR_HISTORY_FILE");
+
+    if (override != NULL && override[0] != '\0')
+    {
+        snprintf(path, sizeof(path), "%s", override);
+        return path;
+    }
+
+#if defined(_WIN32)
+    const char *base = getenv("APPDATA");
+
+    if (base != NULL && base[0] != '\0')
+        snprintf(directory, sizeof(directory), "%s" PATH_SEP "Calculator", base);
+    else
+        directory[0] = '\0';
+#elif defined(__APPLE__)
+    const char *home = getenv("HOME");
+
+    if (home != NULL && home[0] != '\0')
+        snprintf(directory, sizeof(directory), "%s/Library/Application Support/Calculator", home);
+    else
+        directory[0] = '\0';
+#else
+    /* XDG Base Directory spec: $XDG_DATA_HOME, else ~/.local/share. */
+    const char *xdg = getenv("XDG_DATA_HOME");
+    const char *home = getenv("HOME");
+
+    if (xdg != NULL && xdg[0] != '\0')
+        snprintf(directory, sizeof(directory), "%s/calculator", xdg);
+    else if (home != NULL && home[0] != '\0')
+        snprintf(directory, sizeof(directory), "%s/.local/share/calculator", home);
+    else
+        directory[0] = '\0';
+#endif
+
+    if (directory[0] == '\0')
+    {
+        /* No home directory to work with (a bare container, a cron
+           job with a stripped environment). Fall back to the working
+           directory rather than losing history entirely. */
+        snprintf(path, sizeof(path), "history.txt");
+        return path;
+    }
+
+    ensureDirectoryExists(directory);
+    snprintf(path, sizeof(path), "%s" PATH_SEP "history.txt", directory);
+
+    return path;
+}
 
 void addHistory(char expression[], double result)
 {
-    FILE *fp = fopen(HISTORY_FILE, "a");
+    /* Resolved once and held: historyFilePath() can itself touch errno
+       (it may attempt mkdir), so calling it again inside the error
+       branch below could overwrite the errno that fopen just set. */
+    const char *file = historyFilePath();
+
+    FILE *fp = fopen(file, "a");
 
     if (fp == NULL)
     {
         fprintf(stderr,
                 "Error opening '%s': %s\n",
-                HISTORY_FILE,
+                file,
                 strerror(errno));
         return;
     }
@@ -24,7 +159,7 @@ void addHistory(char expression[], double result)
 
 void showHistory(void)
 {
-    FILE *fp = fopen(HISTORY_FILE, "r");
+    FILE *fp = fopen(historyFilePath(), "r");
 
     if (fp == NULL)
     {
@@ -49,7 +184,7 @@ void showHistory(void)
 
 void clearHistory(void)
 {
-    FILE *fp = fopen(HISTORY_FILE, "w");
+    FILE *fp = fopen(historyFilePath(), "w");
     if (fp != NULL)
         fclose(fp);
 
@@ -77,7 +212,7 @@ static int extractExpressionFromLine(const char line[], char outExpr[], int outS
 
 int getLastHistoryExpression(char outExpr[], int outSize)
 {
-    FILE *fp = fopen(HISTORY_FILE, "r");
+    FILE *fp = fopen(historyFilePath(), "r");
     if (fp == NULL)
         return 0;
 
@@ -104,7 +239,7 @@ int getHistoryExpressionByNumber(int n, char outExpr[], int outSize)
     if (n <= 0)
         return 0;
 
-    FILE *fp = fopen(HISTORY_FILE, "r");
+    FILE *fp = fopen(historyFilePath(), "r");
     if (fp == NULL)
         return 0;
 
@@ -134,7 +269,7 @@ int getHistoryExpressionByNumber(int n, char outExpr[], int outSize)
 
 void showRecentHistory(int n)
 {
-    FILE *fp = fopen(HISTORY_FILE, "r");
+    FILE *fp = fopen(historyFilePath(), "r");
 
     if (fp == NULL)
     {
@@ -178,7 +313,7 @@ void showRecentHistory(int n)
 
 int getHistoryCount(void)
 {
-    FILE *fp = fopen(HISTORY_FILE, "r");
+    FILE *fp = fopen(historyFilePath(), "r");
     if (fp == NULL)
         return 0;
 
@@ -197,7 +332,7 @@ int getHistoryLineByNumber(int n, char outLine[], int outSize)
     if (n <= 0)
         return 0;
 
-    FILE *fp = fopen(HISTORY_FILE, "r");
+    FILE *fp = fopen(historyFilePath(), "r");
     if (fp == NULL)
         return 0;
 

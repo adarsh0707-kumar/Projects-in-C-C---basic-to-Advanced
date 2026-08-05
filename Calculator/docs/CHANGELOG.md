@@ -8,6 +8,86 @@ The format is based on **Keep a Changelog** and follows **Semantic Versioning** 
 
 # [Unreleased]
 
+## 2026-08-05 (7) — Phase 35 (cross-platform), part 1: portability groundwork
+
+Goal: someone downloads a release from GitHub and runs it on Linux,
+macOS, or Windows without building anything. This entry is the code and
+build-system half; CI, release archives, and installers follow.
+
+### Fixed
+
+- `Src/history.c`: the history file was the literal relative path
+  `"./Build/history.txt"`, with nothing creating that directory. Any
+  user running the binary from anywhere other than the project root —
+  which is *every* user of a downloaded release, on every OS including
+  Linux — silently lost all history: `fopen()` returned NULL and the
+  read paths just reported "No history available!". The path is now
+  resolved at runtime by `historyFilePath()` to the per-user data
+  directory each platform expects (`%APPDATA%\Calculator` on Windows,
+  `~/Library/Application Support/Calculator` on macOS,
+  `$XDG_DATA_HOME`/`~/.local/share/calculator` elsewhere), creating it
+  `mkdir -p` style. Verified by running the binary from `/tmp` with no
+  `Build/` anywhere: history now works and lands in
+  `~/.local/share/calculator/history.txt`.
+
+### Added
+
+- `CMakeLists.txt`: a second build system covering Windows/MSVC,
+  macOS/Xcode, Ninja, and Make. The existing Makefile is untouched and
+  remains the Linux development build — it carries the sanitizer
+  configs and `BUILD=<type>` layout — but it is POSIX-shell-only
+  (`mkdir -p`, `command -v`, `pkg-config`, shell loops), so it can
+  never serve Windows. Source lists are written out explicitly rather
+  than globbed, matching the Makefile's reasoning. The GUI target is
+  conditional on `find_package(Qt6)`: Qt missing is not an error, since
+  the CLI and tests have no external dependencies and must build
+  everywhere. `AUTOMOC`/`AUTORCC` replace the hand-written moc/rcc
+  rules and pick tooling matching the Qt6 that was found, which is the
+  same Qt5/Qt6 mismatch the Makefile solves via `qmake6 -query`.
+- `Inc/history.h`: `historyFilePath()` and `setHistoryFilePath()` are
+  now public. The setter exists because the test suite needs a scratch
+  file and `setenv()` is not ISO C — it's unavailable under a strict
+  `-std=c11`, so an environment variable alone could not be driven
+  portably from a test. `$CALCULATOR_HISTORY_FILE` is still honoured
+  for users, since `getenv()` *is* ISO C.
+
+### Changed
+
+- `Tests/test_framework.h`: `ASSERT_EXITS_NONZERO` used `fork()`,
+  `waitpid()`, `<unistd.h>` and `<sys/wait.h>` unconditionally, so the
+  suite could not compile on Windows at all. Those are now behind
+  `#if !defined(_WIN32)`, with a Windows branch that reports each such
+  case as **SKIP** and counts it in a new `testsSkipped` total printed
+  by `Tests/test_main.c`. Deliberately not silently passing: a Windows
+  run genuinely covers less than a POSIX run and the summary should say
+  so.
+- `Tests/test_history.c`: replaced the backup-and-restore dance against
+  the user's real history file with `setHistoryFilePath()` pointing at
+  a scratch file. The old approach duplicated a path constant that has
+  now moved, and lost the user's history outright if the suite crashed
+  between backup and restore. The suite no longer opens the real
+  history file at all.
+
+### Verified
+
+`cmake -B build && cmake --build build` produces all three targets
+(CLI, tests, GUI) with **zero warnings**, `ctest` passes, and the
+resulting `calculator-tests` reports **471 passed** — the same count
+the Makefile produces, which still builds and passes unchanged
+alongside it. `cmake --install` stages a correct release layout. The
+CMake-built GUI launches under `QT_QPA_PLATFORM=offscreen`. The
+`_WIN32` branch of `test_framework.h` was syntax-checked by compiling
+it on Linux with `_WIN32` forced; that proves the branch is well-formed
+C but is **not** a substitute for a real Windows build, which arrives
+with the CI matrix.
+
+### Still to do for Phase 35
+
+CI matrix (`ubuntu`/`macos`/`windows`), a tag-triggered release
+workflow, release archives, and the non-developer installers
+(AppImage, `.dmg`, Windows installer). Nothing here has been built or
+tested on macOS or Windows yet — only made capable of it.
+
 ## 2026-08-05 (6) — Drop the redundant validateParentheses() call from the pipeline
 
 ### Changed

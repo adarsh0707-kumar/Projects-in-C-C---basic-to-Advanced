@@ -26,6 +26,12 @@ calculator-gui
 Obj/
 Build/
 
+# CMake (Phase 35). Note that on a case-insensitive filesystem (macOS,
+# Windows) "build" and the legacy "Build" above are the same directory.
+build/
+cmake-build-*/
+CMakeUserPresets.json
+
 ############################################################
 # Static & Shared Libraries
 ############################################################

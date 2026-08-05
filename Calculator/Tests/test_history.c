@@ -1,62 +1,33 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "test_framework.h"
 #include "tests.h"
 #include "history.h"
 
 /*
- * history.c persists to a real file on disk (./Build/history.txt,
- * hardcoded internally -- not exposed via history.h). That's fine for
- * the interactive calculator, but it means these tests would otherwise
- * overwrite whatever history you'd actually built up while using the
- * calculator by hand. So: back the real file up before testing and
- * restore it afterward. This path string duplicates history.c's
- * internal HISTORY_FILE constant; if that ever changes, update this too.
+ * These tests exercise real file I/O, so they need somewhere to write
+ * that isn't the history the user has built up by hand. history.c
+ * honours $CALCULATOR_HISTORY_FILE ahead of every platform default
+ * (see historyFilePath()), so pointing that at a scratch file makes
+ * the suite hermetic: nothing is backed up, nothing is restored, and
+ * the real history is never opened in the first place.
+ *
+ * This replaces an earlier backup-and-restore dance against a
+ * hardcoded "./Build/history.txt" -- which duplicated a path constant
+ * that has since moved, and which lost the user's history outright if
+ * the suite crashed between the backup and the restore.
  */
-#define HISTORY_FILE "./Build/history.txt"
-#define HISTORY_BACKUP_FILE "./Build/history_test_backup.txt"
+#define TEST_HISTORY_FILE "calculator_test_history.txt"
 
-static void copyFile(const char *from, const char *to)
+static void useScratchHistoryFile(void)
 {
-    FILE *src = fopen(from, "r");
-    if (src == NULL)
-        return;
-
-    FILE *dst = fopen(to, "w");
-    if (dst == NULL)
-    {
-        fclose(src);
-        return;
-    }
-
-    char buf[4096];
-    size_t n;
-
-    while ((n = fread(buf, 1, sizeof(buf), src)) > 0)
-        fwrite(buf, 1, n, dst);
-
-    fclose(src);
-    fclose(dst);
+    setHistoryFilePath(TEST_HISTORY_FILE);
 }
 
-static void backupRealHistory(void)
+static void removeScratchHistoryFile(void)
 {
-    copyFile(HISTORY_FILE, HISTORY_BACKUP_FILE);
-}
-
-static void restoreRealHistory(void)
-{
-    FILE *backup = fopen(HISTORY_BACKUP_FILE, "r");
-
-    if (backup == NULL)
-    {
-        /* There was no pre-existing history file -- leave it cleared. */
-        clearHistory();
-        return;
-    }
-
-    fclose(backup);
-    copyFile(HISTORY_BACKUP_FILE, HISTORY_FILE);
-    remove(HISTORY_BACKUP_FILE);
+    remove(TEST_HISTORY_FILE);
+    setHistoryFilePath(NULL);
 }
 
 static void test_add_and_get_last(void)
@@ -141,12 +112,12 @@ static void test_clear_history(void)
 
 void run_history_tests(void)
 {
-    backupRealHistory();
+    useScratchHistoryFile();
 
     test_add_and_get_last();
     test_get_by_number();
     test_count_and_line_by_number();
     test_clear_history();
 
-    restoreRealHistory();
+    removeScratchHistoryFile();
 }
