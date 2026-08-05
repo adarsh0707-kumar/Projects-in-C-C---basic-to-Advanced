@@ -6,6 +6,7 @@
  * Step 1: basic arithmetic keypad. Step 2: history panel.
  * Step 3: variable manager panel. Step 4: memory panel.
  * Step 5: Complex/Matrix/Statistics/Units/Base tabs.
+ * Step 6: real (QPainter) graphical plotting, via PlotWidget.
  */
 #ifndef MAINWINDOW_HPP
 #define MAINWINDOW_HPP
@@ -17,6 +18,7 @@ class QLabel;
 class QListWidget;
 class QListWidgetItem;
 class QTableWidget;
+class PlotWidget;
 
 class MainWindow : public QMainWindow
 {
@@ -50,6 +52,8 @@ private slots:
     void memorySubtractSlot();
     /** MC: resets memory.c's register to 0. */
     void memoryClearSlot();
+    /** Samples the Plot tab's expression over x and redraws PlotWidget. */
+    void plotCurrentExpression();
 
 private:
     /** Repopulates the history list from history.c's on-disk log. */
@@ -77,6 +81,9 @@ private:
     QLineEdit *m_newVarValue;
     QLabel *m_variablesError;
     QLabel *m_memoryLabel;
+    QLineEdit *m_plotInput;
+    QLabel *m_plotError;
+    PlotWidget *m_plotWidget;
     /* MS/M+/M- operate on the most recently evaluated result, mirroring
        main.c's MS behavior (Src/main.c: memoryStore(lastResult)) and
        extending the same convenience to M+/M- -- the CLI instead

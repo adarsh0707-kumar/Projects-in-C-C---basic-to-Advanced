@@ -8,6 +8,55 @@ The format is based on **Keep a Changelog** and follows **Semantic Versioning** 
 
 # [Unreleased]
 
+## 2026-08-05 — Phase 31 (GUI) Step 6: real graphical plotting
+
+### Added
+
+- `Gui/PlotWidget.{hpp,cpp}`: a plain `QWidget` subclass with a
+  `paintEvent()` override that draws a real line plot with
+  `QPainter`, replacing Step 1-5's text-label approach for this one
+  tab. Deliberately not a `QObject`/`Q_OBJECT` -- it has no signals or
+  slots of its own, just a public `setSamples()`/`clearPlot()` and the
+  paint override, so it needs no `moc` step at all, unlike
+  `MainWindow.hpp`. It's also engine-agnostic: it only knows how to
+  draw `(x, y, valid)` arrays handed to it, nothing about the
+  calculator itself.
+- `Gui/MainWindow.{hpp,cpp}`: a new "Plot" tab (input line + Plot
+  button + `PlotWidget`) and a new `plotCurrentExpression()` slot that
+  does the sampling, mirroring `Src/plot.c`'s own pipeline exactly --
+  `insertImplicitMultiplication` -> `validateExpression` ->
+  `validateParentheses` once (syntax doesn't depend on x), then
+  per-sample `setVariable("x", ...)` + `infixToPostfix` +
+  `evaluatePostfix` over `Src/plot.c`'s own `PLOT_XMIN`/`PLOT_XMAX`
+  (`-10`/`10`) -- but at 400 samples instead of `plot.c`'s 61 ASCII
+  columns, since a drawn line benefits from a smoother curve. Unlike
+  `plot.c`'s CLI syntax, the tab's input takes the bare expression
+  (`sin(x)`, not `plot(sin(x))`) since the tab itself is already the
+  plot command. Non-finite samples are marked invalid and skipped when
+  drawing line segments -- the same gap-at-the-discontinuity treatment
+  `plot.c` gives asymptotes like `1/x`, just drawn instead of left
+  blank in an ASCII canvas.
+- `Makefile`: `GUI_SRCS` gained `Gui/PlotWidget.cpp`. `MOC_HEADERS`
+  did not, per the no-`Q_OBJECT` point above.
+- `.gitignore`: added `calculator-gui` alongside the existing
+  `calculator` entry -- it's the same kind of build artifact and
+  wasn't previously ignored.
+
+### Verified
+
+Manually, via a real X11 session (`xdotool` + `import`, screenshots
+inspected): `sin(x)` draws a correct sine wave across the full
+`[-10, 10]` domain with dashed x=0/y=0 reference lines; `1/x` shows
+the steep rise on each side of the origin; `sqrt(x)` draws a curve
+only for `x >= 0`, with the y-axis auto-ranged from the valid half
+only -- confirming the gap-skip logic, not just a steep slope, is
+what's driving the missing negative half; typing an invalid expression
+(e.g. `foo(x`) shows a red "Error: Invalid expression." label and
+clears the canvas rather than drawing anything stale.
+`make`/`make BUILD=asan test` (460 cases, unchanged -- no engine
+changes this time) and `./calculator` confirmed unaffected; `make gui`
+builds clean with zero `-Wall -Wextra` warnings.
+
 ## 2026-08-04 (8) — GUI: QWERTY alpha keyboard
 
 ### Added

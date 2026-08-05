@@ -65,7 +65,7 @@ AddressSanitizer/UndefinedBehaviorSanitizer).
 | 28       | Dynamic data structures                      | 🟡 Planned    |
 | 29       | Abstract Syntax Tree (AST)                   | 🟡 Planned    |
 | 30       | Symbolic mathematics                         | 🟡 Planned    |
-| 31       | Graphical User Interface (Qt)                | 🟠 In Progress — Steps 1–5 done |
+| 31       | Graphical User Interface (Qt)                | 🟠 In Progress — Steps 1–6 done |
 | 32       | Plugin architecture                          | 🟡 Planned    |
 | 33       | Calculator scripting                         | 🟡 Planned    |
 | 34       | Package manager                              | 🟡 Planned    |
@@ -185,6 +185,36 @@ typed entirely via the S/I/N alpha keys plus the numeric keypad's
 `( 3 0 )` evaluates to `-0.988032` and logs to history, exactly as
 typing it on a physical keyboard would.
 
+**Step 6 (done):** real graphical plotting. A new `PlotWidget`
+(`Gui/PlotWidget.{hpp,cpp}`) is a plain `QWidget` subclass with a
+`paintEvent()` override — deliberately *not* a `QObject` with
+`Q_OBJECT`, since it has no signals/slots of its own (just a public
+`setSamples()`/`clearPlot()` and the paint override), so it needs no
+`moc` step at all, unlike `MainWindow.hpp`. It's also deliberately
+engine-agnostic: it only knows how to draw `(x, y, valid)` arrays it's
+handed, nothing about the calculator. The sampling itself lives in a
+new `MainWindow::plotCurrentExpression()`, mirroring `Src/plot.c`'s
+own pipeline exactly (`insertImplicitMultiplication` →
+`validateExpression` → `validateParentheses`, then per-sample
+`setVariable("x", ...)` + `infixToPostfix` + `evaluatePostfix` over
+`PLOT_XMIN`/`PLOT_XMAX = -10/10`, same as the CLI) but building arrays
+for `PlotWidget` instead of an ASCII canvas, and sampling 400 points
+instead of `plot.c`'s 61 columns since a drawn line benefits from a
+smoother curve. Non-finite samples are marked invalid and simply
+skipped when drawing line segments — the same gap-at-the-
+discontinuity treatment `plot.c` gives asymptotes like `1/x`, just
+drawn instead of left blank in an ASCII canvas. Unlike `plot.c`'s CLI
+syntax, the new "Plot" tab's input takes the bare expression (`sin(x)`,
+not `plot(sin(x))`) since the tab itself is already the plot command.
+`Makefile`'s `GUI_SRCS` gained `PlotWidget.cpp`; `MOC_HEADERS` did not,
+for the reason above. Verified via a real X11 session: `sin(x)` draws
+a correct sine wave across the full domain; `1/x` shows the steep rise
+on each side of the origin; `sqrt(x)` shows a curve only for `x >= 0`
+with the y-axis auto-ranged from the valid half only (confirming the
+gap logic, not just a steep slope, is what's driving it); an invalid
+expression shows a red error label and clears the canvas rather than
+drawing anything stale.
+
 **Known Step 1 limitation (unchanged):** `validateExpression()`/
 `validateParentheses()` report their specific failure reason via
 `printf()` to stdout (fine for the CLI, invisible to a GUI window) —
@@ -196,9 +226,6 @@ have this gap.
 
 **Remaining steps** (each its own later commit, not all at once):
 
-6. Real graphical plotting: a custom `QWidget::paintEvent` sampling
-   the expression the same way `plot.c` does, drawn with `QPainter`
-   instead of ASCII.
 7. Polish: theme, icon, error styling; consider fixing the Step 1
    validator-message limitation above (would need
    `validateExpression()`/`validateParentheses()` to return a message

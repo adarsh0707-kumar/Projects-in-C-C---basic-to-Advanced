@@ -1,4 +1,5 @@
 #include "MainWindow.hpp"
+#include "PlotWidget.hpp"
 
 #include <QGridLayout>
 #include <QVBoxLayout>
@@ -16,7 +17,9 @@
 #include <QTableWidgetItem>
 #include <QWidget>
 #include <QString>
+#include <QVector>
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <cctype>
@@ -62,6 +65,14 @@ constexpr int kInfixMax = 512;
 constexpr int kPostfixMax = 1024;
 constexpr int kVariableNameMax = 32;
 
+/* Matches Src/plot.c's PLOT_XMIN/PLOT_XMAX exactly, so the GUI plots
+   the same domain the CLI's ASCII plot does. Sample count is much
+   higher than plot.c's 61 columns since a QPainter line plot benefits
+   from a smoother curve, unlike fixed-width ASCII. */
+constexpr double kPlotXMin = -10.0;
+constexpr double kPlotXMax = 10.0;
+constexpr int kPlotSampleCount = 400;
+
 QString trimmed(const char *s)
 {
     return QString::fromUtf8(s).trimmed();
@@ -71,7 +82,7 @@ QString trimmed(const char *s)
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), m_display(nullptr), m_errorLabel(nullptr), m_historyList(nullptr),
       m_variablesTable(nullptr), m_newVarName(nullptr), m_newVarValue(nullptr), m_variablesError(nullptr),
-      m_memoryLabel(nullptr), m_lastResult(0.0)
+      m_memoryLabel(nullptr), m_plotInput(nullptr), m_plotError(nullptr), m_plotWidget(nullptr), m_lastResult(0.0)
 {
     setWindowTitle("Scientific Calculator");
 
@@ -287,6 +298,37 @@ MainWindow::MainWindow(QWidget *parent)
 
     memoryLayout->addStretch(1);
 
+    /* Plot panel (Step 6): real QPainter graphics instead of Step 1-5's
+       ASCII-in-a-label approach. Sampling logic mirrors Src/plot.c's
+       own pipeline (insertImplicitMultiplication -> validateExpression
+       -> validateParentheses -> per-sample infixToPostfix/
+       evaluatePostfix with setVariable("x", ...)), but builds (x, y,
+       valid) arrays for PlotWidget to draw instead of an ASCII canvas.
+       Unlike plot.c's CLI syntax, the expression here is typed bare
+       (just "sin(x)", not "plot(sin(x))") since this tab is already
+       dedicated to plotting. */
+    auto *plotPanel = new QWidget(this);
+    auto *plotLayout = new QVBoxLayout(plotPanel);
+
+    m_plotInput = new QLineEdit(plotPanel);
+    m_plotInput->setPlaceholderText("e.g. sin(x), x^2, 1/x");
+    plotLayout->addWidget(m_plotInput);
+
+    m_plotWidget = new PlotWidget(plotPanel);
+    plotLayout->addWidget(m_plotWidget);
+    plotLayout->setStretchFactor(m_plotWidget, 1);
+
+    m_plotError = new QLabel(plotPanel);
+    m_plotError->setStyleSheet("color: #c0392b;");
+    m_plotError->setWordWrap(true);
+    plotLayout->addWidget(m_plotError);
+
+    connect(m_plotInput, &QLineEdit::returnPressed, this, &MainWindow::plotCurrentExpression);
+
+    auto *plotButton = new QPushButton("Plot", plotPanel);
+    connect(plotButton, &QPushButton::clicked, this, &MainWindow::plotCurrentExpression);
+    plotLayout->addWidget(plotButton);
+
     auto *sidePanel = new QTabWidget(this);
     sidePanel->addTab(historyPanel, "History");
     sidePanel->addTab(variablesPanel, "Variables");
@@ -300,6 +342,7 @@ MainWindow::MainWindow(QWidget *parent)
     sidePanel->addTab(buildEvalTab(evaluateStatsExpression, "e.g. mean(1,2,3,4), stddev(4,8,6,5,3,7)"), "Statistics");
     sidePanel->addTab(buildEvalTab(evaluateUnitExpression, "e.g. 10km, 10km to miles, 80F to C"), "Units");
     sidePanel->addTab(buildEvalTab(evaluateBaseExpression, "e.g. bin(25), hex(255), dec(FFh)"), "Base");
+    sidePanel->addTab(plotPanel, "Plot");
 
     auto *splitter = new QSplitter(Qt::Horizontal, this);
     splitter->addWidget(calculatorPanel);
@@ -606,6 +649,93 @@ void MainWindow::memoryClearSlot()
 {
     memoryClear();
     refreshMemory();
+}
+
+void MainWindow::plotCurrentExpression()
+{
+    m_plotError->clear();
+
+    QByteArray exprBytes = m_plotInput->text().toUtf8();
+
+    if (exprBytes.isEmpty())
+    {
+        m_plotWidget->clearPlot();
+        return;
+    }
+
+    if (exprBytes.size() >= kExpressionMax)
+    {
+        m_plotError->setText("Error: Expression too long.");
+        m_plotWidget->clearPlot();
+        return;
+    }
+
+    char expression[kExpressionMax];
+    std::strncpy(expression, exprBytes.constData(), sizeof(expression) - 1);
+    expression[sizeof(expression) - 1] = '\0';
+
+    char processed[kInfixMax];
+    insertImplicitMultiplication(expression, processed);
+
+    /* Syntax only needs checking once -- it doesn't depend on x's
+       value, exactly as Src/plot.c's own comment notes. */
+    if (!validateExpression(processed))
+    {
+        m_plotError->setText("Error: Invalid expression.");
+        m_plotWidget->clearPlot();
+        return;
+    }
+
+    if (!validateParentheses(processed))
+    {
+        m_plotError->setText("Error: Mismatched parentheses.");
+        m_plotWidget->clearPlot();
+        return;
+    }
+
+    QVector<double> xs(kPlotSampleCount);
+    QVector<double> ys(kPlotSampleCount);
+    QVector<bool> valid(kPlotSampleCount);
+
+    for (int i = 0; i < kPlotSampleCount; ++i)
+    {
+        double x = kPlotXMin + i * (kPlotXMax - kPlotXMin) / (kPlotSampleCount - 1);
+        setVariable("x", x);
+
+        char postfix[kPostfixMax];
+
+        if (!infixToPostfix(processed, postfix))
+        {
+            /* A structural failure (undefined variable, malformed
+               number, ...) independent of x's value -- identical on
+               every sample, so stop instead of repeating it 400
+               times, same reasoning as Src/plot.c. */
+            m_plotError->setText(QString("Error: %1").arg(getLastEvalError()));
+            m_plotWidget->clearPlot();
+            return;
+        }
+
+        double y = evaluatePostfix(postfix);
+
+        xs[i] = x;
+        ys[i] = y;
+        valid[i] = std::isfinite(y);
+    }
+
+    bool anyValid = std::any_of(valid.cbegin(), valid.cend(), [](bool v)
+                                 { return v; });
+
+    if (!anyValid)
+    {
+        m_plotError->setText(QString("Error: '%1' produced no finite values for x in [%2, %3].")
+                                  .arg(m_plotInput->text())
+                                  .arg(kPlotXMin, 0, 'g', 3)
+                                  .arg(kPlotXMax, 0, 'g', 3));
+        m_plotWidget->clearPlot();
+        return;
+    }
+
+    m_plotWidget->setSamples(xs, ys, valid, kPlotXMin, kPlotXMax);
 }
 
 QWidget *MainWindow::buildEvalTab(EvalFn evalFn, const QString &placeholderText)

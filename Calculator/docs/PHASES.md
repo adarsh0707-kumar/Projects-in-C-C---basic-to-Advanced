@@ -947,12 +947,26 @@ Desktop scientific calculator.
   printed to stdout — so `evaluateUnitExpression()` was added,
   mirroring `convertToSingleUnit()`/`convertAndPrint()`'s existing
   logic into a buffer instead, covered by `Tests/test_units.c`)
+- Real graphical plotting — done (Step 6: a new `PlotWidget`, a plain
+  `QWidget` subclass with a `paintEvent()` override and no `Q_OBJECT`
+  of its own — it only draws `(x, y, valid)` arrays it's handed, with
+  no dependency on the calculator engine at all. `MainWindow` does the
+  sampling in a new `plotCurrentExpression()`, mirroring `Src/plot.c`'s
+  own pipeline (`insertImplicitMultiplication` -> `validateExpression`
+  -> `validateParentheses`, then per-sample `setVariable("x", ...)` +
+  `infixToPostfix` + `evaluatePostfix` over the same `[-10, 10]` domain
+  `plot.c` uses) at 400 samples instead of `plot.c`'s 61 ASCII columns.
+  Non-finite samples are skipped when drawing line segments, giving
+  the same gap-at-a-discontinuity behavior `plot.c` gives `1/x`, drawn
+  instead of left blank)
 - Theme support — not yet (Step 7)
 
 ## Files
 
 Gui/MainWindow.hpp
 Gui/MainWindow.cpp
+Gui/PlotWidget.hpp
+Gui/PlotWidget.cpp
 Gui/main.cpp
 Inc/history.h (2 new functions)
 Src/history.c (2 new functions)
@@ -989,8 +1003,16 @@ Matrix (`det([[1,2],[3,4]])` -> `-2`), Statistics
 `6.21371 miles`, the bare-form full table, and a parse-error path),
 and Base (`hex(255)` -> `FF`).
 
+Step 6: a "Plot" tab with a real `QPainter`-drawn graph, verified via
+a real X11 session: `sin(x)` draws a correct sine wave across the
+full `[-10, 10]` domain; `1/x` shows the steep rise on each side of
+the origin; `sqrt(x)` draws a curve only for `x >= 0`, with the y-axis
+auto-ranged from the valid half only (confirming the gap logic, not
+just a steep slope, drives the missing negative half); an invalid
+expression shows a red error label and clears the canvas.
+
 Status:
-🟠 In Progress — Steps 1–5 (of 7 planned steps; see
+🟠 In Progress — Steps 1–6 (of 7 planned steps; see
 `docs/ROADMAP.md`'s "In Progress: Phase 31" section for the full
 breakdown) complete
 

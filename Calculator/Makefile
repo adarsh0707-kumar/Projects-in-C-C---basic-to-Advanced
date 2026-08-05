@@ -167,7 +167,9 @@ TESTED_CXX_OBJS = $(CXX_SRCS:$(SRC_DIR)/%.cpp=$(TEST_OBJ_DIR)/%.o)
 # replaces with its own), so `make gui` builds/reuses them from
 # $(OBJ_DIR) rather than recompiling the engine a third time.
 # ------------------------------------------------------------------
-GUI_SRCS      = $(GUI_DIR)/MainWindow.cpp $(GUI_DIR)/main.cpp
+GUI_SRCS      = $(GUI_DIR)/MainWindow.cpp $(GUI_DIR)/PlotWidget.cpp $(GUI_DIR)/main.cpp
+# PlotWidget.hpp has no Q_OBJECT (no signals/slots of its own -- see
+# Gui/PlotWidget.hpp), so it needs no moc step, unlike MainWindow.hpp.
 MOC_HEADERS   = $(GUI_DIR)/MainWindow.hpp
 MOC_GEN_SRCS  = $(MOC_HEADERS:$(GUI_DIR)/%.hpp=$(GUI_OBJ_DIR)/moc_%.cpp)
 
