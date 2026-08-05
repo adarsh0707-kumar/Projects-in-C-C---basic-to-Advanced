@@ -914,7 +914,11 @@ Desktop scientific calculator.
   than duplicating any parsing logic. `make gui` / `make run-gui`.
 - Scientific keypad — done (Step 1: digits, `+ - * / ^ % ( ) . !`,
   `=`, clear, backspace)
-- History panel — not yet (Step 2)
+- History panel — done (Step 2: `QListWidget` reads `history.c`'s
+  on-disk log via two new functions, `getHistoryCount()` and
+  `getHistoryLineByNumber()`, added to that module and covered by
+  `Tests/test_history.c`; click-to-recall via the existing
+  `getHistoryExpressionByNumber()`; a "Clear History" button)
 - Variable manager — not yet (Step 3)
 - Memory panel — not yet (Step 4)
 - Theme support — not yet (Step 7)
@@ -924,6 +928,8 @@ Desktop scientific calculator.
 Gui/MainWindow.hpp
 Gui/MainWindow.cpp
 Gui/main.cpp
+Inc/history.h (2 new functions)
+Src/history.c (2 new functions)
 
 ## Deliverables
 
@@ -931,9 +937,14 @@ Step 1: a working Qt6 arithmetic calculator window, verified against
 `2+3*5`, `sqrt(16)`, variable assignment/recall, `2^10`, and graceful
 division-by-zero handling — via both keyboard and button-click input.
 
+Step 2: a history side panel sharing the CLI's on-disk history file,
+verified for populate-on-launch, append-on-calculate, click-to-recall,
+and Clear History — via a real X11 session.
+
 Status:
-🟠 In Progress — Step 1 (of 7 planned steps; see `docs/ROADMAP.md`'s
-"In Progress: Phase 31" section for the full breakdown) complete
+🟠 In Progress — Steps 1–2 (of 7 planned steps; see
+`docs/ROADMAP.md`'s "In Progress: Phase 31" section for the full
+breakdown) complete
 
 ---
 

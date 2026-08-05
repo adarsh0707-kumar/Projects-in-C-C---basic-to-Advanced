@@ -20,7 +20,7 @@ make asan && make BUILD=asan test   # same suite under ASan + UBSan
 ```
 
 A shared pass/fail counter (`test_framework.h`) prints a running total;
-the run exits non-zero if anything failed. As of this writing: **433
+the run exits non-zero if anything failed. As of this writing: **441
 tests, all passing**, clean under AddressSanitizer and
 UndefinedBehaviorSanitizer.
 
@@ -57,7 +57,7 @@ UndefinedBehaviorSanitizer.
 | `test_postfix.c`        | `postfix.c`                        | Infix→postfix conversion, `isOperator()`/`precedence()` helpers, end-to-end evaluation via `evaluatePostfix()`, and postfix-conversion error paths (undefined variable, malformed number) |
 | `test_functions.c`      | `functions.c`, `angle_mode.c`      | Unary/binary function dispatch, trig respecting the current angle mode, factorial, and error paths for out-of-domain/unknown input |
 | `test_variables.c`      | `variables.c`                      | Built-in constants (`pi`, `e`), their read-only enforcement, user variable set/get, undefined-variable lookup, and `ans` |
-| `test_history.c`        | `history.c`                        | Adding an entry and recalling it (`!!`), recall by number (`!N`), and clearing history |
+| `test_history.c`        | `history.c`                        | Adding an entry and recalling it (`!!`), recall by number (`!N`), entry count and full-line lookup by number (added for the GUI history panel), and clearing history |
 | `test_memory.c`         | `memory.c`                         | MS/MR/M+/M-/MC |
 | `test_units.c`          | `units.c`                          | Parsing `<value><unit>`, unit-category lookup, bare and `to <unit>` conversion forms, category-mismatch/unknown-unit error paths |
 | `test_stats.c`          | `stats.c`                          | `mean`/`median`/`sum`/`min`/`max`/`count`, sample `stddev`/`variance` (n-1) vs. population `pstddev`/`pvariance` (n), and error paths (unparseable argument list, too few values, unknown function) |

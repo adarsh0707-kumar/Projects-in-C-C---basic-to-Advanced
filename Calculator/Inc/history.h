@@ -20,4 +20,14 @@ int getHistoryExpressionByNumber(int n, char outExpr[], int outSize);
    has less than n entries), preserving their original numbering. */
 void showRecentHistory(int n);
 
+/* Returns the number of entries currently in history (0 if the file
+   doesn't exist yet or is empty). */
+int getHistoryCount(void);
+
+/* Writes the full formatted line for history entry #n (1-indexed,
+   same numbering as showHistory()), e.g. "2+3 = 5", into outLine
+   with the trailing newline stripped. Returns 1 on success, 0 if
+   entry n doesn't exist. */
+int getHistoryLineByNumber(int n, char outLine[], int outSize);
+
 #endif

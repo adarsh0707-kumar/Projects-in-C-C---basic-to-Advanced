@@ -99,6 +99,33 @@ static void test_get_by_number(void)
                 "referencing a history entry that doesn't exist should fail, not crash");
 }
 
+static void test_count_and_line_by_number(void)
+{
+    clearHistory();
+
+    ASSERT_TRUE(getHistoryCount() == 0, "an empty history should count as 0 entries");
+
+    char expr1[] = "2+3";
+    addHistory(expr1, 5.0);
+
+    char expr2[] = "10*2";
+    addHistory(expr2, 20.0);
+
+    ASSERT_TRUE(getHistoryCount() == 2, "getHistoryCount() should reflect both additions");
+
+    char line[256];
+
+    ASSERT_TRUE(getHistoryLineByNumber(1, line, sizeof(line)) == 1, "entry #1 should exist");
+    ASSERT_STR_EQ(line, "2+3 = 5", "getHistoryLineByNumber() should return the full 'expr = result' line");
+
+    ASSERT_TRUE(getHistoryLineByNumber(2, line, sizeof(line)) == 1, "entry #2 should exist");
+    ASSERT_STR_EQ(line, "10*2 = 20", "entries should stay in the order they were added");
+
+    ASSERT_TRUE(getHistoryLineByNumber(99, line, sizeof(line)) == 0,
+                "referencing a history entry that doesn't exist should fail, not crash");
+    ASSERT_TRUE(getHistoryLineByNumber(0, line, sizeof(line)) == 0, "entry #0 should fail (1-indexed)");
+}
+
 static void test_clear_history(void)
 {
     char expr[] = "5+5";
@@ -118,6 +145,7 @@ void run_history_tests(void)
 
     test_add_and_get_last();
     test_get_by_number();
+    test_count_and_line_by_number();
     test_clear_history();
 
     restoreRealHistory();

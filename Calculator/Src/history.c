@@ -175,3 +175,57 @@ void showRecentHistory(int n)
 
     fclose(fp);
 }
+
+int getHistoryCount(void)
+{
+    FILE *fp = fopen(HISTORY_FILE, "r");
+    if (fp == NULL)
+        return 0;
+
+    char line[256];
+    int total = 0;
+
+    while (fgets(line, sizeof(line), fp))
+        total++;
+
+    fclose(fp);
+    return total;
+}
+
+int getHistoryLineByNumber(int n, char outLine[], int outSize)
+{
+    if (n <= 0)
+        return 0;
+
+    FILE *fp = fopen(HISTORY_FILE, "r");
+    if (fp == NULL)
+        return 0;
+
+    char line[256];
+    int count = 0;
+    int found = 0;
+
+    while (fgets(line, sizeof(line), fp))
+    {
+        count++;
+        if (count == n)
+        {
+            found = 1;
+            break;
+        }
+    }
+
+    fclose(fp);
+
+    if (!found)
+        return 0;
+
+    size_t len = strcspn(line, "\r\n");
+
+    if ((int)len >= outSize)
+        len = (size_t)(outSize - 1);
+
+    strncpy(outLine, line, len);
+    outLine[len] = '\0';
+    return 1;
+}

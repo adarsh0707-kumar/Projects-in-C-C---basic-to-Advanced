@@ -2,9 +2,13 @@
 
 #include <QGridLayout>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QSplitter>
 #include <QLineEdit>
 #include <QLabel>
 #include <QPushButton>
+#include <QListWidget>
+#include <QListWidgetItem>
 #include <QWidget>
 #include <QString>
 
@@ -23,7 +27,8 @@ extern "C"
                             validateParentheses, infixToPostfix,
                             evaluatePostfix, getLastEvalError */
 #include "variables.h"  /* setVariable, getVariable, setAns */
-#include "history.h"    /* addHistory */
+#include "history.h"    /* addHistory, clearHistory, getHistoryCount,
+                            getHistoryLineByNumber, getHistoryExpressionByNumber */
 }
 
 namespace
@@ -45,14 +50,14 @@ QString trimmed(const char *s)
 } // namespace
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), m_display(nullptr), m_errorLabel(nullptr)
+    : QMainWindow(parent), m_display(nullptr), m_errorLabel(nullptr), m_historyList(nullptr)
 {
     setWindowTitle("Scientific Calculator");
 
-    auto *central = new QWidget(this);
-    auto *layout = new QVBoxLayout(central);
+    auto *calculatorPanel = new QWidget(this);
+    auto *layout = new QVBoxLayout(calculatorPanel);
 
-    m_display = new QLineEdit(central);
+    m_display = new QLineEdit(calculatorPanel);
     m_display->setMaxLength(kExpressionMax - 1);
     m_display->setAlignment(Qt::AlignRight);
     m_display->setPlaceholderText("0");
@@ -61,7 +66,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_display->setFont(displayFont);
     layout->addWidget(m_display);
 
-    m_errorLabel = new QLabel(central);
+    m_errorLabel = new QLabel(calculatorPanel);
     m_errorLabel->setStyleSheet("color: #c0392b;");
     m_errorLabel->setWordWrap(true);
     layout->addWidget(m_errorLabel);
@@ -87,7 +92,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     for (const KeyDef &key : valueKeys)
     {
-        auto *button = new QPushButton(QString::fromUtf8(key.label), central);
+        auto *button = new QPushButton(QString::fromUtf8(key.label), calculatorPanel);
         button->setSizePolicy(buttonPolicy);
         QString text = QString::fromUtf8(key.label);
         connect(button, &QPushButton::clicked, this, [this, text]()
@@ -95,17 +100,17 @@ MainWindow::MainWindow(QWidget *parent)
         keypad->addWidget(button, key.row, key.col);
     }
 
-    auto *clearButton = new QPushButton("C", central);
+    auto *clearButton = new QPushButton("C", calculatorPanel);
     clearButton->setSizePolicy(buttonPolicy);
     connect(clearButton, &QPushButton::clicked, this, &MainWindow::clearDisplay);
     keypad->addWidget(clearButton, 5, 0);
 
-    auto *backspaceButton = new QPushButton(QStringLiteral("⌫"), central);
+    auto *backspaceButton = new QPushButton(QStringLiteral("⌫"), calculatorPanel);
     backspaceButton->setSizePolicy(buttonPolicy);
     connect(backspaceButton, &QPushButton::clicked, this, &MainWindow::backspace);
     keypad->addWidget(backspaceButton, 5, 1);
 
-    auto *equalsButton = new QPushButton("=", central);
+    auto *equalsButton = new QPushButton("=", calculatorPanel);
     equalsButton->setSizePolicy(buttonPolicy);
     connect(equalsButton, &QPushButton::clicked, this, &MainWindow::evaluate);
     keypad->addWidget(equalsButton, 5, 2, 1, 2);
@@ -124,7 +129,33 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(m_display, &QLineEdit::returnPressed, this, &MainWindow::evaluate);
 
-    setCentralWidget(central);
+    /* History panel (Step 2): reuses history.c's on-disk log (the
+       same file the CLI reads/writes) rather than keeping its own
+       in-memory copy, so both front ends always agree on what's in
+       history. */
+    auto *historyPanel = new QWidget(this);
+    auto *historyLayout = new QVBoxLayout(historyPanel);
+
+    auto *historyTitle = new QLabel("History", historyPanel);
+    historyLayout->addWidget(historyTitle);
+
+    m_historyList = new QListWidget(historyPanel);
+    connect(m_historyList, &QListWidget::itemClicked, this, &MainWindow::recallHistoryItem);
+    historyLayout->addWidget(m_historyList);
+
+    auto *clearHistoryButton = new QPushButton("Clear History", historyPanel);
+    connect(clearHistoryButton, &QPushButton::clicked, this, &MainWindow::clearHistoryPanel);
+    historyLayout->addWidget(clearHistoryButton);
+
+    auto *splitter = new QSplitter(Qt::Horizontal, this);
+    splitter->addWidget(calculatorPanel);
+    splitter->addWidget(historyPanel);
+    splitter->setStretchFactor(0, 2);
+    splitter->setStretchFactor(1, 1);
+
+    setCentralWidget(splitter);
+
+    refreshHistory();
 }
 
 void MainWindow::appendToDisplay(const QString &text)
@@ -231,6 +262,7 @@ void MainWindow::evaluate()
         setVariable(varNameBytes.constData(), result);
         setAns(result);
         addHistory(infix, result);
+        refreshHistory();
 
         m_display->setText(QString("%1 = %2").arg(varName).arg(result, 0, 'g', 6));
         return;
@@ -264,6 +296,44 @@ void MainWindow::evaluate()
 
     setAns(result);
     addHistory(infix, result);
+    refreshHistory();
 
     m_display->setText(QString::number(result, 'g', 6));
+}
+
+void MainWindow::refreshHistory()
+{
+    m_historyList->clear();
+
+    int count = getHistoryCount();
+    char line[256];
+
+    for (int n = 1; n <= count; ++n)
+    {
+        if (getHistoryLineByNumber(n, line, sizeof(line)))
+            m_historyList->addItem(QString::fromUtf8(line));
+    }
+
+    m_historyList->scrollToBottom();
+}
+
+void MainWindow::recallHistoryItem(QListWidgetItem *item)
+{
+    if (item == nullptr)
+        return;
+
+    int n = m_historyList->row(item) + 1;
+    char expr[256];
+
+    if (!getHistoryExpressionByNumber(n, expr, sizeof(expr)))
+        return;
+
+    m_errorLabel->clear();
+    m_display->setText(QString::fromUtf8(expr));
+}
+
+void MainWindow::clearHistoryPanel()
+{
+    clearHistory();
+    refreshHistory();
 }

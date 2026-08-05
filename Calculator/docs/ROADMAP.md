@@ -49,7 +49,7 @@ table to match.
 **v1.0 (CLI engine): shipped.** All of Phases 1–27 are complete — the
 full expression engine, scientific functions, variables/memory/history,
 statistics, unit and base conversion, complex numbers, matrices, and
-ASCII graph plotting, backed by 433 passing unit tests (clean under
+ASCII graph plotting, backed by 441 passing unit tests (clean under
 AddressSanitizer/UndefinedBehaviorSanitizer).
 
 | Phase(s) | Area                                        | Status        |
@@ -65,7 +65,7 @@ AddressSanitizer/UndefinedBehaviorSanitizer).
 | 28       | Dynamic data structures                      | 🟡 Planned    |
 | 29       | Abstract Syntax Tree (AST)                   | 🟡 Planned    |
 | 30       | Symbolic mathematics                         | 🟡 Planned    |
-| 31       | Graphical User Interface (Qt)                | 🟠 In Progress — Step 1 done |
+| 31       | Graphical User Interface (Qt)                | 🟠 In Progress — Steps 1–2 done |
 | 32       | Plugin architecture                          | 🟡 Planned    |
 | 33       | Calculator scripting                         | 🟡 Planned    |
 | 34       | Package manager                              | 🟡 Planned    |
@@ -96,7 +96,23 @@ target unaffected whether or not Qt is installed. Verified: `2+3*5`,
 `5/0` (shows the error, window stays open) all work via both
 keyboard and button clicks.
 
-**Known Step 1 limitation:** `validateExpression()`/
+**Step 2 (done):** history panel. Added a `QListWidget` beside the
+keypad (via a `QSplitter`) that reads `history.c`'s on-disk log — the
+same file the CLI reads/writes, so both front ends always agree on
+what's in history. Required two small additions to `history.h`/
+`history.c`, mirroring its existing style exactly:
+`getHistoryCount()` and `getHistoryLineByNumber()` (the latter
+returns the full `"expr = result"` line, unlike the existing
+`getHistoryExpressionByNumber()` which only returns the expression
+part — used separately for click-to-recall so recalling an entry
+puts just the expression back in the display, not the whole line).
+Both new functions have test coverage in `Tests/test_history.c`.
+Also added a "Clear History" button (`clearHistory()`). Verified:
+existing history entries populate on launch, a new calculation
+appends and auto-scrolls, clicking an entry recalls its expression,
+Clear History empties the panel — all via a real X11 session.
+
+**Known Step 1 limitation (unchanged):** `validateExpression()`/
 `validateParentheses()` report their specific failure reason via
 `printf()` to stdout (fine for the CLI, invisible to a GUI window) —
 the GUI currently shows a generic "Invalid expression."/"Mismatched
@@ -107,7 +123,6 @@ have this gap.
 
 **Remaining steps** (each its own later commit, not all at once):
 
-2. History panel (reuse `history.c`), click-to-recall.
 3. Variable manager panel (reuse `variables.c`).
 4. Memory panel (MS/MR/M+/M-/MC, reuse `memory.c`).
 5. Tabs for Complex / Matrix / Statistics / Units / Base — each a thin

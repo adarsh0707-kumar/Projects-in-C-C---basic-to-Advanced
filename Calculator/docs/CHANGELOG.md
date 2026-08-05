@@ -8,6 +8,36 @@ The format is based on **Keep a Changelog** and follows **Semantic Versioning** 
 
 # [Unreleased]
 
+## 2026-08-04 (4) — Phase 31 (GUI) Step 2: history panel
+
+### Added
+
+- `Src/history.c`/`Inc/history.h`: `getHistoryCount()` and
+  `getHistoryLineByNumber()`, mirroring the module's existing style
+  exactly (same file-open/loop pattern as `getHistoryExpressionByNumber()`/
+  `showRecentHistory()`). Needed because no existing function could
+  enumerate history entries programmatically for a GUI list — the
+  existing accessors only fetch a single entry by number or print
+  directly to stdout. Covered by a new `test_count_and_line_by_number()`
+  in `Tests/test_history.c`. Test suite: 433 -> 441 cases.
+- `Gui/MainWindow`: a history side panel (`QListWidget` in a
+  `QSplitter` next to the keypad) populated from the two functions
+  above — the same on-disk log (`Build/history.txt`) the CLI reads
+  and writes, so both front ends always agree on what's in history.
+  Clicking an entry recalls just its expression (via the existing
+  `getHistoryExpressionByNumber()`) into the display. A "Clear
+  History" button calls the existing `clearHistory()`.
+
+### Verified
+
+Manually, via a real X11 session (`xdotool` + `import`, screenshots
+inspected): existing history entries populate on launch; evaluating
+`100/4` appends `"100/4 = 25"` and auto-scrolls the list; clicking a
+`"sin(0) = 0"` entry recalls `sin(0)` (not the result) into the
+display; Clear History empties the panel. `make test`/
+`make BUILD=asan test` (441 cases) and `./calculator` confirmed
+unaffected by the GUI changes.
+
 ## 2026-08-04 (3) — Phase 31 (GUI) Step 1: Qt6 arithmetic keypad
 
 ### Added
