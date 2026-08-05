@@ -959,7 +959,14 @@ Desktop scientific calculator.
   Non-finite samples are skipped when drawing line segments, giving
   the same gap-at-a-discontinuity behavior `plot.c` gives `1/x`, drawn
   instead of left blank)
-- Theme support — not yet (Step 7)
+- Theme support — done (Step 7, partial: a QSS stylesheet color-codes
+  every keypad key by a `"keyType"` dynamic property —
+  digit/operator/equals/clear/backspace/alpha each get a distinct
+  color — plus matching rounded-corner/hover/selected styling for the
+  display, tabs, lists, and tables. Deliberately excludes a blanket
+  `QWidget {...}` rule so it can't override `PlotWidget`'s own
+  palette-based white canvas. Icon and the validator-message
+  limitation below are still open)
 
 ## Files
 
@@ -1011,10 +1018,16 @@ auto-ranged from the valid half only (confirming the gap logic, not
 just a steep slope, drives the missing negative half); an invalid
 expression shows a red error label and clears the canvas.
 
+Step 7 (partial): a dark QSS theme, verified via a real X11 session:
+all six key-type colors (digit/operator/equals/clear/backspace/alpha)
+render as intended with working hover/pressed feedback, and the Plot
+tab's white canvas is confirmed unaffected (screenshotted both before
+and after).
+
 Status:
-🟠 In Progress — Steps 1–6 (of 7 planned steps; see
-`docs/ROADMAP.md`'s "In Progress: Phase 31" section for the full
-breakdown) complete
+🟠 In Progress — Steps 1–6 complete, Step 7 partial (of 7 planned
+steps; see `docs/ROADMAP.md`'s "In Progress: Phase 31" section for the
+full breakdown)
 
 ---
 

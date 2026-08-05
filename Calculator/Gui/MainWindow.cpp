@@ -77,6 +77,133 @@ QString trimmed(const char *s)
 {
     return QString::fromUtf8(s).trimmed();
 }
+
+bool isDigitKeyLabel(const char *label)
+{
+    return (label[0] >= '0' && label[0] <= '9') || label[0] == '.';
+}
+
+/* Step 7 (polish): color-codes key groups via the "keyType" dynamic
+   property + attribute selectors below, rather than five near-
+   identical setStyleSheet() calls per button. Deliberately doesn't
+   use a blanket "QWidget {...}" rule -- PlotWidget (Step 6) paints
+   its own white canvas via QPalette/autoFillBackground, and a
+   universal QSS selector matching every QWidget would silently
+   override that once any stylesheet is active in the window. */
+const char *const kStyleSheet = R"CSS(
+QLineEdit {
+    background-color: #20222f;
+    color: #f2f2fa;
+    border: 2px solid #3a3c54;
+    border-radius: 10px;
+    padding: 8px 12px;
+    selection-background-color: #5468ff;
+}
+QLineEdit:focus {
+    border: 2px solid #5468ff;
+}
+
+QPushButton {
+    background-color: #2d2f45;
+    color: #e6e6f0;
+    border: none;
+    border-radius: 10px;
+    padding: 10px;
+    font-weight: 600;
+}
+QPushButton:hover {
+    background-color: #3a3d5c;
+}
+QPushButton:pressed {
+    background-color: #21222f;
+}
+
+QPushButton[keyType="operator"] {
+    background-color: #33456e;
+    color: #a9d3ff;
+}
+QPushButton[keyType="operator"]:hover {
+    background-color: #3f5484;
+}
+
+QPushButton[keyType="equals"] {
+    background-color: #3ecf8e;
+    color: #10241b;
+    font-size: 15px;
+}
+QPushButton[keyType="equals"]:hover {
+    background-color: #55e0a2;
+}
+
+QPushButton[keyType="clear"] {
+    background-color: #e0555a;
+    color: #2a0a0b;
+}
+QPushButton[keyType="clear"]:hover {
+    background-color: #ea7378;
+}
+
+QPushButton[keyType="backspace"] {
+    background-color: #e0a355;
+    color: #2a1a08;
+}
+QPushButton[keyType="backspace"]:hover {
+    background-color: #eab876;
+}
+
+QPushButton[keyType="alpha"] {
+    background-color: #262840;
+    color: #b6b8d6;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 6px;
+}
+QPushButton[keyType="alpha"]:hover {
+    background-color: #333756;
+}
+
+QTabBar::tab {
+    background: #21222f;
+    color: #9d9fbd;
+    padding: 8px 14px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    margin-right: 2px;
+}
+QTabBar::tab:selected {
+    background: #33456e;
+    color: #ffffff;
+}
+QTabBar::tab:hover {
+    background: #2d2f45;
+}
+QTabWidget::pane {
+    border: 1px solid #33354c;
+    border-radius: 8px;
+    top: -1px;
+}
+
+QListWidget, QTableWidget {
+    background-color: #20222f;
+    color: #e6e6f0;
+    border: 1px solid #33354c;
+    border-radius: 8px;
+    gridline-color: #33354c;
+}
+QHeaderView::section {
+    background-color: #2d2f45;
+    color: #cfd0e6;
+    border: none;
+    padding: 4px;
+}
+
+QSplitter::handle {
+    background-color: #33354c;
+}
+QSplitter::handle:hover {
+    background-color: #454869;
+}
+)CSS";
 } // namespace
 
 MainWindow::MainWindow(QWidget *parent)
@@ -85,6 +212,7 @@ MainWindow::MainWindow(QWidget *parent)
       m_memoryLabel(nullptr), m_plotInput(nullptr), m_plotError(nullptr), m_plotWidget(nullptr), m_lastResult(0.0)
 {
     setWindowTitle("Scientific Calculator");
+    setStyleSheet(QString::fromUtf8(kStyleSheet));
 
     auto *calculatorPanel = new QWidget(this);
     auto *layout = new QVBoxLayout(calculatorPanel);
@@ -126,6 +254,7 @@ MainWindow::MainWindow(QWidget *parent)
     {
         auto *button = new QPushButton(QString::fromUtf8(key.label), calculatorPanel);
         button->setSizePolicy(buttonPolicy);
+        button->setProperty("keyType", isDigitKeyLabel(key.label) ? "digit" : "operator");
         QString text = QString::fromUtf8(key.label);
         connect(button, &QPushButton::clicked, this, [this, text]()
                 { appendToDisplay(text); });
@@ -134,16 +263,19 @@ MainWindow::MainWindow(QWidget *parent)
 
     auto *clearButton = new QPushButton("C", calculatorPanel);
     clearButton->setSizePolicy(buttonPolicy);
+    clearButton->setProperty("keyType", "clear");
     connect(clearButton, &QPushButton::clicked, this, &MainWindow::clearDisplay);
     keypad->addWidget(clearButton, 5, 0);
 
     auto *backspaceButton = new QPushButton(QStringLiteral("⌫"), calculatorPanel);
     backspaceButton->setSizePolicy(buttonPolicy);
+    backspaceButton->setProperty("keyType", "backspace");
     connect(backspaceButton, &QPushButton::clicked, this, &MainWindow::backspace);
     keypad->addWidget(backspaceButton, 5, 1);
 
     auto *equalsButton = new QPushButton("=", calculatorPanel);
     equalsButton->setSizePolicy(buttonPolicy);
+    equalsButton->setProperty("keyType", "equals");
     connect(equalsButton, &QPushButton::clicked, this, &MainWindow::evaluate);
     keypad->addWidget(equalsButton, 5, 2, 1, 2);
 
@@ -184,6 +316,7 @@ MainWindow::MainWindow(QWidget *parent)
 
             auto *button = new QPushButton(QString(QChar(upper)), calculatorPanel);
             button->setSizePolicy(buttonPolicy);
+            button->setProperty("keyType", "alpha");
 
             QString insertText{QChar(lower)};
             connect(button, &QPushButton::clicked, this, [this, insertText]()

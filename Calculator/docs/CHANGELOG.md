@@ -8,6 +8,38 @@ The format is based on **Keep a Changelog** and follows **Semantic Versioning** 
 
 # [Unreleased]
 
+## 2026-08-05 (2) — Phase 31 (GUI) Step 7 (partial): dark keypad/widget theme
+
+### Added
+
+- `Gui/MainWindow.cpp`: a single QSS stylesheet (`kStyleSheet`,
+  applied once via `setStyleSheet()` in the constructor) replacing
+  the plain default-widget look with a cohesive dark theme. Every
+  keypad button gets a `"keyType"` dynamic property
+  (`digit`/`operator`/`equals`/`clear`/`backspace`/`alpha`) and a
+  matching QSS attribute selector: digits stay neutral, operators
+  turn blue, `=` turns green, `C` turns red, backspace turns amber,
+  and the alpha keyboard gets a muted, smaller-font look distinct
+  from the numeric keys, so color alone signals what a key does.
+  `QLineEdit`/`QTabBar`/`QListWidget`/`QTableWidget`/`QHeaderView`/
+  `QSplitter::handle` got matching rounded-corner, hover, and
+  selected-state styling. Deliberately does *not* use a blanket
+  `QWidget {...}` rule -- Step 6's `PlotWidget` paints its own white
+  canvas via `QPalette`/`autoFillBackground`, and a universal QSS
+  selector matching every `QWidget` would silently override that once
+  any stylesheet is active anywhere in the window.
+
+### Verified
+
+Manually, via a real X11 session (`xdotool` + `import`, screenshots
+inspected): all six key-type colors render as intended with working
+hover/pressed feedback; the Plot tab's white canvas is unaffected
+(screenshotted both before and after this change, `cos(x)` still
+plots correctly on it). `make`/`make BUILD=asan test` (460 cases,
+unchanged -- no engine changes) and `./calculator` confirmed
+unaffected; `make gui` builds clean with zero `-Wall -Wextra`
+warnings.
+
 ## 2026-08-05 — Phase 31 (GUI) Step 6: real graphical plotting
 
 ### Added

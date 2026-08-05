@@ -65,7 +65,7 @@ AddressSanitizer/UndefinedBehaviorSanitizer).
 | 28       | Dynamic data structures                      | 🟡 Planned    |
 | 29       | Abstract Syntax Tree (AST)                   | 🟡 Planned    |
 | 30       | Symbolic mathematics                         | 🟡 Planned    |
-| 31       | Graphical User Interface (Qt)                | 🟠 In Progress — Steps 1–6 done |
+| 31       | Graphical User Interface (Qt)                | 🟠 In Progress — Steps 1–6 done, Step 7 partial |
 | 32       | Plugin architecture                          | 🟡 Planned    |
 | 33       | Calculator scripting                         | 🟡 Planned    |
 | 34       | Package manager                              | 🟡 Planned    |
@@ -215,6 +215,30 @@ gap logic, not just a steep slope, is what's driving it); an invalid
 expression shows a red error label and clears the canvas rather than
 drawing anything stale.
 
+**Step 7 (partial — theme done, icon/validator-message still open):**
+a single QSS stylesheet (`MainWindow`'s new `kStyleSheet` constant,
+applied once via `setStyleSheet()` in the constructor) replaces the
+plain default-widget look with a cohesive dark theme: every keypad
+button gets a `"keyType"` dynamic property (`digit`/`operator`/
+`equals`/`clear`/`backspace`/`alpha`) and a matching QSS attribute
+selector, so digits stay neutral, operators turn blue, `=` turns
+green, `C` turns red, backspace turns amber, and the alpha keyboard
+gets a muted, smaller-font look distinct from the numeric keys —
+color alone now tells you what a key does before you read its label.
+`QLineEdit`/`QTabBar`/`QListWidget`/`QTableWidget`/`QHeaderView`/
+`QSplitter::handle` got matching rounded-corner, hover, and
+selected-state styling. Deliberately *not* a blanket `QWidget {...}`
+rule: Step 6's `PlotWidget` paints its own white canvas via
+`QPalette`/`autoFillBackground`, and a universal QSS selector
+matching every `QWidget` would silently override that once any
+stylesheet is active anywhere in the window — confirmed unaffected by
+screenshotting the Plot tab both before and after this change.
+Verified via a real X11 session: all six key-type colors render as
+intended, hover/pressed feedback works, `cos(x)` still plots
+correctly with an unchanged white canvas, and the full 460-test suite
+plus `./calculator` are unaffected (no engine changes). An application
+icon and the validator-message limitation below remain open.
+
 **Known Step 1 limitation (unchanged):** `validateExpression()`/
 `validateParentheses()` report their specific failure reason via
 `printf()` to stdout (fine for the CLI, invisible to a GUI window) —
@@ -226,10 +250,10 @@ have this gap.
 
 **Remaining steps** (each its own later commit, not all at once):
 
-7. Polish: theme, icon, error styling; consider fixing the Step 1
-   validator-message limitation above (would need
-   `validateExpression()`/`validateParentheses()` to return a message
-   into a buffer like every other module already does).
+- Step 7 (remainder): an application icon, and fixing the
+  validator-message limitation above (would need
+  `validateExpression()`/`validateParentheses()` to return a message
+  into a buffer like every other module already does).
 
 Phases 28–30 (dynamic data structures, AST, symbolic math) are
 foundational rewrites of the evaluation engine itself and are
