@@ -225,19 +225,50 @@ selector, so digits stay neutral, operators turn blue, `=` turns
 green, `C` turns red, backspace turns amber, and the alpha keyboard
 gets a muted, smaller-font look distinct from the numeric keys —
 color alone now tells you what a key does before you read its label.
-`QLineEdit`/`QTabBar`/`QListWidget`/`QTableWidget`/`QHeaderView`/
-`QSplitter::handle` got matching rounded-corner, hover, and
-selected-state styling. Deliberately *not* a blanket `QWidget {...}`
-rule: Step 6's `PlotWidget` paints its own white canvas via
-`QPalette`/`autoFillBackground`, and a universal QSS selector
-matching every `QWidget` would silently override that once any
-stylesheet is active anywhere in the window — confirmed unaffected by
-screenshotting the Plot tab both before and after this change.
-Verified via a real X11 session: all six key-type colors render as
-intended, hover/pressed feedback works, `cos(x)` still plots
-correctly with an unchanged white canvas, and the full 460-test suite
-plus `./calculator` are unaffected (no engine changes). An application
-icon and the validator-message limitation below remain open.
+`QLineEdit`/`QTabBar`/`QListWidget`/`QTableWidget`/`QHeaderView` got
+matching rounded-corner, hover, and selected-state styling.
+Deliberately *not* a blanket `QWidget {...}` rule: Step 6's
+`PlotWidget` paints its own white canvas via `QPalette`/
+`autoFillBackground`, and a universal QSS selector matching every
+`QWidget` would silently override that once any stylesheet is active
+anywhere in the window — confirmed unaffected by screenshotting the
+Plot tab both before and after this change. Verified via a real X11
+session: all six key-type colors render as intended, hover/pressed
+feedback works, `cos(x)` still plots correctly with an unchanged
+white canvas, and the full 460-test suite plus `./calculator` are
+unaffected (no engine changes). An application icon and the
+validator-message limitation below remain open.
+
+**Menu-driven layout (Step 7 follow-up, done):** the always-visible
+alpha keyboard and nine-tab side panel made the default window busy
+for what's supposed to be, first and foremost, a plain calculator.
+Both are now opt-in: the side `QTabWidget` (History/Variables/Memory/
+Complex/Matrix/Statistics/Units/Base/Plot) moved into a `QDockWidget`
+titled "Functions & History", hidden by default and added via
+`addDockWidget(Qt::RightDockWidgetArea, ...)`; the alpha keyboard's
+`QGridLayout` moved into its own container `QWidget`
+(`alphaContainer`), also hidden by default. A `QMenuBar` menu
+("Menu") holds two checkable entries: "Alpha Keyboard" (a plain
+`QAction` wired to `alphaContainer`'s `setVisible()` slot) and
+"Functions & History (Advanced)" -- which reuses
+`QDockWidget::toggleViewAction()` rather than a hand-wired second
+`QAction`, so the checkbox and the dock's own close ("x") button stay
+in sync automatically with no manual bookkeeping. The former
+`QSplitter` is gone -- `calculatorPanel` is now the plain
+`setCentralWidget()`, and Qt's own dock-area geometry handles the
+resize-to-fit that the splitter used to. The stylesheet's leftover
+`QSplitter::handle` rule was replaced with `QDockWidget::title`/
+`QMainWindow::separator`/`QMenuBar`/`QMenu` rules so the dock's title
+bar and the menu match the existing dark theme. Verified via a real
+X11 session: a fresh launch shows nothing but the plain keypad (no
+menu-bar row is visible inline in-window on this machine's desktop
+environment, which renders Qt menu bars in a global top panel
+instead -- confirmed by screenshotting the full screen, not just the
+window, and seeing the "Menu" entry appear there once the calculator
+window is focused); opening the menu and checking "Alpha Keyboard"
+shows the QWERTY grid; checking "Functions & History (Advanced)"
+opens the dock beside the keypad with History pre-populated and
+correctly styled.
 
 **Known Step 1 limitation (unchanged):** `validateExpression()`/
 `validateParentheses()` report their specific failure reason via

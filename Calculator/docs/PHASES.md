@@ -967,6 +967,15 @@ Desktop scientific calculator.
   `QWidget {...}` rule so it can't override `PlotWidget`'s own
   palette-based white canvas. Icon and the validator-message
   limitation below are still open)
+- Menu-driven layout — done (Step 7 follow-up: the nine-tab side
+  panel moved into a `QDockWidget` and the alpha keyboard into its own
+  container widget, both hidden by default so the default window is
+  just a plain calculator. A `QMenuBar` menu holds two checkable
+  toggles -- "Alpha Keyboard" and "Functions & History (Advanced)",
+  the latter reusing `QDockWidget::toggleViewAction()` so the checkbox
+  and the dock's own close button stay in sync automatically. The
+  `QSplitter` from Steps 2-6 is gone, replaced by `setCentralWidget()`
+  plus Qt's native dock-area geometry)
 
 ## Files
 
@@ -1023,6 +1032,13 @@ all six key-type colors (digit/operator/equals/clear/backspace/alpha)
 render as intended with working hover/pressed feedback, and the Plot
 tab's white canvas is confirmed unaffected (screenshotted both before
 and after).
+
+Menu-driven layout (Step 7 follow-up): verified via a real X11
+session that a fresh launch shows only the plain keypad (no side
+panel, no alpha keyboard); opening the menu bar's "Menu" entry and
+checking "Alpha Keyboard" shows the QWERTY grid; checking "Functions
+& History (Advanced)" opens a dock beside the keypad with History
+pre-populated.
 
 Status:
 🟠 In Progress — Steps 1–6 complete, Step 7 partial (of 7 planned

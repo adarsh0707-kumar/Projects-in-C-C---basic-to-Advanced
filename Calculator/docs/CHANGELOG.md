@@ -8,6 +8,49 @@ The format is based on **Keep a Changelog** and follows **Semantic Versioning** 
 
 # [Unreleased]
 
+## 2026-08-05 (3) — Phase 31 (GUI) Step 7 follow-up: menu-driven layout
+
+### Added
+
+- `Gui/MainWindow.cpp`: the always-visible alpha keyboard and
+  nine-tab side panel made the default window busy for what's meant
+  to be, first and foremost, a plain calculator. Both are now opt-in.
+  The side `QTabWidget` (History/Variables/Memory/Complex/Matrix/
+  Statistics/Units/Base/Plot) moved into a `QDockWidget` titled
+  "Functions & History", hidden by default via `addDockWidget()`; the
+  alpha keyboard's `QGridLayout` moved into its own container
+  `QWidget` (`alphaContainer`), also hidden by default. A new
+  `QMenuBar` menu ("Menu") holds two checkable entries: "Alpha
+  Keyboard" (a plain `QAction` wired directly to `alphaContainer`'s
+  `setVisible()` slot) and "Functions & History (Advanced)" -- the
+  latter reuses `QDockWidget::toggleViewAction()` instead of a
+  hand-wired second `QAction`, so the menu checkbox and the dock's own
+  close ("x") button stay in sync automatically with no manual
+  bookkeeping. The `QSplitter` used since Step 2 is gone --
+  `calculatorPanel` is now the plain `setCentralWidget()`, and Qt's
+  native dock-area geometry handles the resizing the splitter used to.
+- `Gui/MainWindow.cpp` (stylesheet): the now-unused `QSplitter::handle`
+  rule was replaced with `QDockWidget::title`/`QMainWindow::separator`/
+  `QMenuBar`/`QMenu` rules so the dock's title bar and the menu match
+  the existing dark theme.
+
+### Verified
+
+Manually, via a real X11 session (`xdotool` + `import`, screenshots
+inspected): a fresh launch shows nothing but the plain numeric keypad
+-- no side panel, no alpha keyboard. On this machine's desktop
+environment, Qt's menu bar renders in a global top panel rather than
+inline in the window (confirmed by screenshotting the full screen,
+not just the window, and seeing the "Menu" entry appear there once the
+calculator window is focused) -- functionally identical to an inline
+menu bar, just a desktop-level rendering choice. Opening the menu and
+checking "Alpha Keyboard" shows the QWERTY grid; checking "Functions &
+History (Advanced)" opens the dock beside the keypad with History
+pre-populated and correctly styled. `make`/`make BUILD=asan test` (460
+cases, unchanged -- no engine changes) and `./calculator` confirmed
+unaffected; `make gui` builds clean with zero `-Wall -Wextra`
+warnings.
+
 ## 2026-08-05 (2) — Phase 31 (GUI) Step 7 (partial): dark keypad/widget theme
 
 ### Added

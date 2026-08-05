@@ -4,8 +4,11 @@
 #include <QGridLayout>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
-#include <QSplitter>
 #include <QTabWidget>
+#include <QDockWidget>
+#include <QMenuBar>
+#include <QMenu>
+#include <QAction>
 #include <QLineEdit>
 #include <QLabel>
 #include <QPushButton>
@@ -197,11 +200,36 @@ QHeaderView::section {
     padding: 4px;
 }
 
-QSplitter::handle {
-    background-color: #33354c;
+QDockWidget::title {
+    background-color: #21222f;
+    color: #cfd0e6;
+    padding: 6px 8px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
 }
-QSplitter::handle:hover {
+QMainWindow::separator {
+    background-color: #33354c;
+    width: 4px;
+    height: 4px;
+}
+QMainWindow::separator:hover {
     background-color: #454869;
+}
+
+QMenuBar {
+    background-color: #21222f;
+    color: #cfd0e6;
+}
+QMenuBar::item:selected {
+    background-color: #33456e;
+}
+QMenu {
+    background-color: #21222f;
+    color: #cfd0e6;
+    border: 1px solid #33354c;
+}
+QMenu::item:selected {
+    background-color: #33456e;
 }
 )CSS";
 } // namespace
@@ -298,9 +326,15 @@ MainWindow::MainWindow(QWidget *parent)
        keyboard; labels are uppercase (matching physical keys) but
        insert lowercase, since every function/variable name in this
        engine is matched case-sensitively in lowercase
-       (functions.c/variables.c: strcmp() against "sin", "sqrt", ...). */
-    auto *alphaKeypad = new QGridLayout();
-    layout->addLayout(alphaKeypad);
+       (functions.c/variables.c: strcmp() against "sin", "sqrt", ...).
+       Wrapped in its own container widget (rather than added directly
+       as a layout) so it's a single unit the "Alpha Keyboard" menu
+       toggle below can show/hide -- hidden by default, since most
+       calculations don't need it and the plain numeric keypad should
+       be what a first-time user sees. */
+    auto *alphaContainer = new QWidget(calculatorPanel);
+    auto *alphaKeypad = new QGridLayout(alphaContainer);
+    layout->addWidget(alphaContainer);
 
     static const char *const alphaRows[] = {"QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"};
     constexpr int kAlphaCols = 10;
@@ -331,7 +365,8 @@ MainWindow::MainWindow(QWidget *parent)
     for (int row = 0; row < 3; ++row)
         alphaKeypad->setRowStretch(row, 1);
 
-    layout->setStretchFactor(alphaKeypad, 1);
+    layout->setStretchFactor(alphaContainer, 1);
+    alphaContainer->setVisible(false);
 
     connect(m_display, &QLineEdit::returnPressed, this, &MainWindow::evaluate);
 
@@ -477,13 +512,36 @@ MainWindow::MainWindow(QWidget *parent)
     sidePanel->addTab(buildEvalTab(evaluateBaseExpression, "e.g. bin(25), hex(255), dec(FFh)"), "Base");
     sidePanel->addTab(plotPanel, "Plot");
 
-    auto *splitter = new QSplitter(Qt::Horizontal, this);
-    splitter->addWidget(calculatorPanel);
-    splitter->addWidget(sidePanel);
-    splitter->setStretchFactor(0, 2);
-    splitter->setStretchFactor(1, 1);
+    /* The nine tabs above (History/Variables/Memory/Complex/Matrix/
+       Statistics/Units/Base/Plot) are "advanced" features a first-time
+       user doesn't need just to add two numbers -- putting them in a
+       QDockWidget instead of always-visible beside the keypad means
+       the default window is just a plain calculator, with the
+       advanced panel (and the alpha keyboard above) opt-in via the
+       menu bar below. QDockWidget already ships a close ("x") button
+       and a ready-made checkable QAction (toggleViewAction()) that
+       stays in sync with its visibility -- no manual show/hide
+       bookkeeping needed. */
+    auto *toolsDock = new QDockWidget("Functions & History", this);
+    toolsDock->setObjectName("toolsDock");
+    toolsDock->setWidget(sidePanel);
+    toolsDock->setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
+    addDockWidget(Qt::RightDockWidgetArea, toolsDock);
+    toolsDock->hide();
 
-    setCentralWidget(splitter);
+    auto *menu = menuBar()->addMenu("Menu");
+
+    auto *alphaKeyboardAction = new QAction("Alpha Keyboard", this);
+    alphaKeyboardAction->setCheckable(true);
+    alphaKeyboardAction->setChecked(false);
+    connect(alphaKeyboardAction, &QAction::toggled, alphaContainer, &QWidget::setVisible);
+    menu->addAction(alphaKeyboardAction);
+
+    QAction *toolsAction = toolsDock->toggleViewAction();
+    toolsAction->setText("Functions && History (Advanced)");
+    menu->addAction(toolsAction);
+
+    setCentralWidget(calculatorPanel);
 
     refreshHistory();
     refreshVariables();
