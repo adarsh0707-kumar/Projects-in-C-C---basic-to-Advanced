@@ -148,6 +148,47 @@ MainWindow::MainWindow(QWidget *parent)
 
     layout->setStretchFactor(keypad, 1);
 
+    /* Alpha keyboard: the numeric keypad above has no way to produce
+       a letter at all, so typing a function name (sin, sqrt, ...) or
+       a variable name needed a physical keyboard. QWERTY layout
+       (rather than alphabetical) since it's meant to feel like a
+       keyboard; labels are uppercase (matching physical keys) but
+       insert lowercase, since every function/variable name in this
+       engine is matched case-sensitively in lowercase
+       (functions.c/variables.c: strcmp() against "sin", "sqrt", ...). */
+    auto *alphaKeypad = new QGridLayout();
+    layout->addLayout(alphaKeypad);
+
+    static const char *const alphaRows[] = {"QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"};
+    constexpr int kAlphaCols = 10;
+
+    for (int row = 0; row < 3; ++row)
+    {
+        const char *rowLetters = alphaRows[row];
+
+        for (int col = 0; rowLetters[col] != '\0'; ++col)
+        {
+            char upper = rowLetters[col];
+            char lower = static_cast<char>(std::tolower(static_cast<unsigned char>(upper)));
+
+            auto *button = new QPushButton(QString(QChar(upper)), calculatorPanel);
+            button->setSizePolicy(buttonPolicy);
+
+            QString insertText{QChar(lower)};
+            connect(button, &QPushButton::clicked, this, [this, insertText]()
+                    { appendToDisplay(insertText); });
+
+            alphaKeypad->addWidget(button, row, col);
+        }
+    }
+
+    for (int col = 0; col < kAlphaCols; ++col)
+        alphaKeypad->setColumnStretch(col, 1);
+    for (int row = 0; row < 3; ++row)
+        alphaKeypad->setRowStretch(row, 1);
+
+    layout->setStretchFactor(alphaKeypad, 1);
+
     connect(m_display, &QLineEdit::returnPressed, this, &MainWindow::evaluate);
 
     /* History panel (Step 2): reuses history.c's on-disk log (the

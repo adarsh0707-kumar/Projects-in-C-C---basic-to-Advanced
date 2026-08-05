@@ -913,7 +913,11 @@ Desktop scientific calculator.
   `validateExpression`, `setVariable`/`setAns`, `addHistory`) rather
   than duplicating any parsing logic. `make gui` / `make run-gui`.
 - Scientific keypad — done (Step 1: digits, `+ - * / ^ % ( ) . !`,
-  `=`, clear, backspace)
+  `=`, clear, backspace; QWERTY alpha keyboard added afterward so
+  function names like `sin`/`sqrt` and variable names can be typed
+  without a physical keyboard — labels are uppercase, but insert
+  lowercase, since every function/variable name in this engine is
+  matched case-sensitively in lowercase)
 - History panel — done (Step 2: `QListWidget` reads `history.c`'s
   on-disk log via two new functions, `getHistoryCount()` and
   `getHistoryLineByNumber()`, added to that module and covered by

@@ -171,6 +171,20 @@ later tabs — expected given how many tabs there are, not a bug, and
 listed under Step 7 (polish) as something to reconsider (e.g. a
 narrower tab-bar font, or a different navigation widget entirely).
 
+**Alpha keyboard (Step 1 follow-up, done):** the numeric keypad had no
+way to produce a letter at all, so typing a function name (`sin`,
+`sqrt`, ...) or a variable name required a physical keyboard — a real
+gap given the whole point of a GUI is not needing one. Added a QWERTY
+grid (`Gui/MainWindow.cpp`) below the numeric keypad: button labels
+are uppercase (matching physical keys), but each button inserts
+lowercase, since every function/variable name in this engine is
+matched case-sensitively in lowercase (`functions.c`/`variables.c`:
+`strcmp()` against `"sin"`, `"sqrt"`, ...). Window's default/minimum
+size grown (`Gui/main.cpp`) to fit the extra rows. Verified: `sin(30)`
+typed entirely via the S/I/N alpha keys plus the numeric keypad's
+`( 3 0 )` evaluates to `-0.988032` and logs to history, exactly as
+typing it on a physical keyboard would.
+
 **Known Step 1 limitation (unchanged):** `validateExpression()`/
 `validateParentheses()` report their specific failure reason via
 `printf()` to stdout (fine for the CLI, invisible to a GUI window) —

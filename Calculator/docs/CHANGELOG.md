@@ -8,6 +8,32 @@ The format is based on **Keep a Changelog** and follows **Semantic Versioning** 
 
 # [Unreleased]
 
+## 2026-08-04 (8) — GUI: QWERTY alpha keyboard
+
+### Added
+
+- `Gui/MainWindow.cpp`: a QWERTY letter grid below the numeric keypad.
+  The numeric keypad (Step 1) had no way to produce a letter at all,
+  so typing a function name (`sin`, `sqrt`, ...) or a variable name
+  required a physical keyboard -- a real gap for a GUI whose whole
+  point is not needing one. Button labels are uppercase (matching
+  physical keys), but each button inserts lowercase, since every
+  function/variable name in this engine is matched case-sensitively
+  in lowercase (`functions.c`/`variables.c`: `strcmp()` against
+  `"sin"`, `"sqrt"`, ...).
+- `Gui/main.cpp`: grew the window's default/minimum size to fit the
+  three extra rows.
+
+### Verified
+
+Manually, via a real X11 session (`xdotool` + `import`, screenshots
+inspected): clicking S, I, N on the new alpha keyboard followed by
+`( 3 0 )` on the numeric keypad produces `sin(30)` in the display;
+pressing Enter evaluates it to `-0.988032` (radian mode) and logs it
+to history -- identical to typing it on a physical keyboard.
+`make test`/`make BUILD=asan test` (460 cases, unchanged -- no engine
+changes this time) and `./calculator` confirmed unaffected.
+
 ## 2026-08-04 (7) — Phase 31 (GUI) Step 5: Complex/Matrix/Statistics/Units/Base tabs
 
 ### Added
