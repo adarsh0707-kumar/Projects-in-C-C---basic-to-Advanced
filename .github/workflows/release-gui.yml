@@ -23,6 +23,10 @@ on:
         description: 'Version label for a manual test build (no tag created)'
         required: false
         default: '0.0.0-test'
+      qt_version:
+        description: 'Qt version to build against (see the AGL note in env below)'
+        required: false
+        default: '6.9.1'
 
 defaults:
   run:
@@ -31,8 +35,14 @@ defaults:
 permissions:
   contents: write
 
+# Qt 6.8.1's CMake config links the AGL framework, which Apple removed
+# from the SDKs now shipping on macos-latest -- the macOS job failed
+# with "ld: framework 'AGL' not found" while Linux and Windows passed on
+# the same version. Newer Qt dropped that reference. Exposed as a
+# dispatch input so the working version can be found by re-running
+# rather than by a commit per attempt.
 env:
-  QT_VERSION: 6.8.1
+  QT_VERSION: ${{ github.event.inputs.qt_version || '6.9.1' }}
 
 jobs:
   # -------------------------------------------------------------------
