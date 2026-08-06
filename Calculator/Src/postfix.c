@@ -441,8 +441,18 @@ int infixToPostfix(char infix[], char postfix[])
         if (!popToken(&operators, &top))
             return reportInternalStackError();
 
+        /* A '(' still on the stack here was never closed. This used to
+           `continue`, silently dropping it and returning success: "(2+3"
+           converted to "2 3 +" and "(()" to an empty string, despite
+           Inc/calculator.h documenting a 0 return for mismatched
+           parentheses. Reported the same way as the surplus-')' case
+           above, so both directions behave alike. */
         if (top.type == TOKEN_LEFT_PAREN)
-            continue;
+        {
+            printf("Error: Mismatched parentheses.\n");
+            calculatorSetLastError(CALC_ERR_INVALID_EXPRESSION);
+            return 0;
+        }
 
         j += sprintf(&postfix[j], "%s ", top.text);
     }

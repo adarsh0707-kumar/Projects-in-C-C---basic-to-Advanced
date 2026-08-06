@@ -73,10 +73,58 @@ static void test_infix_to_postfix_error_paths(void)
                 "should record CALC_ERR_INVALID_TOKEN");
 }
 
+/*
+ * A surplus ')' was always rejected, but an unclosed '(' used to be
+ * dropped silently and reported as success -- "(2+3" came back as
+ * "2 3 +" -- contradicting Inc/calculator.h's documented 0 return for
+ * mismatched parentheses. Nothing user-facing depended on it, since
+ * validateExpression() rejects such input earlier in the pipeline, but
+ * a direct caller of infixToPostfix() was misled.
+ */
+static void test_infix_to_postfix_unbalanced_parentheses(void)
+{
+    char in[128];
+    char out[256];
+
+    const char *unclosed[] = {"(2+3", "sin(2", "(()", "(", "((1+2)"};
+
+    for (unsigned k = 0; k < sizeof(unclosed) / sizeof(unclosed[0]); k++)
+    {
+        strcpy(in, unclosed[k]);
+        calculatorClearError();
+        ASSERT_TRUE(!infixToPostfix(in, out),
+                    "an unclosed '(' should fail, not silently drop the parenthesis");
+        ASSERT_TRUE(calculatorGetLastError() == CALC_ERR_INVALID_EXPRESSION,
+                    "an unclosed '(' should record CALC_ERR_INVALID_EXPRESSION");
+    }
+
+    /* The opposite direction was already correct; pinned so both stay
+       consistent with each other. */
+    const char *surplus[] = {"2+3)", ")(", ")"};
+
+    for (unsigned k = 0; k < sizeof(surplus) / sizeof(surplus[0]); k++)
+    {
+        strcpy(in, surplus[k]);
+        calculatorClearError();
+        ASSERT_TRUE(!infixToPostfix(in, out),
+                    "a surplus ')' should fail");
+    }
+
+    /* Balanced expressions must still convert, so the new check can't
+       be over-eager. */
+    strcpy(in, "((1+2)*3)");
+    calculatorClearError();
+    ASSERT_TRUE(infixToPostfix(in, out),
+                "fully balanced nested parentheses should still succeed");
+    ASSERT_DOUBLE_EQ(evaluatePostfix(out), 9.0,
+                     "((1+2)*3) should still evaluate to 9");
+}
+
 void run_postfix_tests(void)
 {
     test_infix_to_postfix();
     test_infix_to_postfix_error_paths();
+    test_infix_to_postfix_unbalanced_parentheses();
     test_operator_helpers();
     test_evaluate_postfix();
 }
