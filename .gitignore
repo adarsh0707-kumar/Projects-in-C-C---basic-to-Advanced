@@ -1,3 +1,11 @@
 *.zip
 .lsp
 .claude
+
+# Build output. CMake configures into <project>/build, and a stray
+# ./build at the repo root (currently a DigitalClock build) would
+# otherwise show up as untracked on every status. These are generated
+# files holding absolute machine paths -- never committed.
+build/
+cmake-build-*/
+CMakeUserPresets.json
