@@ -141,7 +141,21 @@ set_tests_properties(unit_tests PROPERTIES
 # are the parts that must build everywhere, exactly as `make` works
 # with or without Qt installed.
 # ---------------------------------------------------------------------
-find_package(Qt6 6.2 COMPONENTS Widgets QUIET)
+#
+# CALCULATOR_BUILD_GUI exists so a build can opt out even when Qt *is*
+# installed. Without it, whether the release archive contains a GUI
+# binary depends on whether the build machine happened to have Qt --
+# and an unbundled calculator-gui simply fails to start on a user's
+# clean machine. The CLI release workflow therefore passes OFF
+# explicitly, so the archive's contents are a decision rather than an
+# accident of the builder's environment.
+option(CALCULATOR_BUILD_GUI "Build the Qt6 GUI (requires Qt6; harmless if absent)" ON)
+
+if(CALCULATOR_BUILD_GUI)
+    find_package(Qt6 6.2 COMPONENTS Widgets QUIET)
+else()
+    message(STATUS "CALCULATOR_BUILD_GUI=OFF -- skipping the GUI target")
+endif()
 
 if(Qt6_FOUND)
     # AUTOMOC/AUTORCC replace the Makefile's explicit moc and rcc rules,
