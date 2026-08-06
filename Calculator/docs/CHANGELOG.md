@@ -8,6 +8,34 @@ The format is based on **Keep a Changelog** and follows **Semantic Versioning** 
 
 # [Unreleased]
 
+## 2026-08-06 (2) — Fix infixToPostfix() silently accepting an unclosed '('
+
+### Fixed
+
+- `Src/postfix.c`: draining the operator stack at the end of conversion
+  hit a leftover `TOKEN_LEFT_PAREN` and `continue`d, dropping it and
+  returning **success**. `"(2+3"` converted to `"2 3 +"`, `"sin(2"` to
+  `"2 sin"`, and `"(()"` to an empty postfix string — while
+  `Inc/calculator.h` documented a 0 return for mismatched parentheses,
+  which it did honour for the opposite case (a surplus `)`). It now
+  reports `CALC_ERR_INVALID_EXPRESSION` and returns 0, exactly as the
+  surplus-`)` branch already did, so both directions behave alike.
+
+  Flagged as a known issue in the 2026-08-05 (6) entry and fixed here.
+  Nothing user-facing depended on it — `validateExpression()` rejects
+  such input earlier in every pipeline — but the documented contract
+  was wrong and a direct caller of `infixToPostfix()` was misled.
+
+### Verified
+
+Test suite **471 → 486**: `Tests/test_postfix.c` gains
+`test_infix_to_postfix_unbalanced_parentheses()`, covering five
+unclosed-`(` inputs (including the bare `"("`), the three surplus-`)`
+inputs that were already correct, and a balanced `"((1+2)*3)"` that
+must still convert and evaluate to 9 so the new check can't be
+over-eager. Passes in both the normal and `BUILD=asan` builds; `make
+all`/`gui`/`test` and the CMake build are clean under `-Wall -Wextra`.
+
 ## 2026-08-06 — Phase 35 (cross-platform), part 2: CI, releases, and packaging
 
 Part 1 made the code *capable* of running everywhere. This part proves
