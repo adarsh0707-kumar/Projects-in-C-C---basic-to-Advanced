@@ -1,0 +1,328 @@
+# Builds the *graphical* Calculator for people who don't build software:
+# an AppImage on Linux, a .dmg on macOS, and a portable folder on
+# Windows. Each bundles the Qt runtime, so nothing needs installing.
+#
+# Separate from release.yml on purpose. That workflow ships the CLI,
+# which has no dependencies and is small and fast to build; this one
+# installs Qt on every runner and runs the per-platform deployment
+# tools, which is slower and has far more that can break. Keeping them
+# apart means a GUI packaging failure can't block a CLI release.
+#
+# PLACEMENT: repository root, like the other workflows. Steps set
+# working-directory: Calculator.
+
+name: Calculator GUI Release
+
+on:
+  push:
+    tags:
+      - 'calculator-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version label for a manual test build (no tag created)'
+        required: false
+        default: '0.0.0-test'
+
+defaults:
+  run:
+    working-directory: Calculator
+
+permissions:
+  contents: write
+
+env:
+  QT_VERSION: 6.8.1
+
+jobs:
+  # -------------------------------------------------------------------
+  # Linux -- AppImage. One executable file the user marks executable and
+  # runs; no install, no package manager, no Qt on the system.
+  # -------------------------------------------------------------------
+  linux:
+    name: AppImage (Linux)
+    runs-on: ubuntu-22.04   # older glibc than 24.04, so the AppImage
+                            # also runs on older distributions
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Qt's xcb platform plugin needs these at link/deploy time; they
+      # are not present on a bare runner.
+      - name: Install Qt platform dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgl1-mesa-dev libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 \
+            libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 \
+            libxcb-xinerama0 libxcb-xkb1 libfuse2
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          cache: true
+
+      - name: Configure and build
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release -j
+
+      - name: Set version
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#calculator-v}"
+          [ "${{ github.event_name }}" = "workflow_dispatch" ] && VERSION="${{ github.event.inputs.version }}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      # linuxdeploy wants a real .desktop file and an icon in the
+      # AppDir. The repo keeps a .desktop.in whose @EXEC@ placeholder is
+      # normally substituted with an absolute path by `make
+      # install-desktop`; inside an AppImage the binary is always on
+      # PATH as calculator-gui, so that is what it becomes here.
+      - name: Assemble AppDir
+        run: |
+          mkdir -p AppDir/usr/bin
+          mkdir -p AppDir/usr/share/applications
+          mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
+
+          cp build/calculator-gui AppDir/usr/bin/
+          sed 's|"@EXEC@"|calculator-gui|' Gui/calculator-gui.desktop.in \
+            > AppDir/usr/share/applications/calculator-gui.desktop
+          cp Gui/icons/calculator-256.png \
+            AppDir/usr/share/icons/hicolor/256x256/apps/calculator-gui.png
+
+          cat AppDir/usr/share/applications/calculator-gui.desktop
+
+      - name: Build AppImage
+        env:
+          # ubuntu-22.04 has no FUSE by default, so the linuxdeploy
+          # AppImages would fail to self-mount without this.
+          APPIMAGE_EXTRACT_AND_RUN: 1
+          OUTPUT: Calculator-${{ env.VERSION }}-x86_64.AppImage
+        run: |
+          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          chmod +x linuxdeploy*.AppImage
+
+          ./linuxdeploy-x86_64.AppImage \
+            --appdir AppDir \
+            --plugin qt \
+            --desktop-file AppDir/usr/share/applications/calculator-gui.desktop \
+            --icon-file AppDir/usr/share/icons/hicolor/256x256/apps/calculator-gui.png \
+            --output appimage
+
+          ls -lh ./*.AppImage
+
+      # An AppImage that can't start is worse than none, so run it
+      # headless before shipping it.
+      - name: Verify the AppImage starts
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: 1
+        run: |
+          chmod +x Calculator-*.AppImage
+          QT_QPA_PLATFORM=offscreen timeout 10 ./Calculator-*.AppImage &
+          PID=$!
+          sleep 5
+          if kill -0 $PID 2>/dev/null; then
+            echo "AppImage started and stayed running"
+            kill $PID
+          else
+            wait $PID; echo "::error::AppImage exited immediately"; exit 1
+          fi
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: Calculator-${{ env.VERSION }}-linux-AppImage
+          path: Calculator/Calculator-*.AppImage
+          if-no-files-found: error
+
+  # -------------------------------------------------------------------
+  # macOS -- .app inside a .dmg, the format a Mac user expects to drag
+  # into Applications.
+  # -------------------------------------------------------------------
+  macos:
+    name: DMG (macOS)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          cache: true
+
+      - name: Configure and build
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release -j
+
+      - name: Set version
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#calculator-v}"
+          [ "${{ github.event_name }}" = "workflow_dispatch" ] && VERSION="${{ github.event.inputs.version }}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      # macOS takes its Dock/Finder icon from the bundle, not from
+      # QApplication::setWindowIcon(), so the committed PNGs are
+      # converted to an .icns and registered in Info.plist. Without this
+      # the app ships with the generic placeholder icon.
+      - name: Build and install the bundle icon
+        run: |
+          APP=$(find build -maxdepth 2 -name "calculator-gui.app" | head -1)
+          echo "APP=$APP" >> "$GITHUB_ENV"
+
+          mkdir -p Calculator.iconset
+          for s in 16 32 128 256; do
+            cp "Gui/icons/calculator-$s.png" "Calculator.iconset/icon_${s}x${s}.png"
+          done
+          # Retina variants: a 2x entry is the next size up.
+          cp Gui/icons/calculator-32.png  Calculator.iconset/icon_16x16@2x.png
+          cp Gui/icons/calculator-64.png  Calculator.iconset/icon_32x32@2x.png
+          cp Gui/icons/calculator-256.png Calculator.iconset/icon_128x128@2x.png
+
+          iconutil -c icns Calculator.iconset -o Calculator.icns
+
+          cp Calculator.icns "$APP/Contents/Resources/"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string Calculator" \
+            "$APP/Contents/Info.plist" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile Calculator" \
+            "$APP/Contents/Info.plist"
+
+      - name: Deploy Qt into the bundle and make the DMG
+        run: |
+          macdeployqt "$APP" -dmg
+          mv "$(dirname "$APP")/calculator-gui.dmg" "Calculator-${VERSION}-macos-arm64.dmg"
+          ls -lh ./*.dmg
+
+      - name: Verify the bundled app starts
+        run: |
+          QT_QPA_PLATFORM=offscreen "$APP/Contents/MacOS/calculator-gui" &
+          PID=$!
+          sleep 5
+          if kill -0 $PID 2>/dev/null; then
+            echo "Bundled app started and stayed running"
+            kill $PID
+          else
+            wait $PID; echo "::error::bundled app exited immediately"; exit 1
+          fi
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: Calculator-${{ env.VERSION }}-macos-dmg
+          path: Calculator/Calculator-*.dmg
+          if-no-files-found: error
+
+  # -------------------------------------------------------------------
+  # Windows -- a portable folder. windeployqt copies the Qt DLLs and
+  # plugins next to the .exe, so the user unzips and double-clicks.
+  # -------------------------------------------------------------------
+  windows:
+    name: Portable zip (Windows)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          cache: true
+
+      - name: Configure and build
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release
+
+      - name: Set version
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#calculator-v}"
+          [ "${{ github.event_name }}" = "workflow_dispatch" ] && VERSION="${{ github.event.inputs.version }}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Stage and deploy Qt
+        shell: bash
+        run: |
+          DEST="Calculator-${VERSION}-windows-x64"
+          echo "DEST=$DEST" >> "$GITHUB_ENV"
+
+          mkdir -p "$DEST"
+          cp build/Release/calculator-gui.exe "$DEST/"
+          cp build/Release/calculator.exe "$DEST/" 2>/dev/null || true
+          cp LICENSE Readme.md "$DEST/"
+
+          windeployqt --release --no-translations "$DEST/calculator-gui.exe"
+          ls "$DEST"
+
+      - name: Verify the deployed app starts
+        shell: pwsh
+        run: |
+          $env:QT_QPA_PLATFORM = "offscreen"
+          $p = Start-Process -FilePath "$env:DEST\calculator-gui.exe" -PassThru
+          Start-Sleep -Seconds 5
+          if ($p.HasExited) {
+            Write-Host "::error::deployed app exited immediately with $($p.ExitCode)"
+            exit 1
+          }
+          Write-Host "Deployed app started and stayed running"
+          Stop-Process -Id $p.Id
+
+      - name: Create zip
+        shell: bash
+        run: 7z a -tzip "$DEST.zip" "$DEST"
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.DEST }}
+          path: Calculator/${{ env.DEST }}.zip
+          if-no-files-found: error
+
+  # -------------------------------------------------------------------
+  # Attach everything to the same draft release the CLI archives go to.
+  # -------------------------------------------------------------------
+  release:
+    name: Attach to draft release
+    needs: [linux, macos, windows]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/calculator-v')
+
+    steps:
+      - name: Download all packages
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List what will be attached
+        run: ls -lR artifacts
+        working-directory: ${{ github.workspace }}
+
+      - name: Attach to draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          name: Calculator ${{ github.ref_name }}
+          files: artifacts/*
+          append_body: true
+          body: |
+
+            ### Graphical version
+
+            No installation, no Qt required — the runtime is bundled.
+
+            | Platform | Download | How to run |
+            |---|---|---|
+            | Linux | `Calculator-*-x86_64.AppImage` | `chmod +x` it, then run it |
+            | macOS | `Calculator-*-macos-arm64.dmg` | Open, drag to Applications |
+            | Windows | `Calculator-*-windows-x64.zip` | Unzip, run `calculator-gui.exe` |
+
+            Each package was started headless on its own platform before
+            release, so it is known to launch rather than merely build.
