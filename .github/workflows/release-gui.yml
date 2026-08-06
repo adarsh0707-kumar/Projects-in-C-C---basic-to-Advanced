@@ -24,9 +24,13 @@ on:
         required: false
         default: '0.0.0-test'
       qt_version:
-        description: 'Qt version to build against (see the AGL note in env below)'
+        description: 'Qt version to build against'
         required: false
         default: '6.9.1'
+      macos_runner:
+        description: 'macOS runner image (see the AGL note on the macos job)'
+        required: false
+        default: 'macos-14'
 
 defaults:
   run:
@@ -154,7 +158,13 @@ jobs:
   # -------------------------------------------------------------------
   macos:
     name: DMG (macOS)
-    runs-on: macos-latest
+    # NOT macos-latest: that is now macos-26, whose SDK no longer ships
+    # the AGL framework that Qt's CMake config still links against --
+    # every Qt version tried failed there with "ld: framework 'AGL' not
+    # found" while Linux and Windows built fine. macos-14 is the newest
+    # image that still has it, and is Apple Silicon, so the DMG stays
+    # arm64 rather than falling back to Intel.
+    runs-on: ${{ github.event.inputs.macos_runner || 'macos-14' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
