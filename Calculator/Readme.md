@@ -7,6 +7,7 @@
 ![Tests](<https://img.shields.io/badge/Tests-486%20passing-brightgreen>)
 ![CI](https://github.com/adarsh0707-kumar/Projects-in-C-C---basic-to-Advanced/actions/workflows/ci.yml/badge.svg)
 ![License](https://img.shields.io/badge/License-MIT-brightgreen)
+[![Release](https://img.shields.io/github/v/release/adarsh0707-kumar/Projects-in-C-C---basic-to-Advanced?filter=calculator-v*&label=download)](https://github.com/adarsh0707-kumar/Projects-in-C-C---basic-to-Advanced/releases/latest)
 
 A modular, extensible, and production-style **Scientific Calculator** written in **C/C++**, demonstrating expression parsing, postfix evaluation, scientific functions, variables, memory operations, unit conversion, statistics, complex numbers, matrices, graph plotting, and comprehensive testing.
 
@@ -16,6 +17,7 @@ This project is intended as both a learning resource and a portfolio-quality sof
 
 # Table of Contents
 
+- [Download](#download)
 - [Introduction](#introduction)
 - [Features](#features)
 - [Folder Structure](#folder-structure)
@@ -29,6 +31,58 @@ This project is intended as both a learning resource and a portfolio-quality sof
 - [Roadmap](#development-roadmap)
 - [Contributing](#contributing)
 - [License](#license)
+
+---
+
+# Download
+
+**You don't need to build this.** Prebuilt packages for Linux, macOS, and Windows are on the
+[latest release page](https://github.com/adarsh0707-kumar/Projects-in-C-C---basic-to-Advanced/releases/latest) — download one file and run it.
+
+## Graphical version
+
+Qt is bundled, so nothing needs installing.
+
+| Platform | File | How to run |
+|---|---|---|
+| Linux | `Calculator-*-x86_64.AppImage` | `chmod +x` it, then run it |
+| macOS (Apple Silicon) | `Calculator-*-macos-arm64.dmg` | Open it, drag Calculator to Applications |
+| Windows (x64) | `Calculator-GUI-*-windows-x64.zip` | Unzip, run `calculator-gui.exe` |
+
+## Command-line version
+
+No dependencies at all, and roughly 50 KB.
+
+| Platform | File |
+|---|---|
+| Linux | `calculator-*-linux-x86_64.tar.gz` |
+| macOS (Apple Silicon) | `calculator-*-macos-arm64.tar.gz` |
+| Windows (x64) | `calculator-*-windows-x64.zip` |
+
+Extract it and run the `calculator` binary inside.
+
+## First run: expect a security warning
+
+The packages are **not code-signed** — certificates cost money and this is a free project — so
+your system will warn you once:
+
+- **macOS** — right-click the app, choose **Open**, then **Open** again.
+- **Windows** — click **More info**, then **Run anyway**.
+- **Linux** — no warning; just mark the AppImage executable.
+
+Prefer to build it yourself instead? See [Build](#build); it's two commands.
+
+## Where your history is kept
+
+Outside the downloaded folder, so moving or deleting it loses nothing:
+
+| Platform | Location |
+|---|---|
+| Linux | `~/.local/share/calculator/history.txt` |
+| macOS | `~/Library/Application Support/Calculator/history.txt` |
+| Windows | `%APPDATA%\Calculator\history.txt` |
+
+Set `CALCULATOR_HISTORY_FILE` to put it somewhere else.
 
 ---
 
