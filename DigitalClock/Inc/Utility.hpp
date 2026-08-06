@@ -1,167 +1,117 @@
-#pragma once
+#ifndef UTILITY_HPP
+#define UTILITY_HPP
 
 /******************************************************************************
  * @file Utility.hpp
- * @brief Collection of utility helper functions.
+ * @brief Declaration of the Utility helper class.
  * @author Adarsh Kumar
  * @date 2026
  *
- * This header provides commonly used utility functions for the
- * Digital Clock application. These inline functions simplify
- * string manipulation, file handling, timing operations, and
- * timestamp generation while avoiding the need for separate
- * implementation files.
+ * The Utility class provides small, stateless helper functions that are
+ * shared across every layer of the Digital Clock System. Grouping them here
+ * avoids duplicating string and filesystem helpers throughout the project.
  *
- * Features:
- *  - String trimming
- *  - String case conversion
- *  - Thread sleeping
- *  - File existence checking
- *  - Current timestamp generation
+ * Reference: API Documentation, section 3.6.
  ******************************************************************************/
 
 #include <string>
-#include <vector>
-#include <fstream>
-#include <chrono>
-#include <thread>
-#include <algorithm>
-#include <cctype>
 
 /**
- * @namespace Utility
- * @brief Contains reusable helper functions.
+ * @class Utility
+ * @brief Stateless helper functions shared by all components.
  *
- * The Utility namespace groups together frequently used helper
- * functions that support various modules throughout the application.
+ * All members are static; the class is never instantiated. It exists as a
+ * namespace-like grouping so that helpers are discoverable from a single
+ * well-known header.
  */
-namespace Utility
+class Utility
 {
+public:
+    Utility() = delete;
 
     /**
      * @brief Removes leading and trailing whitespace.
      *
-     * Whitespace characters including spaces, tabs, carriage returns,
-     * and newlines are removed from both ends of the string.
+     * Whitespace is defined as space, tab, carriage return and newline.
      *
-     * @param str Input string.
-     * @return std::string Trimmed string.
+     * @param text Text to trim.
+     * @return std::string Trimmed copy. Empty if @p text is all whitespace.
      */
-    inline std::string trim(const std::string &str)
-    {
-        size_t first = str.find_first_not_of(" \t\n\r");
-
-        if (first == std::string::npos)
-            return "";
-
-        size_t last = str.find_last_not_of(" \t\n\r");
-
-        return str.substr(first, (last - first + 1));
-    }
+    static std::string trim(const std::string &text);
 
     /**
-     * @brief Converts a string to uppercase.
+     * @brief Converts text to upper case.
      *
-     * Every alphabetic character in the string is converted
-     * to its uppercase equivalent.
-     *
-     * @param str Input string.
-     * @return std::string Uppercase string.
+     * @param text Text to convert.
+     * @return std::string Upper-case copy.
      */
-    inline std::string toUpper(const std::string &str)
-    {
-        std::string result = str;
-
-        std::transform(result.begin(),
-                       result.end(),
-                       result.begin(),
-                       ::toupper);
-
-        return result;
-    }
+    static std::string toUpper(const std::string &text);
 
     /**
-     * @brief Converts a string to lowercase.
+     * @brief Converts text to lower case.
      *
-     * Every alphabetic character in the string is converted
-     * to its lowercase equivalent.
-     *
-     * @param str Input string.
-     * @return std::string Lowercase string.
+     * @param text Text to convert.
+     * @return std::string Lower-case copy.
      */
-    inline std::string toLower(const std::string &str)
-    {
-        std::string result = str;
-
-        std::transform(result.begin(),
-                       result.end(),
-                       result.begin(),
-                       ::tolower);
-
-        return result;
-    }
+    static std::string toLower(const std::string &text);
 
     /**
-     * @brief Suspends execution for a specified duration.
+     * @brief Checks whether a readable file exists at @p path.
      *
-     * Pauses the current thread for the given number of
-     * milliseconds.
-     *
-     * @param milliseconds Sleep duration in milliseconds.
+     * @param path Path to test.
+     * @return true if the file exists and can be opened for reading.
      */
-    inline void sleep(int milliseconds)
-    {
-        std::this_thread::sleep_for(
-            std::chrono::milliseconds(milliseconds));
-    }
+    static bool fileExists(const std::string &path);
 
     /**
-     * @brief Checks whether a file exists.
+     * @brief Returns the current date and time as text.
      *
-     * Attempts to open the specified file and determines
-     * whether it is accessible.
+     * The format is <tt>YYYY-MM-DD HH:MM:SS</tt> in local time.
      *
-     * @param path Path to the file.
-     * @return true if the file exists.
-     * @return false otherwise.
+     * @return std::string Formatted timestamp.
      */
-    inline bool fileExists(const std::string &path)
-    {
-        std::ifstream f(path);
-
-        return f.good();
-    }
+    static std::string currentDateTime();
 
     /**
-     * @brief Returns the current local timestamp.
+     * @brief Left-pads an integer with zeros to the requested width.
      *
-     * The timestamp is formatted using the pattern:
-     *
-     * YYYY-MM-DD HH:MM:SS
-     *
-     * Example:
-     * 2026-08-04 21:15:32
-     *
-     * @return std::string Current timestamp.
+     * @param value Value to render.
+     * @param width Minimum number of characters.
+     * @return std::string Zero-padded representation.
      */
-    inline std::string currentTimestamp()
-    {
-        auto now = std::chrono::system_clock::now();
+    static std::string padZero(int value, int width = 2);
 
-        std::time_t tt =
-            std::chrono::system_clock::to_time_t(now);
+    /**
+     * @brief Centres text inside a field of the given width.
+     *
+     * If @p text is longer than @p width the text is returned unchanged.
+     *
+     * @param text  Text to centre.
+     * @param width Total field width.
+     * @return std::string Text prefixed with the required padding.
+     */
+    static std::string center(const std::string &text, int width);
 
-        std::tm *tm =
-            std::localtime(&tt);
+    /**
+     * @brief Converts common textual boolean spellings to a bool.
+     *
+     * Recognises (case-insensitively) "true", "yes", "on", "enabled" and "1"
+     * as true, and "false", "no", "off", "disabled" and "0" as false.
+     *
+     * @param text         Text to interpret.
+     * @param defaultValue Returned when @p text matches nothing.
+     * @return bool Interpreted value.
+     */
+    static bool toBool(const std::string &text, bool defaultValue = false);
 
-        char buffer[80];
+    /**
+     * @brief Converts text to an integer without throwing.
+     *
+     * @param text         Text to parse.
+     * @param defaultValue Returned when @p text is not a valid integer.
+     * @return int Parsed value, or @p defaultValue on failure.
+     */
+    static int toInt(const std::string &text, int defaultValue = 0);
+};
 
-        strftime(buffer,
-                 sizeof(buffer),
-                 "%Y-%m-%d %H:%M:%S",
-                 tm);
-
-        return std::string(buffer);
-    }
-
-} // namespace Utility
+#endif // UTILITY_HPP

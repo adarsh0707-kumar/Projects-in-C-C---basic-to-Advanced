@@ -1,100 +1,93 @@
 #include "Banner.hpp"
 
-#include <fstream>
 #include <sstream>
 
-/*
-------------------------------------------------------------
-Read an entire text file.
-
-This utility function is shared by every public loader.
-
-Parameters
-----------
-filename
-    Path of the file to read.
-
-Returns
--------
-Entire file as one string.
-
-If the file cannot be opened,
-an empty string is returned.
-------------------------------------------------------------
-*/
-std::string Banner::readFile(const std::string &filename) const
+namespace
 {
-    std::ifstream file(filename);
+    /** Artwork used when no banner resource can be loaded. */
+    const char *const DEFAULT_BANNER =
+        "============================================================\n"
+        "                 DIGITAL CLOCK SYSTEM\n"
+        "============================================================";
+}
 
-    if (!file)
-    {
+Banner::Banner()
+    : text(DEFAULT_BANNER),
+      visible(true)
+{
+}
+
+bool Banner::load(const std::string &fileName)
+{
+    if (!resources.load(fileName))
+        return false;
+
+    const std::string loaded = resources.getContent();
+
+    // An empty file is treated as a missing one so the header is never blank.
+    if (loaded.empty())
+        return false;
+
+    text = loaded;
+
+    return true;
+}
+
+void Banner::show()
+{
+    visible = true;
+}
+
+void Banner::hide()
+{
+    visible = false;
+}
+
+bool Banner::isVisible() const
+{
+    return visible;
+}
+
+std::string Banner::content() const
+{
+    if (!visible)
         return "";
-    }
 
-    std::ostringstream buffer;
-
-    buffer << file.rdbuf();
-
-    return buffer.str();
+    return text;
 }
 
-/*
-------------------------------------------------------------
-Load startup logo.
-
-Attempts to read:
-
-Resources/logo.txt
-
-If the file does not exist,
-returns a built-in fallback logo.
-------------------------------------------------------------
-*/
-std::string Banner::loadLogo() const
+std::vector<std::string> Banner::lines() const
 {
-    std::string logo = readFile("Resources/logo.txt");
+    std::vector<std::string> result;
 
-    if (!logo.empty())
+    if (!visible)
+        return result;
+
+    std::istringstream stream(text);
+    std::string line;
+
+    while (std::getline(stream, line))
     {
-        return logo;
+        // Tolerate resource files saved with Windows line endings.
+        if (!line.empty() && line.back() == '\r')
+            line.pop_back();
+
+        result.push_back(line);
     }
 
-    return
-        R"(
+    while (!result.empty() && result.back().empty())
+        result.pop_back();
 
-============================================================
-
-                 DIGITAL CLOCK SYSTEM
-
-============================================================
-
-)";
+    return result;
 }
 
-/*
-------------------------------------------------------------
-Load compact application banner.
-
-Attempts to read:
-
-Resources/banner.txt
-
-If unavailable,
-returns a default banner.
-------------------------------------------------------------
-*/
-std::string Banner::loadBanner() const
+std::size_t Banner::lineCount() const
 {
-    std::string banner = readFile("Resources/banner.txt");
+    return lines().size();
+}
 
-    if (!banner.empty())
-    {
-        return banner;
-    }
-
-    return
-        R"(============================================================
-                 DIGITAL CLOCK SYSTEM
-============================================================
-)";
+void Banner::reset()
+{
+    text = DEFAULT_BANNER;
+    visible = true;
 }

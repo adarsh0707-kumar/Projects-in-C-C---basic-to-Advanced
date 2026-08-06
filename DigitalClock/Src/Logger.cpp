@@ -1,22 +1,13 @@
 #include "Logger.hpp"
 
-#include <chrono>
-#include <ctime>
-#include <iomanip>
+#include <filesystem>
 #include <iostream>
-#include <sstream>
 
-/*
-============================================================
-Logger Implementation
-============================================================
-Implements the Logger class for the Digital Clock project.
-============================================================
-*/
+#include "Utility.hpp"
 
 Logger::Logger()
-    : consoleOutput(true),
-      minimumLevel(Level::DEBUG)
+    : consoleOutput(false),
+      minimumLevel(Level::INFO)
 {
 }
 
@@ -25,19 +16,46 @@ Logger::~Logger()
     close();
 }
 
-bool Logger::open(const std::string &filename)
+bool Logger::initialize(const std::string &fileName)
 {
-    file.open(filename, std::ios::app);
+    if (fileName.empty())
+        return false;
+
+    std::lock_guard<std::mutex> lock(mutex);
+
+    if (file.is_open())
+    {
+        file.flush();
+        file.close();
+    }
+
+    /*
+    Create the parent directory when the configured path points somewhere that
+    does not exist yet. A failure here is not fatal -- the open below simply
+    fails and the application runs without logging (TC-024).
+    */
+    const std::filesystem::path path(fileName);
+
+    if (path.has_parent_path())
+    {
+        std::error_code code;
+        std::filesystem::create_directories(path.parent_path(), code);
+    }
+
+    file.open(fileName, std::ios::app);
 
     if (!file.is_open())
         return false;
 
     writeSessionHeader();
+
     return true;
 }
 
 void Logger::close()
 {
+    std::lock_guard<std::mutex> lock(mutex);
+
     if (file.is_open())
     {
         file.flush();
@@ -45,24 +63,46 @@ void Logger::close()
     }
 }
 
-void Logger::log(Level level,
-                 const std::string &message)
+void Logger::log(Level level, const std::string &message)
 {
-    if (!shouldLog(level))
+    if (static_cast<int>(level) < static_cast<int>(minimumLevel))
         return;
 
     std::lock_guard<std::mutex> lock(mutex);
 
-    std::string entry =
-        "[" + timestamp() + "] "
-                            "[" +
-        levelToString(level) + "] " + message;
+    const std::string entry =
+        "[" + Utility::currentDateTime() + "] " +
+        "[" + levelToString(level) + "] " +
+        message;
 
-    file << entry << '\n';
-    file.flush();
+    if (file.is_open())
+    {
+        file << entry << '\n';
+        file.flush();
+    }
 
     if (consoleOutput)
         std::cout << entry << '\n';
+}
+
+void Logger::info(const std::string &message)
+{
+    log(Level::INFO, message);
+}
+
+void Logger::warning(const std::string &message)
+{
+    log(Level::WARNING, message);
+}
+
+void Logger::error(const std::string &message)
+{
+    log(Level::ERROR, message);
+}
+
+void Logger::debug(const std::string &message)
+{
+    log(Level::DEBUG, message);
 }
 
 void Logger::setConsoleOutput(bool enabled)
@@ -75,54 +115,64 @@ void Logger::setMinimumLevel(Level level)
     minimumLevel = level;
 }
 
-std::string Logger::timestamp() const
+bool Logger::isOpen() const
 {
-    auto now = std::chrono::system_clock::now();
-    std::time_t t = std::chrono::system_clock::to_time_t(now);
+    std::lock_guard<std::mutex> lock(mutex);
 
-    std::tm tm{};
-#ifdef _WIN32
-    localtime_s(&tm, &t);
-#else
-    localtime_r(&t, &tm);
-#endif
-
-    std::ostringstream out;
-    out << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
-    return out.str();
+    return file.is_open();
 }
 
-std::string Logger::levelToString(Level level) const
+std::string Logger::levelToString(Level level)
 {
     switch (level)
     {
     case Level::DEBUG:
         return "DEBUG";
+
     case Level::INFO:
         return "INFO";
+
     case Level::WARNING:
         return "WARNING";
+
     case Level::ERROR:
         return "ERROR";
-    default:
-        return "UNKNOWN";
     }
+
+    return "UNKNOWN";
 }
 
-bool Logger::shouldLog(Level level) const
+Logger::Level Logger::levelFromString(const std::string &text,
+                                      Level defaultLevel)
 {
-    return static_cast<int>(level) >=
-           static_cast<int>(minimumLevel);
+    const std::string value = Utility::toUpper(Utility::trim(text));
+
+    if (value == "DEBUG")
+        return Level::DEBUG;
+
+    if (value == "INFO")
+        return Level::INFO;
+
+    if (value == "WARNING" || value == "WARN")
+        return Level::WARNING;
+
+    if (value == "ERROR")
+        return Level::ERROR;
+
+    return defaultLevel;
 }
 
 void Logger::writeSessionHeader()
 {
+    // Caller already holds the mutex.
     if (!file.is_open())
         return;
 
-    file << "\n============================================================\n";
-    file << "NEW LOGGING SESSION\n";
-    file << "Started : " << timestamp() << '\n';
-    file << "============================================================\n";
+    file << '\n'
+         << "============================================================\n"
+         << "NEW LOGGING SESSION\n"
+         << "Started : " << Utility::currentDateTime() << '\n'
+         << "============================================================\n";
+
     file.flush();
 }

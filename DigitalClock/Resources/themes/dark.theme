@@ -1,4 +1,10 @@
+# Dark theme
+# Light text on a dark terminal background.
+
 HEADER=Cyan
-TIME=Green
+TIME=BrightGreen
 DATE=Yellow
-FOOTER=White
+STATUS=White
+FOOTER=BrightBlack
+ACCENT=Blue
+ERROR=BrightRed

@@ -1,0 +1,10 @@
+# Blue theme
+# A single-hue blue colour scheme.
+
+HEADER=BrightBlue
+TIME=BrightCyan
+DATE=Blue
+STATUS=White
+FOOTER=BrightBlack
+ACCENT=Blue
+ERROR=BrightRed

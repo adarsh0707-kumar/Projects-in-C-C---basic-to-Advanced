@@ -3,71 +3,95 @@
 
 /******************************************************************************
  * @file Banner.hpp
- * @brief Declaration of the Banner class.
+ * @brief Declaration of the Banner presentation component.
  * @author Adarsh Kumar
  * @date 2026
  *
- * The Banner module is responsible for loading ASCII art resources
- * used throughout the Digital Clock application. It separates the
- * presentation resources from the application logic, making it easy
- * to customize the user interface without modifying the source code.
+ * The Banner loads the ASCII art shown at the top of the screen. Keeping the
+ * artwork in Resources rather than in the source lets it be changed without
+ * recompiling. A missing banner file is not an error: the application falls
+ * back to a built-in banner and carries on (TC-017).
  *
- * Resources:
- *  - Resources/logo.txt
- *  - Resources/banner.txt
+ * Reference: API Documentation, section 4.6.
  ******************************************************************************/
 
 #include <string>
+#include <vector>
+
+#include "ResourceManager.hpp"
 
 /**
  * @class Banner
- * @brief Loads ASCII art used by the application.
- *
- * The Banner class reads text-based resources from disk and returns
- * their contents as strings. These resources are displayed during
- * application startup and while refreshing the screen.
+ * @brief Loads and supplies the application banner artwork.
  */
 class Banner
 {
 public:
     /**
-     * @brief Constructs a Banner object.
-     *
-     * No initialization is required because the class only
-     * loads text files when requested.
+     * @brief Constructs a banner holding the built-in default artwork.
      */
-    Banner() = default;
+    Banner();
 
     /**
-     * @brief Loads the startup logo.
+     * @brief Loads banner artwork from a resource file.
      *
-     * Reads the contents of the logo resource file.
-     * If the file cannot be opened, a default logo is returned.
+     * When the file cannot be found the built-in banner is retained so the
+     * screen still has a header.
      *
-     * @return std::string Complete logo text.
+     * @param fileName Resource path, such as @c Resources/banner.txt.
+     * @return true if the file was loaded, false if the default was kept.
      */
-    std::string loadLogo() const;
+    bool load(const std::string &fileName);
 
     /**
-     * @brief Loads the application banner.
-     *
-     * Reads the banner displayed during screen refreshes.
-     * If the file cannot be opened, a default banner is returned.
-     *
-     * @return std::string Complete banner text.
+     * @brief Makes the banner visible.
      */
-    std::string loadBanner() const;
+    void show();
+
+    /**
+     * @brief Hides the banner without discarding it.
+     *
+     * Used when the terminal is too short to show the full layout.
+     */
+    void hide();
+
+    /**
+     * @brief Reports whether the banner should be drawn.
+     * @return true when visible.
+     */
+    bool isVisible() const;
+
+    /**
+     * @brief Returns the banner as a single string.
+     * @return std::string Banner text, or empty when hidden.
+     */
+    std::string content() const;
+
+    /**
+     * @brief Returns the banner split into individual lines.
+     *
+     * Trailing blank lines are removed so the layout spacing is controlled by
+     * Screen rather than by the resource file.
+     *
+     * @return std::vector<std::string> Banner lines, empty when hidden.
+     */
+    std::vector<std::string> lines() const;
+
+    /**
+     * @brief Returns the number of lines the banner occupies.
+     * @return std::size_t Line count, 0 when hidden.
+     */
+    std::size_t lineCount() const;
+
+    /**
+     * @brief Restores the built-in banner artwork.
+     */
+    void reset();
 
 private:
-    /**
-     * @brief Reads a text file.
-     *
-     * Opens the specified file and returns its complete contents.
-     *
-     * @param filename Path of the file to read.
-     * @return std::string Entire file contents.
-     */
-    std::string readFile(const std::string &filename) const;
+    std::string text;          ///< Current banner artwork.
+    bool visible;              ///< Whether the banner is drawn.
+    ResourceManager resources; ///< Locates banner files.
 };
 
 #endif // BANNER_HPP

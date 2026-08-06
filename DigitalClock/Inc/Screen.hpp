@@ -3,81 +3,149 @@
 
 /******************************************************************************
  * @file Screen.hpp
- * @brief Declaration of the Screen class.
+ * @brief Declaration of the Screen presentation component.
  * @author Adarsh Kumar
  * @date 2026
  *
- * The Screen module provides low-level console manipulation functions
- * used throughout the Digital Clock application. It encapsulates ANSI
- * escape sequences behind a simple interface, allowing other modules
- * to perform screen operations without dealing directly with terminal
- * control codes.
+ * The Screen composes the complete console layout from the banner, the clock,
+ * the date and the status rows. It is the only component that decides where
+ * things sit on screen.
  *
- * Responsibilities:
- *  - Clear the console screen
- *  - Move the cursor to the home position
- *  - Hide the console cursor
- *  - Show the console cursor
- *  - Flush pending console output
+ * Redraws are flicker-free: rather than clearing the screen and repainting,
+ * draw() returns the cursor home and overwrites each line, erasing the rest of
+ * each line as it goes. This satisfies FR-008 (no duplicated output) without
+ * the flashing a full clear would cause (FR-003).
+ *
+ * Reference: API Documentation, section 4.5.
  ******************************************************************************/
+
+#include <string>
+#include <vector>
+
+#include "Banner.hpp"
+#include "Console.hpp"
+#include "ThemeManager.hpp"
 
 /**
  * @class Screen
- * @brief Provides console screen management utilities.
- *
- * The Screen class abstracts terminal-specific operations such as
- * clearing the display, controlling cursor visibility, positioning
- * the cursor, and flushing output. This keeps ANSI escape sequences
- * isolated from the rest of the application.
+ * @brief Lays out and draws the complete application screen.
  */
 class Screen
 {
 public:
     /**
-     * @brief Constructs a Screen object.
-     *
-     * No explicit initialization is required because this class
-     * provides utility functions for console manipulation.
+     * @brief Constructs a screen with the default 80x24 layout.
      */
-    Screen() = default;
+    Screen();
 
     /**
-     * @brief Clears the entire console screen.
+     * @brief Directs output to a Console.
      *
-     * Removes all visible content from the terminal and prepares
-     * it for rendering a new screen.
+     * Until a console is attached, draw() writes to standard output.
+     *
+     * @param console Console to draw through. Must outlive this Screen.
      */
-    void clear() const;
+    void attach(Console &console);
 
     /**
-     * @brief Moves the cursor to the home position.
+     * @brief Supplies the theme used to colour the layout.
      *
-     * Positions the cursor at the top-left corner of the console.
+     * @param theme Theme manager to consult. Must outlive this Screen.
      */
-    void home() const;
+    void attach(ThemeManager &theme);
 
     /**
-     * @brief Hides the console cursor.
-     *
-     * Prevents the cursor from being displayed while the application
-     * continuously refreshes the screen, providing a cleaner interface.
+     * @brief Draws the composed screen.
      */
-    void hideCursor() const;
+    void draw();
 
     /**
-     * @brief Shows the console cursor.
+     * @brief Updates the layout dimensions.
      *
-     * Restores cursor visibility before the application exits.
+     * When the terminal is too short for the full layout the banner is hidden
+     * automatically so the clock stays visible.
+     *
+     * @param width  New width in columns.
+     * @param height New height in rows.
      */
-    void showCursor() const;
+    void resize(int width, int height);
 
     /**
-     * @brief Flushes pending console output.
-     *
-     * Ensures that all buffered output is immediately written
-     * to the terminal.
+     * @brief Restores the default layout and clears the drawn content.
      */
-    void flush() const;
+    void reset();
+
+    /**
+     * @brief Sets the formatted time to display.
+     * @param time Text produced by TimeFormatter.
+     */
+    void setTime(const std::string &time);
+
+    /**
+     * @brief Sets the formatted date to display.
+     * @param date Text produced by TimeFormatter.
+     */
+    void setDate(const std::string &date);
+
+    /**
+     * @brief Sets the status rows shown beneath the clock.
+     * @param lines Rows produced by StatusBar.
+     */
+    void setStatusLines(const std::vector<std::string> &lines);
+
+    /**
+     * @brief Sets the hint shown on the final row.
+     * @param hint Text such as "Press Q or Ctrl+C to Exit".
+     */
+    void setFooterHint(const std::string &hint);
+
+    /**
+     * @brief Composes the screen without drawing it.
+     *
+     * Exposed so that layout can be verified in tests without a terminal.
+     *
+     * @return std::vector<std::string> The lines that draw() would emit,
+     *         without colour codes or cursor control.
+     */
+    std::vector<std::string> compose() const;
+
+    /**
+     * @brief Returns the banner component so it can be loaded or hidden.
+     * @return Banner& The owned banner.
+     */
+    Banner &banner();
+
+    /**
+     * @brief Returns the layout width.
+     * @return int Width in columns.
+     */
+    int width() const;
+
+    /**
+     * @brief Returns the layout height.
+     * @return int Height in rows.
+     */
+    int height() const;
+
+private:
+    /**
+     * @brief Returns a horizontal rule spanning the layout width.
+     * @param character Character to repeat.
+     * @return std::string Rule of the current width.
+     */
+    std::string rule(char character) const;
+
+    Banner bannerArt;                     ///< Header artwork.
+    std::string timeText;                 ///< Formatted time.
+    std::string dateText;                 ///< Formatted date.
+    std::vector<std::string> statusLines; ///< Status rows.
+    std::string footerHint;               ///< Exit hint.
+
+    int layoutWidth;  ///< Layout width in columns.
+    int layoutHeight; ///< Layout height in rows.
+
+    Console *console;    ///< Output target, or null for standard output.
+    ThemeManager *theme; ///< Colour source, or null for uncoloured output.
 };
 
 #endif // SCREEN_HPP

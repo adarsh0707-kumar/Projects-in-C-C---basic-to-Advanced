@@ -3,117 +3,156 @@
 
 /******************************************************************************
  * @file Display.hpp
- * @brief Declaration of the Display class.
+ * @brief Declaration of the Display presentation component.
  * @author Adarsh Kumar
  * @date 2026
  *
- * The Display module is responsible for rendering the complete user
- * interface of the Digital Clock application. It coordinates multiple
- * modules to display formatted information on the console.
+ * The Display coordinates the presentation layer. It receives already
+ * formatted text from TimeFormatter, hands it to Screen for layout, and draws
+ * the result through Console. It performs no formatting of its own, which
+ * keeps presentation and business logic apart.
  *
- * Responsibilities:
- *  - Clear the console screen
- *  - Display application header
- *  - Display current date
- *  - Display current time
- *  - Display footer
- *  - Coordinate Banner, Theme, and Screen modules
+ * Reference: API Documentation, sections 2.5 and 4.4.
  ******************************************************************************/
 
-#include "Banner.hpp"
-#include "Clock.hpp"
-#include "Date.hpp"
+#include <string>
+
+#include "Console.hpp"
 #include "Screen.hpp"
-#include "Theme.hpp"
+#include "StatusBar.hpp"
+#include "ThemeManager.hpp"
 
 /**
  * @class Display
- * @brief Handles rendering of the Digital Clock user interface.
+ * @brief Owns the console, screen layout and status bar.
  *
- * The Display class combines information from the Clock and Date
- * modules with visual resources provided by the Banner, Theme,
- * and Screen classes to render the complete console interface.
+ * Typical use per frame:
+ * @code
+ * display.renderClock(formatter.formatTimeWide(clock));
+ * display.renderDate(formatter.formatDate(date));
+ * display.renderScreen();
+ * @endcode
  */
 class Display
 {
 public:
-    /**
-     * @brief Constructs a Display object.
-     *
-     * Initializes the display manager. The associated Banner,
-     * Theme, and Screen objects are default constructed.
-     */
-    Display() = default;
+    Display();
 
     /**
-     * @brief Clears the console screen.
-     *
-     * Removes all previously displayed content in preparation
-     * for rendering the next screen.
+     * @brief Restores the terminal if shutdown() was not called.
      */
-    void clearScreen() const;
+    ~Display();
+
+    Display(const Display &) = delete;
+    Display &operator=(const Display &) = delete;
 
     /**
-     * @brief Displays the application header.
+     * @brief Prepares the console and wires the theme into the layout.
      *
-     * Prints the application banner or logo at the top of
-     * the console window.
+     * Also disables colour when the terminal cannot render it, so redirected
+     * output stays free of escape sequences.
+     *
+     * @param theme Theme manager supplying element colours. Must outlive this
+     *              Display.
      */
-    void printHeader() const;
+    void initialize(ThemeManager &theme);
 
     /**
-     * @brief Displays the current date.
-     *
-     * Formats and prints the supplied date information.
-     *
-     * @param date Reference to the Date object.
+     * @brief Stores the formatted time for the next frame.
+     * @param time Formatted time text.
      */
-    void printDate(const Date &date) const;
+    void renderClock(const std::string &time);
 
     /**
-     * @brief Displays the current time.
-     *
-     * Formats and prints the supplied time information.
-     *
-     * @param clock Reference to the Clock object.
+     * @brief Stores the formatted date for the next frame.
+     * @param date Formatted date text.
      */
-    void printClock(const Clock &clock) const;
+    void renderDate(const std::string &date);
 
     /**
-     * @brief Displays the application footer.
+     * @brief Composes and draws the complete screen.
      *
-     * Prints footer information such as status text or
-     * additional application details.
+     * Re-reads the terminal size first so the layout follows a resized
+     * window.
      */
-    void printFooter() const;
+    void renderScreen();
 
     /**
-     * @brief Renders the complete user interface.
-     *
-     * Coordinates all rendering operations including clearing
-     * the screen, printing the header, date, time, and footer.
-     *
-     * @param clock Reference to the Clock object.
-     * @param date Reference to the Date object.
+     * @brief Draws the screen. Equivalent to renderScreen().
      */
-    void render(const Clock &clock,
-                const Date &date) const;
+    void render();
+
+    /**
+     * @brief Redraws the screen. Equivalent to renderScreen().
+     */
+    void update();
+
+    /**
+     * @brief Flushes pending output to the terminal.
+     */
+    void refresh();
+
+    /**
+     * @brief Clears the terminal.
+     */
+    void clear();
+
+    /**
+     * @brief Sets the transient status message.
+     * @param text Message to show, or an empty string to remove it.
+     */
+    void setMessage(const std::string &text);
+
+    /**
+     * @brief Adds or updates a named status field.
+     * @param name  Field label, such as "Theme".
+     * @param value Field value, such as "Dark".
+     */
+    void setStatusField(const std::string &name, const std::string &value);
+
+    /**
+     * @brief Loads banner artwork from a resource file.
+     * @param fileName Resource path.
+     * @return true if the artwork was loaded, false if the default was kept.
+     */
+    bool loadBanner(const std::string &fileName);
+
+    /**
+     * @brief Restores the terminal to its pre-run state.
+     *
+     * Safe to call more than once.
+     */
+    void shutdown();
+
+    /**
+     * @brief Reads a keystroke without blocking.
+     * @return int Character read, or -1 when no key is waiting.
+     */
+    int readKey();
+
+    /**
+     * @brief Returns the owned console.
+     * @return Console& The console used for output.
+     */
+    Console &console();
+
+    /**
+     * @brief Returns the owned screen layout.
+     * @return Screen& The screen used for composition.
+     */
+    Screen &screen();
+
+    /**
+     * @brief Returns the owned status bar.
+     * @return StatusBar& The status bar shown beneath the clock.
+     */
+    StatusBar &statusBar();
 
 private:
-    /**
-     * @brief Provides ASCII banner resources.
-     */
-    Banner banner;
-
-    /**
-     * @brief Provides console color and text formatting.
-     */
-    Theme theme;
-
-    /**
-     * @brief Manages low-level console operations.
-     */
-    Screen screen;
+    Console terminal;  ///< Terminal abstraction.
+    Screen layout;     ///< Layout composer, owns the banner.
+    StatusBar status;  ///< Runtime information rows.
+    bool initialized;  ///< Whether initialize() has run.
 };
 
 #endif // DISPLAY_HPP

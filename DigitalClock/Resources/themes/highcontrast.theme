@@ -1,0 +1,10 @@
+# High contrast theme
+# Maximum legibility for accessibility (NFR-020).
+
+HEADER=BrightWhite
+TIME=BrightWhite
+DATE=BrightWhite
+STATUS=BrightWhite
+FOOTER=BrightWhite
+ACCENT=BrightYellow
+ERROR=BrightRed

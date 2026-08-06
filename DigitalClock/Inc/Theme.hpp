@@ -3,113 +3,110 @@
 
 /******************************************************************************
  * @file Theme.hpp
- * @brief Declaration of the Theme class.
+ * @brief ANSI colour and style primitives.
  * @author Adarsh Kumar
  * @date 2026
  *
- * The Theme module provides ANSI escape sequences used to format
- * console output. It supports foreground colors, background colors,
- * text styles, and resetting terminal formatting to the default state.
- *
- * Responsibilities:
- *  - Apply foreground colors
- *  - Apply background colors
- *  - Apply text styles
- *  - Reset console formatting
+ * This header provides the low-level colour vocabulary used by ThemeManager
+ * and the presentation layer. It knows only how to turn a colour or style into
+ * an ANSI escape sequence; deciding which colour a screen element should use
+ * is the responsibility of ThemeManager.
  ******************************************************************************/
 
 #include <string>
 
 /**
- * @class Theme
- * @brief Provides ANSI escape sequences for console formatting.
- *
- * The Theme class generates ANSI escape codes that allow the
- * application to display colored and formatted text in supported
- * terminal environments. It abstracts ANSI codes behind simple
- * member functions, making console formatting easy to use.
+ * @namespace Theme
+ * @brief ANSI colour and style vocabulary.
  */
-class Theme
+namespace Theme
 {
-public:
     /**
      * @enum Color
-     * @brief Defines the supported console colors.
+     * @brief Terminal colours available to themes.
      */
     enum class Color
     {
-        Default, /**< Use the terminal's default color. */
-        Black,   /**< Black color. */
-        Red,     /**< Red color. */
-        Green,   /**< Green color. */
-        Yellow,  /**< Yellow color. */
-        Blue,    /**< Blue color. */
-        Magenta, /**< Magenta color. */
-        Cyan,    /**< Cyan color. */
-        White    /**< White color. */
+        Default,       ///< Terminal's own foreground/background.
+        Black,
+        Red,
+        Green,
+        Yellow,
+        Blue,
+        Magenta,
+        Cyan,
+        White,
+        BrightBlack,   ///< Commonly rendered as dark grey.
+        BrightRed,
+        BrightGreen,
+        BrightYellow,
+        BrightBlue,
+        BrightMagenta,
+        BrightCyan,
+        BrightWhite
     };
 
     /**
      * @enum Style
-     * @brief Defines the supported text styles.
+     * @brief Text attributes available to themes.
      */
     enum class Style
     {
-        Normal,   /**< Normal text style. */
-        Bold,     /**< Bold text style. */
-        Underline /**< Underlined text style. */
+        Normal,    ///< Clears all attributes.
+        Bold,
+        Dim,
+        Italic,
+        Underline,
+        Reverse
     };
 
     /**
-     * @brief Constructs a Theme object.
-     *
-     * No explicit initialization is required because the class
-     * only generates ANSI escape sequences.
+     * @brief Returns the escape sequence that sets a foreground colour.
+     * @param color Colour to select.
+     * @return std::string ANSI sequence.
      */
-    Theme() = default;
+    std::string foreground(Color color);
 
     /**
-     * @brief Returns the ANSI foreground color sequence.
-     *
-     * Generates the ANSI escape sequence corresponding to the
-     * specified foreground color.
-     *
-     * @param color Desired foreground color.
-     * @return std::string ANSI escape sequence.
+     * @brief Returns the escape sequence that sets a background colour.
+     * @param color Colour to select.
+     * @return std::string ANSI sequence.
      */
-    std::string foreground(Color color) const;
+    std::string background(Color color);
 
     /**
-     * @brief Returns the ANSI background color sequence.
-     *
-     * Generates the ANSI escape sequence corresponding to the
-     * specified background color.
-     *
-     * @param color Desired background color.
-     * @return std::string ANSI escape sequence.
+     * @brief Returns the escape sequence that sets a text attribute.
+     * @param style Attribute to select.
+     * @return std::string ANSI sequence.
      */
-    std::string background(Color color) const;
+    std::string style(Style style);
 
     /**
-     * @brief Returns the ANSI text style sequence.
-     *
-     * Generates the ANSI escape sequence corresponding to the
-     * specified text style.
-     *
-     * @param style Desired text style.
-     * @return std::string ANSI escape sequence.
+     * @brief Returns the escape sequence that clears all colours and styles.
+     * @return std::string ANSI reset sequence.
      */
-    std::string style(Style style) const;
+    std::string reset();
 
     /**
-     * @brief Resets all console formatting.
+     * @brief Converts a colour name to a Color.
      *
-     * Returns the ANSI escape sequence that restores the terminal
-     * to its default foreground color, background color, and text style.
+     * Matching is case-insensitive and tolerates the spellings used in the
+     * bundled theme files, including "DarkBlue", "DarkGray" and "Grey".
+     * Unrecognised names yield @p fallback.
      *
-     * @return std::string ANSI reset escape sequence.
+     * @param name     Colour name.
+     * @param fallback Returned when @p name is not recognised.
+     * @return Color Parsed colour.
      */
-    std::string reset() const;
-};
+    Color colorFromName(const std::string &name,
+                        Color fallback = Color::Default);
+
+    /**
+     * @brief Converts a Color back to its canonical name.
+     * @param color Colour to name.
+     * @return std::string Canonical name, such as "Cyan".
+     */
+    std::string colorName(Color color);
+}
 
 #endif // THEME_HPP

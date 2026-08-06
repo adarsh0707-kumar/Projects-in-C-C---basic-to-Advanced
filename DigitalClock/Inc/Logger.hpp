@@ -3,23 +3,16 @@
 
 /******************************************************************************
  * @file Logger.hpp
- * @brief Declaration of the Logger class.
+ * @brief Declaration of the Logger service.
  * @author Adarsh Kumar
  * @date 2026
  *
- * The Logger module provides a centralized logging system for the
- * Digital Clock application. It supports formatted log messages,
- * multiple severity levels, optional console output, and thread-safe
- * logging operations.
+ * The Logger records application events, warnings and errors so that runtime
+ * behaviour can be traced after the fact. Logging is a support service: when
+ * the log file cannot be opened the application continues to run with logging
+ * silently disabled (see NFR-009 and TC-024).
  *
- * Responsibilities:
- *  - Create and manage log files
- *  - Write formatted log entries
- *  - Generate timestamps
- *  - Support multiple logging levels
- *  - Provide thread-safe logging
- *  - Enable optional console output
- *  - Maintain logging sessions
+ * Reference: API Documentation, section 3.4.
  ******************************************************************************/
 
 #include <fstream>
@@ -28,148 +21,145 @@
 
 /**
  * @class Logger
- * @brief Provides logging services for the application.
+ * @brief Thread-safe, file-backed event log with severity filtering.
  *
- * The Logger class records application events into a log file
- * while optionally displaying them on the console. It supports
- * multiple log levels and ensures thread-safe access using a mutex.
+ * Entries are written as:
+ * @code
+ * [YYYY-MM-DD HH:MM:SS] [LEVEL] message
+ * @endcode
+ *
+ * Every entry is flushed immediately so that a crash cannot lose the tail of
+ * the log.
  */
 class Logger
 {
 public:
     /**
      * @enum Level
-     * @brief Defines the severity level of log messages.
+     * @brief Severity of a log entry, ordered from least to most severe.
      */
     enum class Level
     {
-        DEBUG,   /**< Detailed debugging information. */
-        INFO,    /**< General application information. */
-        WARNING, /**< Warning messages for unexpected situations. */
-        ERROR    /**< Error messages indicating failures. */
+        DEBUG = 0,  ///< Diagnostic detail useful only while developing.
+        INFO = 1,   ///< Normal lifecycle events.
+        WARNING = 2, ///< Recoverable problems; the application continues.
+        ERROR = 3   ///< Failures that prevented an operation from completing.
     };
 
-    /**
-     * @brief Constructs a Logger object.
-     *
-     * Initializes the logger with default settings.
-     */
     Logger();
 
     /**
-     * @brief Destroys the Logger object.
-     *
-     * Ensures that the log file is properly closed and
-     * any allocated resources are released.
+     * @brief Closes the log file if it is still open.
      */
     ~Logger();
 
-    /**
-     * @brief Opens the log file.
-     *
-     * Creates or opens the specified log file for writing.
-     *
-     * @param filename Path to the log file.
-     * @return true if the file was opened successfully.
-     * @return false if the file could not be opened.
-     */
-    bool open(const std::string &filename);
+    Logger(const Logger &) = delete;
+    Logger &operator=(const Logger &) = delete;
 
     /**
-     * @brief Closes the log file.
+     * @brief Opens the log file and writes a session header.
      *
-     * Safely closes the currently opened log file.
+     * The file is opened in append mode so that history is preserved across
+     * runs. Any parent directory named in @p fileName is created first.
+     *
+     * @param fileName Path of the log file.
+     * @return true if logging is available, false if the file could not be
+     *         opened. A false return is not fatal: the caller should continue
+     *         and simply run without logging.
+     */
+    bool initialize(const std::string &fileName);
+
+    /**
+     * @brief Records an informational event.
+     * @param message Text to record.
+     */
+    void info(const std::string &message);
+
+    /**
+     * @brief Records a recoverable problem.
+     * @param message Text to record.
+     */
+    void warning(const std::string &message);
+
+    /**
+     * @brief Records a failure.
+     * @param message Text to record.
+     */
+    void error(const std::string &message);
+
+    /**
+     * @brief Records developer-level diagnostic detail.
+     * @param message Text to record.
+     */
+    void debug(const std::string &message);
+
+    /**
+     * @brief Records a message at an explicit severity.
+     *
+     * @param level   Severity of the entry.
+     * @param message Text to record.
+     */
+    void log(Level level, const std::string &message);
+
+    /**
+     * @brief Flushes and closes the log file.
+     *
+     * Safe to call more than once and safe to call when the log was never
+     * opened.
      */
     void close();
 
     /**
-     * @brief Writes a formatted log entry.
+     * @brief Mirrors log entries to standard output.
      *
-     * Records a log message with the specified severity level.
-     * The message is written to the log file and optionally
-     * displayed on the console.
+     * Disabled by default because console output would corrupt the clock
+     * rendering.
      *
-     * @param level Severity level of the log message.
-     * @param message Message to be logged.
-     */
-    void log(Level level,
-             const std::string &message);
-
-    /**
-     * @brief Enables or disables console logging.
-     *
-     * @param enabled true to display log messages on the console;
-     *                false to disable console output.
+     * @param enabled true to echo entries to the console.
      */
     void setConsoleOutput(bool enabled);
 
     /**
-     * @brief Sets the minimum logging level.
-     *
-     * Messages below the specified level are ignored.
-     *
-     * @param level Minimum severity level to record.
+     * @brief Discards entries below the given severity.
+     * @param level Lowest severity that will be recorded.
      */
     void setMinimumLevel(Level level);
 
+    /**
+     * @brief Reports whether the log file is currently open.
+     * @return true when entries are being written to disk.
+     */
+    bool isOpen() const;
+
+    /**
+     * @brief Converts a severity to its textual name.
+     * @param level Severity to convert.
+     * @return std::string One of DEBUG, INFO, WARNING or ERROR.
+     */
+    static std::string levelToString(Level level);
+
+    /**
+     * @brief Converts a severity name to a Level.
+     *
+     * Matching is case-insensitive; unrecognised names yield @p defaultLevel.
+     *
+     * @param text         Severity name.
+     * @param defaultLevel Returned when @p text is not recognised.
+     * @return Level Parsed severity.
+     */
+    static Level levelFromString(const std::string &text,
+                                 Level defaultLevel = Level::INFO);
+
 private:
     /**
-     * @brief Output file stream used for logging.
-     */
-    std::ofstream file;
-
-    /**
-     * @brief Mutex used to ensure thread-safe logging.
-     */
-    std::mutex mutex;
-
-    /**
-     * @brief Indicates whether console output is enabled.
-     */
-    bool consoleOutput;
-
-    /**
-     * @brief Minimum severity level required for logging.
-     */
-    Level minimumLevel;
-
-    /**
-     * @brief Generates the current timestamp.
-     *
-     * The timestamp is formatted as:
-     * YYYY-MM-DD HH:MM:SS
-     *
-     * @return Formatted timestamp string.
-     */
-    std::string timestamp() const;
-
-    /**
-     * @brief Converts a log level into a readable string.
-     *
-     * @param level Logging level.
-     * @return String representation of the logging level.
-     */
-    std::string levelToString(Level level) const;
-
-    /**
-     * @brief Determines whether a message should be logged.
-     *
-     * Compares the message severity against the configured
-     * minimum logging level.
-     *
-     * @param level Severity level of the message.
-     * @return true if the message should be logged.
-     * @return false otherwise.
-     */
-    bool shouldLog(Level level) const;
-
-    /**
-     * @brief Writes a new logging session header.
-     *
-     * Adds a separator and session information at the
-     * beginning of a new logging session.
+     * @brief Writes the banner that separates one run from the previous one.
      */
     void writeSessionHeader();
+
+    std::ofstream file;   ///< Destination log file.
+    mutable std::mutex mutex; ///< Serialises writes from multiple threads.
+    bool consoleOutput;   ///< Whether entries are echoed to stdout.
+    Level minimumLevel;   ///< Lowest severity that is recorded.
 };
 
 #endif // LOGGER_HPP

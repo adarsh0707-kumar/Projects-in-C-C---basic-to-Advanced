@@ -1,13 +1,12 @@
-# Build directories
+# Build output
 Build/
+Obj/
 build/
 cmake-build-*/
 
-# Object files
+# Object files and libraries
 *.o
 *.obj
-
-# Libraries
 *.a
 *.so
 *.dll
@@ -15,20 +14,24 @@ cmake-build-*/
 
 # Executables
 DigitalClock
+DigitalClockTests
 *.exe
 
 # CMake
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
-Makefile
+CTestTestfile.cmake
+Testing/
 
 # Logs
+Logs/*.log
 *.log
 
 # Editors
 .vscode/
 .idea/
+*.swp
 
 # OS files
 .DS_Store

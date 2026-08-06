@@ -1,144 +1,113 @@
 #include "Display.hpp"
 
-#include <iostream>
-
-#include "Version.hpp"
-
-/*
-------------------------------------------------------------
-Clear screen.
-
-Delegates responsibility to Screen module.
-------------------------------------------------------------
-*/
-void Display::clearScreen() const
+Display::Display()
+    : initialized(false)
 {
-    screen.clear();
-    screen.home();
-    screen.hideCursor();
+    layout.attach(terminal);
 }
 
-/*
-------------------------------------------------------------
-Display header.
-
-Header consists of:
-
-• Banner
-• Version
-• Author
-
-Theme colors are applied here.
-------------------------------------------------------------
-*/
-void Display::printHeader() const
+Display::~Display()
 {
-    std::cout
-        << theme.style(Theme::Style::Bold)
-        << theme.foreground(Theme::Color::Cyan);
-
-    std::cout
-        << banner.loadBanner();
-
-    std::cout
-        << theme.reset();
-
-    std::cout
-        << "\nVersion : "
-        << Version::VERSION
-        << '\n';
-
-    std::cout
-        << "Author  : "
-        << Version::AUTHOR
-        << "\n\n";
+    shutdown();
 }
 
-/*
-------------------------------------------------------------
-Display today's date.
-------------------------------------------------------------
-*/
-void Display::printDate(const Date &date) const
+void Display::initialize(ThemeManager &theme)
 {
-    std::cout
-        << theme.foreground(Theme::Color::Yellow);
+    // Redirected output must not contain escape sequences.
+    theme.setColorEnabled(terminal.supportsColor());
+    theme.applyTheme();
 
-    std::cout
-        << "Date : "
-        << date.getDateLong()
-        << '\n';
+    layout.attach(theme);
 
-    std::cout
-        << theme.reset();
+    terminal.initialize();
+    terminal.clear();
+
+    layout.resize(terminal.width(), terminal.height());
+
+    initialized = true;
 }
 
-/*
-------------------------------------------------------------
-Display current time.
-
-Shows both 24-hour
-and 12-hour formats.
-------------------------------------------------------------
-*/
-void Display::printClock(const Clock &clock) const
+void Display::renderClock(const std::string &time)
 {
-    std::cout
-        << theme.foreground(Theme::Color::Green);
-
-    std::cout
-        << "Time : "
-        << clock.getTime24()
-        << '\n';
-
-    std::cout
-        << "12H  : "
-        << clock.getTime12()
-        << '\n';
-
-    std::cout
-        << theme.reset();
+    layout.setTime(time);
 }
 
-/*
-------------------------------------------------------------
-Display footer.
-------------------------------------------------------------
-*/
-void Display::printFooter() const
+void Display::renderDate(const std::string &date)
 {
-    std::cout
-        << "\n------------------------------------------------------------\n";
-
-    std::cout
-        << "Press Ctrl+C to Exit\n";
+    layout.setDate(date);
 }
 
-/*
-------------------------------------------------------------
-Render complete application UI.
-
-Rendering order
-
-1. Clear screen
-2. Header
-3. Date
-4. Clock
-5. Footer
-------------------------------------------------------------
-*/
-void Display::render(const Clock &clock,
-                     const Date &date) const
+void Display::renderScreen()
 {
-    clearScreen();
+    // Follow the terminal if the user resized the window between frames.
+    layout.resize(terminal.width(), terminal.height());
 
-    printHeader();
+    layout.setStatusLines(status.lines());
+    layout.draw();
+}
 
-    printDate(date);
+void Display::render()
+{
+    renderScreen();
+}
 
-    std::cout << '\n';
+void Display::update()
+{
+    renderScreen();
+}
 
-    printClock(clock);
+void Display::refresh()
+{
+    terminal.refresh();
+}
 
-    printFooter();
+void Display::clear()
+{
+    terminal.clear();
+    terminal.refresh();
+}
+
+void Display::setMessage(const std::string &text)
+{
+    status.setMessage(text);
+}
+
+void Display::setStatusField(const std::string &name, const std::string &value)
+{
+    status.setField(name, value);
+}
+
+bool Display::loadBanner(const std::string &fileName)
+{
+    return layout.banner().load(fileName);
+}
+
+void Display::shutdown()
+{
+    if (!initialized)
+        return;
+
+    terminal.shutdown();
+
+    initialized = false;
+}
+
+int Display::readKey()
+{
+    return terminal.readKey();
+}
+
+Console &Display::console()
+{
+    return terminal;
+}
+
+Screen &Display::screen()
+{
+    return layout;
+}
+
+StatusBar &Display::statusBar()
+{
+    return status;
 }

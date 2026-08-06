@@ -3,86 +3,101 @@
 
 /******************************************************************************
  * @file ResourceManager.hpp
- * @brief Declaration of the ResourceManager class.
+ * @brief Declaration of the ResourceManager service.
  * @author Adarsh Kumar
  * @date 2026
  *
- * The ResourceManager class provides a centralized interface for
- * locating and accessing application resources. It simplifies file
- * management by supplying standard resource paths and utility
- * functions for loading text-based files.
+ * The ResourceManager loads external text assets such as banners, logos and
+ * theme definitions. A missing asset yields empty content rather than an
+ * error, so the application degrades gracefully (TC-017, TC-023).
  *
- * Responsibilities:
- *  - Verify resource availability
- *  - Load text resources
- *  - Provide standard resource file paths
- *  - Centralize resource management
+ * Reference: API Documentation, section 3.5.
  ******************************************************************************/
 
 #include <string>
+#include <vector>
 
 /**
  * @class ResourceManager
- * @brief Manages application resource files.
+ * @brief Locates and reads text resources from disk.
  *
- * The ResourceManager class provides helper functions for checking
- * whether resource files exist, reading text resources, and returning
- * predefined paths for commonly used application resources such as
- * banners, configuration files, and log files.
+ * Relative paths are resolved against a list of search directories, which
+ * lets the application find its assets whether it is launched from the
+ * project root or from the Build directory.
  */
 class ResourceManager
 {
 public:
     /**
-     * @brief Constructs a ResourceManager object.
+     * @brief Constructs a manager with the default search paths.
      *
-     * No explicit initialization is required because this class
-     * provides utility functions for resource management.
+     * The defaults are the current directory, the parent directory and the
+     * grandparent directory, covering launches from the project root, from
+     * @c Build/ and from a nested build tree.
      */
-    ResourceManager() = default;
+    ResourceManager();
 
     /**
-     * @brief Checks whether a resource exists.
+     * @brief Loads a resource into the internal buffer.
      *
-     * Determines if the specified file or resource is available.
-     *
-     * @param path Path to the resource.
-     * @return true if the resource exists.
-     * @return false otherwise.
+     * @param fileName Absolute path, or a path relative to a search directory.
+     * @return true if the resource was found and read. On false the buffer is
+     *         cleared and getContent() returns an empty string.
      */
-    bool exists(const std::string &path) const;
+    bool load(const std::string &fileName);
 
     /**
-     * @brief Loads a text resource.
-     *
-     * Reads the complete contents of a text file and returns
-     * it as a string.
-     *
-     * @param path Path to the text resource.
-     * @return std::string Contents of the file.
+     * @brief Returns the content of the most recent successful load().
+     * @return std::string Resource text, or empty when nothing is loaded.
      */
-    std::string loadText(const std::string &path) const;
+    std::string getContent() const;
 
     /**
-     * @brief Returns the default banner resource path.
+     * @brief Reports whether a resource can be found.
      *
-     * @return std::string Banner file path.
+     * @param fileName Absolute path, or a path relative to a search directory.
+     * @return true if a readable file exists.
      */
-    std::string bannerPath() const;
+    bool exists(const std::string &fileName) const;
 
     /**
-     * @brief Returns the default configuration file path.
+     * @brief Resolves a resource name to a usable path.
      *
-     * @return std::string Configuration file path.
+     * @param fileName Absolute path, or a path relative to a search directory.
+     * @return std::string The first path that exists, or an empty string when
+     *         the resource cannot be found anywhere.
      */
-    std::string configPath() const;
+    std::string resolve(const std::string &fileName) const;
 
     /**
-     * @brief Returns the default log file path.
+     * @brief Reads a resource without disturbing the internal buffer.
      *
-     * @return std::string Log file path.
+     * @param fileName Absolute path, or a path relative to a search directory.
+     * @return std::string File content, or empty when it cannot be read.
      */
-    std::string logPath() const;
+    std::string read(const std::string &fileName) const;
+
+    /**
+     * @brief Adds a directory to the front of the search path.
+     * @param directory Directory to search before the existing entries.
+     */
+    void addSearchPath(const std::string &directory);
+
+    /**
+     * @brief Discards the currently loaded content.
+     */
+    void clear();
+
+    /**
+     * @brief Returns the path that satisfied the last successful load().
+     * @return std::string Resolved path, or empty when nothing is loaded.
+     */
+    const std::string &loadedPath() const;
+
+private:
+    std::vector<std::string> searchPaths; ///< Directories tried, in order.
+    std::string content;                  ///< Buffer filled by load().
+    std::string resolvedPath;             ///< Path that load() actually used.
 };
 
 #endif // RESOURCE_MANAGER_HPP

@@ -1,0 +1,10 @@
+# Green theme
+# A single-hue green colour scheme.
+
+HEADER=BrightGreen
+TIME=Green
+DATE=BrightGreen
+STATUS=White
+FOOTER=BrightBlack
+ACCENT=Green
+ERROR=BrightRed
