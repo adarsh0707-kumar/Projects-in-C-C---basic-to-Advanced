@@ -273,7 +273,13 @@ jobs:
       - name: Stage and deploy Qt
         shell: bash
         run: |
-          DEST="Calculator-${VERSION}-windows-x64"
+          # "Calculator-GUI-", not "Calculator-": release.yml ships
+          # calculator-<v>-windows-x64.zip, and GitHub compares release
+          # asset names case-insensitively -- the two collided and the
+          # GUI upload failed with "already_exists" on the v1.1.0 tag.
+          # The AppImage and .dmg are distinct by extension, so only the
+          # Windows package needs the marker.
+          DEST="Calculator-GUI-${VERSION}-windows-x64"
           echo "DEST=$DEST" >> "$GITHUB_ENV"
 
           mkdir -p "$DEST"
@@ -345,7 +351,7 @@ jobs:
             |---|---|---|
             | Linux | `Calculator-*-x86_64.AppImage` | `chmod +x` it, then run it |
             | macOS | `Calculator-*-macos-arm64.dmg` | Open, drag to Applications |
-            | Windows | `Calculator-*-windows-x64.zip` | Unzip, run `calculator-gui.exe` |
+            | Windows | `Calculator-GUI-*-windows-x64.zip` | Unzip, run `calculator-gui.exe` |
 
             Each package was started headless on its own platform before
             release, so it is known to launch rather than merely build.
