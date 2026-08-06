@@ -1136,8 +1136,29 @@ CI/CD
 
 Cross compilation
 
+Done so far: `CMakeLists.txt` alongside the Makefile (MSVC, Xcode,
+Ninja, Make); the history file moved off a hardcoded relative path to
+a per-user data directory, without which a downloaded binary lost all
+history on every OS; `Tests/test_framework.h` guarded so the suite
+compiles under MSVC; a CI matrix building and testing on
+ubuntu/macos/windows; a tag-triggered CLI release workflow whose jobs
+extract and run their own archives; and a GUI packaging workflow
+producing an AppImage, a `.dmg`, and a portable Windows zip, each
+launched headless before upload.
+
+Two things only real runners could have caught: a repo file named
+`File Tree: Projects.md` made the repository un-clonable on Windows
+(`:` is illegal there, so `git checkout` aborted before any compiler
+ran), and `macos-latest` is now `macos-26`, whose SDK dropped the AGL
+framework Qt still links against.
+
+Remaining: tag a release; a Windows installer as an alternative to the
+portable zip; code signing, without which macOS Gatekeeper and Windows
+SmartScreen warn on first run.
+
 Status:
-🟡 Planned
+🟠 In Progress — builds, tests and packages on all three operating
+systems; no release tagged yet
 
 ---
 

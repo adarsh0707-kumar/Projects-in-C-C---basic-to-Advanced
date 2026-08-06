@@ -69,7 +69,7 @@ AddressSanitizer/UndefinedBehaviorSanitizer).
 | 32       | Plugin architecture                          | 🟡 Planned    |
 | 33       | Calculator scripting                         | 🟡 Planned    |
 | 34       | Package manager                              | 🟡 Planned    |
-| 35       | Cross-platform builds                        | 🟠 In Progress — portability + CMake done; CI/releases/installers pending |
+| 35       | Cross-platform builds                        | 🟠 In Progress — builds, tests and packages on all 3 OSes; no release tagged yet |
 | 36       | Version 2.0 release                          | 🔵 Future     |
 
 See `docs/PHASES.md` for the full breakdown of every phase above.
