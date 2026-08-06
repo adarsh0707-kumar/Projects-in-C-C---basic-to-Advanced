@@ -207,6 +207,9 @@ jobs:
 
           iconutil -c icns Calculator.iconset -o Calculator.icns
 
+          # CMake's MACOSX_BUNDLE produces Contents/MacOS and Info.plist
+          # but no Resources directory until something needs one.
+          mkdir -p "$APP/Contents/Resources"
           cp Calculator.icns "$APP/Contents/Resources/"
           /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string Calculator" \
             "$APP/Contents/Info.plist" 2>/dev/null || \
