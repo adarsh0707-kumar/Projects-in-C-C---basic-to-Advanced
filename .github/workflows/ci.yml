@@ -31,6 +31,51 @@ defaults:
     working-directory: Calculator
 
 jobs:
+  # Phase 35: the portability gate. The Makefile jobs below are
+  # Linux-only by nature (POSIX shell), so this is the job that proves
+  # the CMake build actually works on macOS and Windows rather than
+  # merely being written to.
+  #
+  # Qt6 is deliberately NOT installed here: the CLI and the test suite
+  # have no external dependencies, and CMakeLists.txt treats a missing
+  # Qt as "skip the GUI target", so this also exercises that path.
+  cross-platform:
+    name: CMake (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      # --config is required by multi-config generators (Visual Studio,
+      # Xcode) and ignored by single-config ones, so one line covers all
+      # three runners.
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Run unit test suite
+        run: ctest --test-dir build --build-config Release --output-on-failure
+
+      # Proves the built binary actually starts and evaluates, which is
+      # the claim a downloadable release makes. bash is present on every
+      # GitHub runner including Windows, so one script covers all three;
+      # the binary's location differs (multi-config generators nest it
+      # under Release/), hence the find.
+      - name: Smoke test the CLI
+        shell: bash
+        run: |
+          BIN=$(find build -type f \( -name calculator -o -name calculator.exe \) | head -1)
+          echo "Running $BIN"
+          printf '1\n2+3*4\n1\nsqrt(16)\n2\n12\n' | "$BIN"
+
   build-and-test:
     name: Build & Test (${{ matrix.build }})
     runs-on: ubuntu-latest
@@ -66,9 +111,11 @@ jobs:
       - name: Build with ${{ matrix.build }}
         run: make BUILD=${{ matrix.build }} all
 
+      # The `mkdir -p Build` that used to be here is gone: history no
+      # longer writes to ./Build (see historyFilePath()), so there is
+      # nothing to create.
       - name: Smoke test under ${{ matrix.build }}
         run: |
-          mkdir -p Build
           printf "1\n2+2*5\n1\n10 %% 3\n1\n5/0\n11\nplot(sin(x))\n11\nplot(1/x)\n11\nplot(x!)\n7\n3+4i\n8\n[[1,2],[3,4]]+[[5,6],[7,8]]\n12\n" | ./calculator
 
       - name: Run unit test suite under ${{ matrix.build }}
