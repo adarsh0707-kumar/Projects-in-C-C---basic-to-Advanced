@@ -60,9 +60,17 @@ extern int testsSkipped;
  * binary again with a "run only this case" flag, or CreateProcess
  * plumbing) would be a lot of machinery for a handful of assertions.
  * So on Windows these cases are *skipped and reported as skipped*
- * rather than silently passing -- a Windows run legitimately covers
- * less than a POSIX run, and the summary should say so instead of
- * quietly claiming the same number of passes.
+ * rather than silently passing, so a Windows summary can never claim
+ * coverage it didn't have.
+ *
+ * As it stands there are NO call sites: every case that once used this
+ * (stack overflow/underflow, out-of-domain factorial) has migrated to
+ * returned status codes, so Linux, macOS and Windows all run the same
+ * 471 tests and testsSkipped is always 0. The macro and its guard are
+ * kept because the underlying pattern -- "this really does exit(1)" --
+ * is still worth being able to assert, and because the POSIX includes
+ * above would otherwise break the MSVC build the moment someone used
+ * it again.
  */
 #if defined(_WIN32)
 

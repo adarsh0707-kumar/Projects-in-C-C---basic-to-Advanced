@@ -58,9 +58,12 @@ build-system half; CI, release archives, and installers follow.
   suite could not compile on Windows at all. Those are now behind
   `#if !defined(_WIN32)`, with a Windows branch that reports each such
   case as **SKIP** and counts it in a new `testsSkipped` total printed
-  by `Tests/test_main.c`. Deliberately not silently passing: a Windows
-  run genuinely covers less than a POSIX run and the summary should say
-  so.
+  by `Tests/test_main.c`, so a Windows summary can never claim coverage
+  it didn't have. In practice the macro currently has **no call sites**
+  — the cases that once used it migrated to returned status codes — so
+  all three platforms run the same 471 tests and `testsSkipped` stays
+  0. The guard was still required: those POSIX includes broke the MSVC
+  compile regardless of whether the macro was used.
 - `Tests/test_history.c`: replaced the backup-and-restore dance against
   the user's real history file with `setHistoryFilePath()` pointing at
   a scratch file. The old approach duplicated a path constant that has
