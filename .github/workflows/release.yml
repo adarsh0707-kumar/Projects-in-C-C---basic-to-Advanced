@@ -62,8 +62,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # GUI explicitly OFF: these archives ship no Qt runtime, and an
+      # unbundled calculator-gui would fail to start on a clean
+      # machine. Making it an explicit flag means the archive contents
+      # don't depend on whether the runner happens to have Qt.
       - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCALCULATOR_BUILD_GUI=OFF
 
       - name: Build
         run: cmake --build build --config Release
