@@ -1,0 +1,185 @@
+# Builds downloadable Calculator archives for Linux, macOS, and Windows
+# and attaches them to a GitHub Release.
+#
+# PLACEMENT: like ci.yml, this must live at the *repository* root, not
+# under Calculator/ -- GitHub Actions only reads <repo-root>/.github/
+# workflows/. Every step sets working-directory: Calculator.
+#
+# TAGGING: this repo hosts several independent projects, so the tag is
+# namespaced. Push a tag like `calculator-v1.1.0` to trigger a build,
+# or run it manually from the Actions tab (workflow_dispatch) to test
+# the pipeline without creating a tag at all.
+#
+# The release is created as a DRAFT. Nothing becomes publicly visible
+# until someone opens it on the Releases page and clicks Publish, so a
+# broken pipeline can never ship a broken download.
+#
+# SCOPE: this is the CLI only. It has no external dependencies, so its
+# archives are small and work on a clean machine with nothing
+# installed. The GUI needs Qt bundled per-platform (windeployqt,
+# macdeployqt, AppImage) and gets its own workflow.
+
+name: Calculator Release
+
+on:
+  push:
+    tags:
+      - 'calculator-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version label for a manual test build (no tag created)'
+        required: false
+        default: '0.0.0-test'
+
+defaults:
+  run:
+    working-directory: Calculator
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: linux-x86_64
+            archive: tar.gz
+          - os: macos-latest
+            label: macos-arm64
+            archive: tar.gz
+          - os: windows-latest
+            label: windows-x64
+            archive: zip
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      # A release must never ship something that failed its own tests.
+      - name: Run unit test suite
+        run: ctest --test-dir build --build-config Release -V
+
+      # cmake --install lays out bin/ + share/doc/ (LICENSE, Readme).
+      # Staging under a versioned directory name means the archive
+      # unpacks into one clearly-named folder rather than spraying
+      # files into the user's current directory.
+      - name: Stage install tree
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#calculator-v}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+          STAGE="calculator-$VERSION-${{ matrix.label }}"
+          echo "STAGE=$STAGE" >> "$GITHUB_ENV"
+
+          cmake --install build --config Release --prefix "stage/$STAGE"
+          ls -R "stage/$STAGE"
+
+      - name: Create archive
+        shell: bash
+        run: |
+          cd stage
+          if [ "${{ matrix.archive }}" = "zip" ]; then
+            7z a -tzip "../$STAGE.zip" "$STAGE"
+          else
+            tar -czf "../$STAGE.tar.gz" "$STAGE"
+          fi
+
+      # Unpack the archive somewhere unrelated and run the binary from
+      # there. This is the actual claim a release makes -- that a user
+      # who downloads and extracts it can run the thing -- and it is
+      # also the regression test for the hardcoded "./Build/history.txt"
+      # path that used to break exactly this scenario.
+      - name: Verify the archive a user would download
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/unpack"
+          cd "$RUNNER_TEMP/unpack"
+
+          if [ "${{ matrix.archive }}" = "zip" ]; then
+            7z x "$GITHUB_WORKSPACE/Calculator/$STAGE.zip" > /dev/null
+          else
+            tar -xzf "$GITHUB_WORKSPACE/Calculator/$STAGE.tar.gz"
+          fi
+
+          BIN=$(find . -type f \( -name calculator -o -name calculator.exe \) | head -1)
+          chmod +x "$BIN" || true
+          echo "Running extracted binary: $BIN"
+
+          OUT=$(printf '1\n2+3*4\n2\n12\n' | "$BIN")
+          echo "$OUT"
+
+          echo "$OUT" | grep -q "14" || { echo "::error::extracted binary did not evaluate 2+3*4 to 14"; exit 1; }
+          echo "$OUT" | grep -q "2+3\*4 = 14" || { echo "::error::history did not record the calculation -- the per-user data dir may be broken on this platform"; exit 1; }
+
+      - name: Upload archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.STAGE }}
+          path: Calculator/${{ env.STAGE }}.${{ matrix.archive }}
+          if-no-files-found: error
+
+  release:
+    name: Draft GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    # A manual run builds and verifies the archives but has no tag to
+    # attach them to, so it stops after the build job.
+    if: startsWith(github.ref, 'refs/tags/calculator-v')
+
+    steps:
+      - name: Download all archives
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List what will be attached
+        run: ls -lR artifacts
+        working-directory: ${{ github.workspace }}
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          name: Calculator ${{ github.ref_name }}
+          files: artifacts/*
+          body: |
+            Command-line Calculator for Linux, macOS, and Windows.
+
+            **No installation and no dependencies** — download the
+            archive for your system, extract it, and run the
+            `calculator` binary inside.
+
+            | Platform | Download |
+            |---|---|
+            | Linux (x86_64) | `calculator-*-linux-x86_64.tar.gz` |
+            | macOS (Apple Silicon) | `calculator-*-macos-arm64.tar.gz` |
+            | Windows (x64) | `calculator-*-windows-x64.zip` |
+
+            Calculation history is kept per-user, outside the extracted
+            folder, so moving or deleting the folder won't lose it:
+
+            - Linux: `~/.local/share/calculator/history.txt`
+            - macOS: `~/Library/Application Support/Calculator/history.txt`
+            - Windows: `%APPDATA%\Calculator\history.txt`
+
+            Every archive was built from this tag, passed the full unit
+            test suite on its own platform, and was then extracted and
+            run to confirm it works outside the build tree.

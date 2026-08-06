@@ -61,8 +61,13 @@ jobs:
       - name: Build
         run: cmake --build build --config Release
 
+      # -V rather than --output-on-failure: on a pass, the latter hides
+      # everything, so the per-platform test count -- and the SKIPPED
+      # line Windows prints where fork() is unavailable -- never reached
+      # the log. That difference in coverage is exactly what should be
+      # visible.
       - name: Run unit test suite
-        run: ctest --test-dir build --build-config Release --output-on-failure
+        run: ctest --test-dir build --build-config Release -V
 
       # Proves the built binary actually starts and evaluates, which is
       # the claim a downloadable release makes. bash is present on every
