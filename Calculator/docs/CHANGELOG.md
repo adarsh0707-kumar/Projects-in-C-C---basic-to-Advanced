@@ -8,6 +8,81 @@ The format is based on **Keep a Changelog** and follows **Semantic Versioning** 
 
 # [Unreleased]
 
+## 2026-08-06 — Phase 35 (cross-platform), part 2: CI, releases, and packaging
+
+Part 1 made the code *capable* of running everywhere. This part proves
+it does, and builds the downloads.
+
+### Added
+
+- `.github/workflows/ci.yml`: a `cross-platform` job building with
+  CMake on `ubuntu-latest`, `macos-latest`, and `windows-latest`. Every
+  pre-existing job is Linux-running-the-Makefile, so nothing until now
+  had ever compiled this project with MSVC or on macOS. Qt is
+  deliberately not installed, which also exercises CMakeLists.txt's
+  "Qt missing is not an error" path. `ctest` runs with `-V` rather than
+  `--output-on-failure`, because the latter prints nothing on a pass and
+  the per-platform test count was invisible.
+- `.github/workflows/release.yml`: tag-triggered (`calculator-v*`) CLI
+  release. Builds, tests, packages `cmake --install`, then **extracts
+  each archive into an unrelated directory and runs the binary from
+  there**, asserting both that `2+3*4` gives 14 and that the
+  calculation reaches history. That second assertion is the
+  per-platform regression test for the hardcoded `./Build/history.txt`
+  path fixed in part 1. Releases are created as **drafts**, so a broken
+  pipeline cannot publish a broken download.
+- `.github/workflows/release-gui.yml`: the non-developer downloads —
+  AppImage via linuxdeploy, `.dmg` via macdeployqt, and a portable
+  Windows folder via windeployqt. Qt is bundled in each, so nothing
+  needs installing. Every job launches its own packaged artifact
+  headless before uploading, so something that builds but cannot start
+  fails the run instead of reaching a user. Kept separate from the CLI
+  workflow so a GUI packaging failure can never block a CLI release.
+- `CMakeLists.txt`: `CALCULATOR_BUILD_GUI` (default ON). Without it,
+  whether a release archive contained a GUI binary depended on whether
+  the build machine happened to have Qt — and an unbundled
+  `calculator-gui` simply fails to start on a clean machine. The CLI
+  release passes OFF explicitly.
+
+### Fixed
+
+- **`File Tree: Projects.md` → `File Tree - Projects.md`.** Windows
+  forbids `:` in filenames, so `git checkout` aborted with "invalid
+  path" before any compiler ran — **the whole repository could not be
+  cloned on Windows**, not just Calculator. Found by the first Windows
+  CI job. A repo-wide scan found no other illegal paths, names ending
+  in a space or dot, or reserved basenames.
+- **macOS GUI build: `ld: framework 'AGL' not found`.** `macos-latest`
+  now resolves to `macos-26-arm64`, whose SDK no longer ships AGL,
+  which Qt's CMake config still links against. Qt 6.8.1 and 6.9.1
+  failed identically while the same Qt built fine on Linux and Windows
+  — that is what ruled out the Qt version as the cause. Pinned to
+  `macos-14`, the newest image still carrying AGL and still Apple
+  Silicon, so the DMG stays arm64 rather than falling back to Intel.
+- **macOS bundle icon.** CMake's `MACOSX_BUNDLE` creates
+  `Contents/MacOS` and `Info.plist` but no `Resources` directory, so
+  installing the generated `.icns` had nowhere to go.
+
+### Verified
+
+Run `31085008040` (CLI): archives on all three platforms — 59 KB Linux,
+47 KB macOS, 46 KB Windows — each extracted and run outside its build
+tree, history recorded. That was the first execution anywhere of the
+per-user data directory on Windows (`%APPDATA%\Calculator`) and macOS
+(`~/Library/Application Support/Calculator`).
+
+Run `31090078960` (GUI): 28.0 MB AppImage, 20.9 MB DMG, 20.6 MB Windows
+zip, each launched headless on its own platform.
+
+All three platforms report **ALL 471 TESTS PASSED**.
+
+### Not done
+
+No release has been tagged yet. The macOS and Windows packages are
+unsigned, so first-run Gatekeeper and SmartScreen warnings are
+expected. A Windows installer (as opposed to the portable zip) and
+`Calculator/Build/`, now orphaned, are both still outstanding.
+
 ## 2026-08-05 (7) — Phase 35 (cross-platform), part 1: portability groundwork
 
 Goal: someone downloads a release from GitHub and runs it on Linux,
