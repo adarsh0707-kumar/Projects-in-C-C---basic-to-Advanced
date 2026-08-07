@@ -178,6 +178,14 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/digitalclock-v')
 
     steps:
+      # github.ref_name is the namespaced tag (digitalclock-v1.2.0), which
+      # would make the release title read "Digital Clock
+      # digitalclock-v1.2.0". Strip the prefix so it reads as a version.
+      - name: Derive the version from the tag
+        id: version
+        run: echo "value=${GITHUB_REF_NAME#digitalclock-}" >> "$GITHUB_OUTPUT"
+        working-directory: ${{ github.workspace }}
+
       - name: Download all archives
         uses: actions/download-artifact@v4
         with:
@@ -192,7 +200,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           draft: true
-          name: Digital Clock ${{ github.ref_name }}
+          name: Digital Clock ${{ steps.version.outputs.value }}
           files: artifacts/*
           body: |
             A console digital clock for Linux, macOS and Windows, with
