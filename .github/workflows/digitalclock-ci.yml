@@ -1,0 +1,186 @@
+# NOTE ON PLACEMENT: this repo hosts multiple independent projects
+# (Calculator, DigitalClock, GuessTheNumber, ...), but GitHub Actions
+# only reads workflow files from <repo-root>/.github/workflows/ -- not
+# from a subproject's own .github/workflows/. So this file lives at the
+# repository root and every step sets working-directory: DigitalClock.
+#
+# The path filters below keep a Calculator change from triggering this
+# workflow, and vice versa.
+
+name: DigitalClock CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'DigitalClock/**'
+      - '.github/workflows/digitalclock-ci.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'DigitalClock/**'
+      - '.github/workflows/digitalclock-ci.yml'
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: DigitalClock
+
+jobs:
+  # The portability gate, and the reason this workflow exists.
+  #
+  # Through v1.1.0 the project shipped _WIN32 branches in Console,
+  # Logger, Clock and Date that had never been compiled, let alone run.
+  # The Testing Report recorded Windows as "implemented, not verified"
+  # (KI-000) rather than claiming support it had not earned. This job is
+  # what closes that gap: it builds and runs the suite on all three
+  # platforms.
+  #
+  # Building alone would not be enough. The Windows-specific code is in
+  # the rendering and terminal paths, which no unit test reaches, so the
+  # smoke step runs the application itself with --once.
+  cross-platform:
+    name: CMake (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      # --config is required by multi-config generators (Visual Studio,
+      # Xcode) and ignored by single-config ones, so one line covers all
+      # three runners.
+      - name: Build
+        run: cmake --build build --config Release
+
+      # -V rather than --output-on-failure: on a pass the latter hides
+      # everything, so the per-platform test count never reaches the log.
+      # Seeing 78 tests run on Windows is the evidence this job exists to
+      # produce.
+      #
+      # The suite resolves Config/ and Resources/ relative to the project
+      # root, which is why CMakeLists sets WORKING_DIRECTORY.
+      - name: Run test suite
+        run: ctest --test-dir build --build-config Release -V
+
+      # Executes the console, layout and rendering paths that the unit
+      # tests reach only indirectly. --once draws a single frame and
+      # exits, so this works on a runner with no interactive terminal.
+      #
+      # Run from the project root so Config/ and Resources/ resolve. The
+      # binary's location differs between generators (multi-config ones
+      # nest it under Release/), hence the find.
+      - name: Smoke test the application
+        shell: bash
+        run: |
+          BIN=$(find Build build -type f \
+                \( -name DigitalClock -o -name DigitalClock.exe \) 2>/dev/null | head -1)
+
+          if [ -z "$BIN" ]; then
+            echo "::error::could not locate the built executable"
+            find Build build -type f -name 'DigitalClock*' || true
+            exit 1
+          fi
+
+          echo "Running $BIN"
+
+          "$BIN" --version
+          "$BIN" --help > /dev/null
+
+          # Strip ANSI escapes so the assertions below match on any
+          # runner, coloured or not.
+          "$BIN" --once | sed 's/\x1b\[[0-9;?]*[A-Za-z]//g' > frame.txt
+
+          echo "--- rendered frame ---"
+          cat frame.txt
+          echo "----------------------"
+
+          # A frame that renders but omits its content would still exit 0,
+          # so assert the parts that prove the layout actually composed.
+          grep -q 'Theme' frame.txt || { echo "::error::status bar missing"; exit 1; }
+          grep -q 'Press Q' frame.txt || { echo "::error::footer missing"; exit 1; }
+          grep -qE '[0-9]{2} : [0-9]{2} : [0-9]{2}' frame.txt \
+            || { echo "::error::clock not rendered"; exit 1; }
+
+          echo "Smoke test passed."
+
+  # The Makefile is POSIX-only by nature, so these jobs are Linux-only.
+  build-and-test:
+    name: Make (${{ matrix.build }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        build: [release, debug]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build (${{ matrix.build }})
+        run: |
+          if [ "${{ matrix.build }}" = "debug" ]; then
+            make debug
+          else
+            make
+          fi
+
+      - name: Run test suite
+        run: make test
+
+      - name: Smoke test the application
+        run: ./Build/DigitalClock --once > /dev/null
+
+  # The project compiles warning-free under five warning flags, and that
+  # is part of its contract with contributors (CONTRIBUTING.md). Treating
+  # warnings as errors here keeps the claim true rather than aspirational.
+  warnings:
+    name: Warnings as errors
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build with -Werror
+        run: make OPTIMIZE="-O2 -Werror"
+
+      - name: Build the test suite with -Werror
+        run: make OPTIMIZE="-O2 -Werror" test
+
+  sanitizers:
+    name: Sanitizer (${{ matrix.sanitizer }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: [address, undefined]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # halt_on_error makes UBSan fail the job rather than printing a
+      # diagnostic and carrying on, which would let a real defect pass as
+      # a green run.
+      - name: Run test suite under ${{ matrix.sanitizer }}
+        env:
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+          ASAN_OPTIONS: detect_leaks=1
+        run: make SANITIZE=${{ matrix.sanitizer }} test
+
+      - name: Smoke test under ${{ matrix.sanitizer }}
+        env:
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+          ASAN_OPTIONS: detect_leaks=1
+        run: ./Build/DigitalClock --once > /dev/null

@@ -30,6 +30,7 @@ namespace
             << "  -c, --config <path>  Configuration file to load\n"
             << "                       (default: "
             << Application::defaultConfigPath() << ")\n"
+            << "  -1, --once           Render a single frame and exit\n"
             << "  -v, --version        Print the version and exit\n"
             << "  -h, --help           Print this help and exit\n\n"
             << "Press Q or Ctrl+C to exit the running clock.\n";
@@ -50,6 +51,14 @@ int main(int argc, char *argv[])
 
     std::string configPath = Application::defaultConfigPath();
 
+    /*
+    --once renders one frame and exits instead of entering the refresh loop.
+    It exists so the rendering path can be exercised non-interactively: a CI
+    job on a platform with no terminal to attach to still executes console
+    initialization, layout and drawing, which a build alone would not.
+    */
+    bool renderOnce = false;
+
     for (int index = 1; index < argc; ++index)
     {
         const std::string argument = argv[index];
@@ -58,6 +67,12 @@ int main(int argc, char *argv[])
         {
             printUsage(programName);
             return 0;
+        }
+
+        if (argument == "-1" || argument == "--once")
+        {
+            renderOnce = true;
+            continue;
         }
 
         if (argument == "-v" || argument == "--version")
@@ -93,6 +108,14 @@ int main(int argc, char *argv[])
                   << "See the log for details.\n";
 
         return Application::EXIT_STARTUP_FAILED;
+    }
+
+    if (renderOnce)
+    {
+        application.renderFrame();
+        application.shutdown();
+
+        return Application::EXIT_OK;
     }
 
     return application.run();

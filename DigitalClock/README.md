@@ -65,6 +65,7 @@ Or via the helper scripts:
 ```bash
 ./Build/DigitalClock                          # uses Config/config.ini
 ./Build/DigitalClock --config path/to.ini     # alternative configuration
+./Build/DigitalClock --once                   # render one frame and exit
 ./Build/DigitalClock --version
 ./Build/DigitalClock --help
 ```
@@ -268,6 +269,9 @@ DigitalClock/
 make test                      # all tests
 ./Build/DigitalClockTests      # same, run directly
 ./Build/DigitalClockTests TC-0 # filter by identifier
+
+make SANITIZE=address test     # under AddressSanitizer
+make SANITIZE=undefined test   # under UndefinedBehaviorSanitizer
 ```
 
 78 tests, covering TC-001 through TC-041 from

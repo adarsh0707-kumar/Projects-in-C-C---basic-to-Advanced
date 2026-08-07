@@ -8,15 +8,29 @@
 #   make debug      Build with debug symbols and no optimisation
 #   make clean      Remove build output
 #   make help       List available targets
+#
+# Sanitizers:
+#   make SANITIZE=address test
+#   make SANITIZE=undefined test
+#
+# SANITIZE is passed straight to -fsanitize=, so any sanitizer the compiler
+# supports works. It also forces -O1 -g, which keeps stack traces readable.
 # =============================================================================
 
 CXX      ?= g++
 CXXSTD    = -std=c++17
 WARNINGS  = -Wall -Wextra -Wpedantic -Wshadow -Wconversion
 OPTIMIZE ?= -O2
-CXXFLAGS  = $(CXXSTD) $(WARNINGS) $(OPTIMIZE) -IInc
-LDFLAGS   =
+SANFLAGS  =
 LDLIBS    = -pthread
+
+ifdef SANITIZE
+  SANFLAGS = -fsanitize=$(SANITIZE) -fno-omit-frame-pointer -g
+  OPTIMIZE = -O1
+endif
+
+CXXFLAGS  = $(CXXSTD) $(WARNINGS) $(OPTIMIZE) $(SANFLAGS) -IInc
+LDFLAGS   = $(SANFLAGS)
 
 INCDIR    = Inc
 SRCDIR    = Src
@@ -83,5 +97,7 @@ help:
 	@echo "  make run      Build and run the application"
 	@echo "  make test     Build and run the test suite"
 	@echo "  make debug    Build with debug symbols"
+	@echo "  make SANITIZE=address test    Run the suite under ASan"
+	@echo "  make SANITIZE=undefined test  Run the suite under UBSan"
 	@echo "  make clean    Remove build output"
 	@echo "  make help     Show this message"
