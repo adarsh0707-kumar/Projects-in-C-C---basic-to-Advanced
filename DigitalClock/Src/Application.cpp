@@ -5,6 +5,7 @@
 #include <csignal>
 #include <thread>
 
+#include "TimeZone.hpp"
 #include "Utility.hpp"
 #include "Version.hpp"
 
@@ -169,6 +170,7 @@ bool Application::initialize(const std::string &configPath)
     // Stage 4b - Alarms (v1.1.0) and the timer (v1.2.0).
     configureAlarms();
     configureTimer();
+    configureZones();
 
     // Stages 5 and 7 - Console and Display.
     display.initialize(theme);
@@ -337,6 +339,42 @@ void Application::configureTimer()
     countdown.setDuration(CountdownTimer::DEFAULT_DURATION_MS);
 }
 
+void Application::configureZones()
+{
+    const std::string configured = config.getValue("TimeZones", "");
+
+    if (Utility::trim(configured).empty())
+        return;
+
+    if (!zones.load(configured))
+    {
+        logger.warning(
+            "No usable time zones in '" + configured + "'.");
+        return;
+    }
+
+    logger.info(
+        "Loaded " + std::to_string(zones.count()) + " time zone(s).");
+
+    if (zones.invalidCount() > 0)
+    {
+        logger.warning(
+            std::to_string(zones.invalidCount()) +
+            " time zone entr(y/ies) could not be parsed and were skipped.");
+    }
+
+    if (zones.unresolvedCount() > 0)
+    {
+        // Worth a warning rather than a silent UTC: a named zone the platform
+        // cannot resolve would otherwise display the wrong time under the
+        // right label.
+        logger.warning(
+            std::to_string(zones.unresolvedCount()) +
+            " time zone(s) cannot be resolved on this platform and will "
+            "display as UTC.");
+    }
+}
+
 void Application::updateTimer(std::int64_t nowMs)
 {
     if (!countdown.poll(nowMs))
@@ -446,6 +484,9 @@ std::string Application::modeName(Mode mode)
     case Mode::Timer:
         return "Timer";
 
+    case Mode::World:
+        return "World";
+
     case Mode::Clock:
         break;
     }
@@ -479,6 +520,12 @@ Application::Mode Application::cycleMode()
         break;
 
     case Mode::Timer:
+        // Skip the world clock when no extra zones are configured; an empty
+        // mode is a dead step in the cycle.
+        setMode(zones.count() > 0 ? Mode::World : Mode::Clock);
+        break;
+
+    case Mode::World:
         setMode(Mode::Clock);
         break;
     }
@@ -496,6 +543,11 @@ CountdownTimer &Application::timer()
     return countdown;
 }
 
+WorldClock &Application::world()
+{
+    return zones;
+}
+
 std::string Application::footerHint() const
 {
     switch (currentMode)
@@ -505,6 +557,9 @@ std::string Application::footerHint() const
 
     case Mode::Timer:
         return "[Space] Start/Pause  [R] Reset  [M] Mode  [Q] Quit";
+
+    case Mode::World:
+        return "[M] Mode  Press Q or Ctrl+C to Exit";
 
     case Mode::Clock:
         break;
@@ -576,10 +631,30 @@ void Application::renderFrame()
         break;
     }
 
+    case Mode::World:
+    {
+        display.renderClock(formatter.formatTimeWide(clock));
+        display.renderDate(formatter.formatDate(date));
+        break;
+    }
+
     case Mode::Clock:
         display.renderClock(formatter.formatTimeWide(clock));
         display.renderDate(formatter.formatDate(date));
         break;
+    }
+
+    // The zone rows belong to the world clock only.
+    if (currentMode == Mode::World)
+    {
+        display.showInfoLines(
+            zones.rows(
+                std::time(nullptr),
+                formatter.timeFormat() == TimeFormatter::TimeFormat::Hour12));
+    }
+    else
+    {
+        display.showInfoLines({});
     }
 
     display.renderScreen();
@@ -667,6 +742,7 @@ bool Application::handleKey(int key)
 
         break;
 
+    case Mode::World:
     case Mode::Clock:
         break;
     }

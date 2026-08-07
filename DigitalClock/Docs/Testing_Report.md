@@ -889,7 +889,8 @@ The table below records the unit tests that were implemented and executed. Count
 | Application Lifecycle | `test_application.cpp` | 6 | 6 | 0 |
 | Alarm Module | `test_alarm.cpp` | 18 | 18 | 0 |
 | Stopwatch & Timer | `test_timing.cpp` | 13 | 13 | 0 |
-| **Total** | | **91** | **91** | **0** |
+| World Clock | `test_timezone.cpp` | 10 | 10 | 0 |
+| **Total** | | **101** | **101** | **0** |
 
 The suite exceeds the 26 tests originally planned because several planned cases needed more than one assertion group to cover their boundary conditions.
 
@@ -1121,8 +1122,9 @@ Integration is exercised through the `Application` and presentation-layer tests,
 | Startup & Shutdown | `TC-001`, `TC-002`, `TC-020` | **Pass** |
 | Alarm + Clock + Notifier + Screen | `TC-034`, `TC-037`, `TC-041` | **Pass** |
 | Stopwatch + Timer + Application modes | `TC-052`, `UT-110` | **Pass** |
+| WorldClock + TimeZone + Screen rows | `TC-060`, `UT-120` | **Pass** |
 
-All ten integration paths passed.
+All eleven integration paths passed.
 
 One defect was found at a module boundary rather than inside a module:
 `AlarmManager::poll()` and `Alarm::minutesUntil()` were each correct alone,
@@ -1819,6 +1821,34 @@ is. The rounding rule is asserted rather than left to inspection.
 
 ---
 
+# 7.12c World Clock Test Cases (v1.3.0)
+
+Executed 2026-08-07; all passed.
+
+| Test ID | Objective | Actual Result | Status |
+|---------|-----------|---------------|--------|
+| TC-053 | Verify UTC offset parsing | `UTC`, `GMT`, `UTC+05:30`, `+05:30`, `-08:00`, `+09` and the +14:00/-12:00 extremes all parsed | **Pass** |
+| TC-054 | Verify malformed offsets are rejected | Empty, unsigned, incomplete and out-of-range specifications all refused | **Pass** |
+| TC-055 | Verify fixed-offset zones convert exactly | 12:00 UTC rendered as 17:30 at +05:30 and 04:00 at -08:00; fixed offsets always resolve | **Pass** |
+| TC-056 | Verify zone time and offset formatting | 24-hour and 12-hour forms correct, including the midnight and noon boundaries; offsets rendered as +HH:MM | **Pass** |
+| TC-057 | Verify zone specification parsing | Offsets, named zones and optional labels parsed; a '/' distinguishes a named zone; malformed entries refused | **Pass** |
+| TC-058 | Verify the world clock loads a zone list | Three zones loaded with labels; whitespace and empty entries between commas tolerated | **Pass** |
+| TC-059 | Verify malformed zone entries are skipped, not fatal | Two valid entries survived alongside two malformed ones, which were counted; the zone count is capped | **Pass** |
+| TC-060 | Verify world clock rows are aligned and labelled | Rows carried label, time and offset; labels padded so times form a column; 12-hour rendering carried a meridiem | **Pass** |
+
+Two supporting cases carry `UT-` identifiers because they assert platform
+behaviour rather than a documented requirement:
+
+- **UT-120** holds whether or not the platform has a timezone database. The
+  assertion is the invariant either way: a zone reporting itself resolvable
+  must convert, and one that does not must still produce a usable time.
+- **UT-121** asserts that resolving a named zone restores the process `TZ`
+  variable. The mechanism mutates global state, and a failure to restore
+  would corrupt every later `localtime()` call in the process -- a fault that
+  would surface far from its cause.
+
+---
+
 # 7.13 Test Case Execution Summary
 
 | Category | Test Cases | Executed | Passed | Failed |
@@ -1835,14 +1865,16 @@ is. The rounding rule is asserted rather than left to inspection.
 | Boundary & Negative | 5 | 5 | 5 | 0 |
 | Alarm Module (v1.1.0) | 16 | 16 | 16 | 0 |
 | Stopwatch & Timer (v1.2.0) | 11 | 11 | 11 | 0 |
-| **Total** | **52** | **52** | **52** | **0** |
+| World Clock (v1.3.0) | 8 | 8 | 8 | 0 |
+| **Total** | **60** | **60** | **60** | **0** |
 
 Executed 2026-08-07. Two additional boundary cases, TC-005A and TC-006A, were
 added during implementation to cover the midnight and noon conversions that
 the FR-004 acceptance criteria require; both pass. TC-026 to TC-041 arrived
-with the v1.1.0 alarm module, and TC-042 to TC-052 with the v1.2.0 stopwatch
-and timer. The wider automated suite contains 91 tests in total, the remainder
-carrying `UT-` identifiers.
+with the v1.1.0 alarm module, TC-042 to TC-052 with the v1.2.0 stopwatch
+and timer, and TC-053 to TC-060 with the v1.3.0 world clock. The wider
+automated suite contains 101 tests in total, the remainder carrying `UT-`
+identifiers.
 
 ---
 
@@ -1885,17 +1917,17 @@ Once development is completed, this chapter should be updated with the actual ex
 # 8.2 Test Execution Summary
 
 The table below records actual execution. The automated suite is a single
-binary, `Build/DigitalClockTests`, containing 91 tests; the phases below
+binary, `Build/DigitalClockTests`, containing 101 tests; the phases below
 describe what those tests cover rather than separate executables, so a single
 test may contribute to more than one phase.
 
 | Testing Phase | Test Cases | Executed | Passed | Failed | Status |
 |---------------|-----------:|---------:|-------:|-------:|--------|
-| Unit Testing | 91 | 91 | 91 | 0 | **Complete** |
-| Integration Testing | 10 paths | 10 | 10 | 0 | **Complete** |
+| Unit Testing | 101 | 101 | 101 | 0 | **Complete** |
+| Integration Testing | 11 paths | 11 | 11 | 0 | **Complete** |
 | System Testing | 6 categories | 6 | 6 | 0 | **Complete** |
-| Functional Testing (TC-001 – TC-052) | 52 | 52 | 52 | 0 | **Complete** |
-| **Automated suite total** | **91** | **91** | **91** | **0** | **Pass** |
+| Functional Testing (TC-001 – TC-060) | 60 | 60 | 60 | 0 | **Complete** |
+| **Automated suite total** | **101** | **101** | **101** | **0** | **Pass** |
 
 Reproduce with:
 
@@ -1914,8 +1946,8 @@ boundary.
 
 | Test Category | Expected Result | Actual Result | Status |
 |---------------|-----------------|---------------|--------|
-| Unit Testing | All modules operate correctly | 91 of 91 tests passed | **Pass** |
-| Integration Testing | Modules communicate without errors | All 10 integration paths passed | **Pass** |
+| Unit Testing | All modules operate correctly | 101 of 101 tests passed | **Pass** |
+| Integration Testing | Modules communicate without errors | All 11 integration paths passed | **Pass** |
 | System Testing | Complete application functions correctly | Application ran and rendered correctly | **Pass** |
 | Performance Testing | Meets target performance requirements | All targets met with margin (see 8.5) | **Pass** |
 | Compatibility Testing | Runs on all supported platforms | Verified by CI on Linux, Windows and macOS (see 8.6) | **Pass** |
@@ -2071,6 +2103,7 @@ Every component has direct automated coverage.
 | Application (startup & shutdown) | 6 | ✔ |
 | Alarm / AlarmManager / Notifier | 18 | ✔ |
 | Stopwatch / CountdownTimer | 13 | ✔ |
+| TimeZone / WorldClock | 10 | ✔ |
 | Error handling | across all files | ✔ |
 
 Two areas are covered only indirectly and are worth stating plainly:
@@ -2150,7 +2183,7 @@ execution statistics, per-requirement outcomes, measured performance figures,
 the compatibility matrix, the defects found and closed, coverage, and the
 acceptance verdict.
 
-The headline result is 91 of 91 automated tests passing, with all documented
+The headline result is 101 of 101 automated tests passing, with all documented
 test cases executed and passed, and no open defects. Continuous integration
 verifies Linux, Windows and macOS on every change, so the compatibility matrix
 reflects executed runs rather than intent. The remaining gap is User
@@ -2352,16 +2385,16 @@ first two are the ones that matter for a release decision.
 # 9.11 Final Validation Statement
 
 Based on the testing and validation activities actually carried out, the
-**Digital Clock System v1.2.0 satisfies its defined functional and
+**Digital Clock System v1.3.0 satisfies its defined functional and
 non-functional requirements on Linux**, with the two exceptions recorded
 below.
 
 Completed and passed:
 
-- Unit Testing — 91 of 91
-- Integration Testing — 10 of 10 paths
+- Unit Testing — 101 of 101
+- Integration Testing — 11 of 11 paths
 - System Testing — 6 of 6 categories
-- Functional Testing — TC-001 to TC-052, all passed
+- Functional Testing — TC-001 to TC-060, all passed
 
 Not completed:
 
@@ -2401,10 +2434,10 @@ The Digital Clock System was tested across multiple levels. Results:
 
 | Testing Level | Result |
 |---------------|--------|
-| Unit Testing | **Pass** — 91 of 91 |
-| Integration Testing | **Pass** — 10 of 10 paths |
+| Unit Testing | **Pass** — 101 of 101 |
+| Integration Testing | **Pass** — 11 of 11 paths |
 | System Testing | **Pass** — 6 of 6 categories |
-| Functional Testing | **Pass** — TC-001 to TC-052 |
+| Functional Testing | **Pass** — TC-001 to TC-060 |
 | Performance Testing | **Pass** — all targets met with margin |
 | Compatibility Testing | **Pass** — Linux, Windows and macOS verified in CI |
 | Recovery Testing | **Pass** — every degraded path exercised |
@@ -2426,6 +2459,7 @@ Every major module carries automated coverage.
 | Time Formatter | **Covered** |
 | Alarm Module | **Covered** |
 | Stopwatch and Timer | **Covered** |
+| World Clock | **Covered** |
 | Display / Screen / StatusBar | **Covered** |
 | Configuration Manager | **Covered** |
 | Theme Manager | **Covered** |
@@ -2532,11 +2566,11 @@ This completes the **06_Testing_Report.md** document.
 | Document | **06_Testing_Report.md** |
 | Project | **Digital Clock System** |
 | Language | **C++17** |
-| Application Version | **1.2.0** |
-| Document Version | **1.4** |
+| Application Version | **1.3.0** |
+| Document Version | **1.5** |
 | Status | **Executed** |
 | Test Execution Date | **2026-08-07** |
-| Result | **91 of 91 automated tests passed; TC-001 – TC-052 all passed** |
+| Result | **101 of 101 automated tests passed; TC-001 – TC-060 all passed** |
 | Open Defects | **None** |
 | Known Gaps | No UAT; line coverage not measured |
 | Environment | Garuda Linux (kernel 7.1.5-zen1-2-zen, x86_64), GCC 16.1.1, GNU Make 4.4.1, CMake 4.4.2 |

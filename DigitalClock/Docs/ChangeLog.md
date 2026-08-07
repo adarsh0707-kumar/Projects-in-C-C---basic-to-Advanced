@@ -500,6 +500,7 @@ The table below summarizes the official project versions.
 | **1.0.0** | Stable        | Initial production release              |
 | **1.1.0** | Stable        | Alarm module and notification support   |
 | **1.2.0** | Stable        | Stopwatch and countdown timer           |
+| **1.3.0** | Stable        | World clock and time zone support       |
 
 These versions represent the major milestones in the development lifecycle.
 
@@ -836,6 +837,66 @@ Stable
 ### Notes
 
 Version **1.2.0** delivers the stopwatch and countdown timer planned for this
+release in section 6.3.
+
+---
+
+# 3.9c Version 1.3.0 - World Clock
+
+### Release Status
+
+Stable
+
+### Added
+
+- **Time zone support.** `TimeZone` converts a UTC instant into wall-clock
+  time elsewhere; `WorldClock` holds the configured set and renders aligned
+  rows.
+- **World mode**, a fourth entry in the `M` cycle, showing local time above
+  the configured zones with their offsets.
+- Configuration key `TimeZones`, a comma-separated list with optional
+  labels: `UTC, Asia/Kolkata | Home, -08:00 | Pacific`.
+- `Screen::setInfoLines()`, informational rows drawn between the date and
+  any alert panel.
+
+### Design Notes
+
+- **C++17 has no timezone database.** `std::chrono::time_zone` arrived in
+  C++20, so two mechanisms are offered, and the difference between them is
+  deliberately visible in the API rather than hidden:
+  - A **fixed offset** is arithmetic on the UTC instant. Exact, identical on
+    every platform, and has no notion of daylight saving.
+  - A **named zone** is resolved through the platform's own database by
+    swapping `TZ` and calling `tzset()`. Daylight saving is handled
+    correctly. POSIX only.
+- Choosing a fixed offset for a region that observes daylight saving is a
+  correctness decision the user is making, not an implementation detail, so
+  it is documented rather than papered over.
+- **A named zone that cannot be resolved is marked**, not silently rendered
+  as UTC. POSIX treats an unknown `TZ` as UTC, so the alternative would be
+  to show a wrong time under a right-looking label.
+- **The `TZ` swap is restored and mutex-guarded.** It mutates process-global
+  state; a failure to restore would leave every later `localtime()` call in
+  the process using the wrong zone. TC-061 (UT-121) asserts the restoration
+  rather than trusting it.
+- **World mode is skipped in the cycle when no zones are configured**, since
+  an empty mode is a dead step.
+
+### Release Verification
+
+| Item | Result |
+|------|--------|
+| Release date | 2026-08-07 |
+| Automated tests | 101 of 101 passed |
+| New test cases | TC-053 - TC-060 |
+| Compiler warnings | 0 under `-Wall -Wextra -Wpedantic -Wshadow -Wconversion` |
+| Platforms | Linux, Windows and macOS via CI |
+| End-to-end check | Four zones rendered; `America/New_York` correctly showed UTC-04:00 in August, confirming daylight saving is followed |
+| Open defects | None |
+
+### Notes
+
+Version **1.3.0** delivers the multiple time zone support planned for this
 release in section 6.3.
 
 ---
@@ -1194,7 +1255,7 @@ Features deferred to future releases:
 | ~~KI-001~~ | ~~Alarm functionality is not implemented~~ | Enhancement | **Closed in v1.1.0** |
 | ~~KI-002~~ | ~~Stopwatch feature is unavailable~~ | Enhancement | **Closed in v1.2.0** |
 | ~~KI-003~~ | ~~Countdown timer is not available~~ | Enhancement | **Closed in v1.2.0** |
-| KI-004   | Multiple time zone support is unavailable | Enhancement | Open |
+| ~~KI-004~~ | ~~Multiple time zone support is unavailable~~ | Enhancement | **Closed in v1.3.0** |
 | KI-005   | Graphical User Interface (GUI) is not implemented | Enhancement | Open |
 | KI-006   | Plugin architecture is not available | Enhancement | Open |
 
@@ -1383,6 +1444,7 @@ The following roadmap outlines the expected progression of future versions.
 | --------------- | ------------------------------------------------------------------- |
 | ~~**1.1.0**~~ | ~~Alarm module and notification support~~ - **delivered 2026-08-07** |
 | ~~**1.2.0**~~ | ~~Stopwatch and countdown timer~~ - **delivered 2026-08-07** |
+| ~~**1.3.0**~~ | ~~Multiple time zone support~~ - **delivered 2026-08-07** |
 | **1.2.0** | Stopwatch and countdown timer                                       |
 | **1.3.0** | Multiple time zone support                                          |
 | **1.4.0** | Theme enhancements and improved configuration                       |
@@ -1693,14 +1755,14 @@ Developers and maintainers are encouraged to update the Change Log as an integra
 | Item | Details |
 | ---- | ------- |
 | Document | **09_ChangeLog.md** |
-| Document Version | **1.4** |
+| Document Version | **1.5** |
 | Project | **Digital Clock System** |
-| Current Version | **1.2.0** |
+| Current Version | **1.3.0** |
 | Release Date | **2026-08-07** |
 | Language | **C++17** |
 | Status | **Released** |
 | Verified On | Linux (GCC 16.1.1), Windows (MSVC 19.51) and macOS, via CI |
-| Test Result | 91 of 91 automated tests passed; no open defects |
+| Test Result | 101 of 101 automated tests passed; no open defects |
 | Known Gaps | No UAT (KI-007); line coverage not measured (KI-008) |
 | Audience | Developers, Maintainers, Test Engineers, Project Managers, End Users |
 

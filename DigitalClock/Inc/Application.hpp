@@ -30,6 +30,7 @@
 #include "ResourceManager.hpp"
 #include "ThemeManager.hpp"
 #include "TimeFormatter.hpp"
+#include "WorldClock.hpp"
 
 /**
  * @class Application
@@ -51,7 +52,8 @@ public:
     {
         Clock,     ///< Time and date (the default).
         Stopwatch, ///< Elapsed time with laps.
-        Timer      ///< Countdown to zero.
+        Timer,     ///< Countdown to zero.
+        World      ///< Local time plus the configured zones.
     };
 
     /** Exit status returned on a normal shutdown. */
@@ -157,6 +159,12 @@ public:
     CountdownTimer &timer();
 
     /**
+     * @brief Returns the configured additional time zones.
+     * @return WorldClock& The world clock.
+     */
+    WorldClock &world();
+
+    /**
      * @brief Returns a monotonic reading for the time-based components.
      *
      * Uses std::chrono::steady_clock, so adjusting the system clock cannot
@@ -260,6 +268,11 @@ private:
     void configureTimer();
 
     /**
+     * @brief Loads the additional time zones from the configuration.
+     */
+    void configureZones();
+
+    /**
      * @brief Handles a keystroke.
      *
      * @param key Character read from the console.
@@ -292,6 +305,7 @@ private:
     AlarmManager alarmManager;   ///< Configured alarms.
     Stopwatch elapsedTimer;      ///< Stopwatch state.
     CountdownTimer countdown;    ///< Countdown timer state.
+    WorldClock zones;            ///< Additional time zones.
     Notifier alertNotifier;      ///< Composes the alarm alert panel.
     Display display;             ///< Presentation layer.
 

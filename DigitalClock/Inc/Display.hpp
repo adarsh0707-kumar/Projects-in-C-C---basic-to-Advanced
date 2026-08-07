@@ -125,6 +125,12 @@ public:
     void clearNotification();
 
     /**
+     * @brief Sets informational rows beneath the date.
+     * @param lines Rows to draw, or an empty vector to remove them.
+     */
+    void showInfoLines(const std::vector<std::string> &lines);
+
+    /**
      * @brief Loads banner artwork from a resource file.
      * @param fileName Resource path.
      * @return true if the artwork was loaded, false if the default was kept.

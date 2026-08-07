@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project(
     DigitalClock
-    VERSION 1.2.0
+    VERSION 1.3.0
     DESCRIPTION "Digital Clock System"
     LANGUAGES CXX
 )
@@ -58,7 +58,9 @@ add_library(digitalclock_core STATIC
     Src/Theme.cpp
     Src/ThemeManager.cpp
     Src/TimeFormatter.cpp
+    Src/TimeZone.cpp
     Src/Utility.cpp
+    Src/WorldClock.cpp
 )
 
 target_include_directories(digitalclock_core
@@ -105,6 +107,7 @@ if(BUILD_TESTING_SUITE)
         Tests/test_application.cpp
         Tests/test_alarm.cpp
         Tests/test_timing.cpp
+        Tests/test_timezone.cpp
     )
 
     target_include_directories(DigitalClockTests

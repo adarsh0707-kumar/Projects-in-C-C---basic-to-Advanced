@@ -71,6 +71,11 @@ void Screen::setFooterHint(const std::string &hint)
     footerHint = hint;
 }
 
+void Screen::setInfoLines(const std::vector<std::string> &lines)
+{
+    infoLines = lines;
+}
+
 void Screen::setNotification(const std::vector<std::string> &lines)
 {
     alertLines = lines;
@@ -101,6 +106,7 @@ void Screen::reset()
     timeText.clear();
     dateText.clear();
     statusLines.clear();
+    infoLines.clear();
     alertLines.clear();
 
     footerHint = "Press Q or Ctrl+C to Exit";
@@ -155,6 +161,12 @@ std::vector<std::string> Screen::compose() const
     lines.push_back("");
     lines.push_back(Utility::center(dateText, layoutWidth));
     lines.push_back("");
+
+    for (const std::string &info : infoLines)
+        lines.push_back(Utility::center(info, layoutWidth));
+
+    if (!infoLines.empty())
+        lines.push_back("");
 
     // A ringing alarm sits directly under the clock, where the eye already is.
     for (const std::string &alert : alertLines)

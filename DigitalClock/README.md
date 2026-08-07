@@ -2,8 +2,8 @@
 
 A console digital clock in C++17. It displays the current system time and date
 in real time, refreshing on a configurable interval, with recurring alarms, a
-stopwatch, a countdown timer, themeable colours, external configuration and
-file-based logging.
+stopwatch, a countdown timer, a world clock, themeable colours, external
+configuration and file-based logging.
 
 No third-party dependencies — the standard library only.
 
@@ -124,6 +124,7 @@ default rather than stopping the application.
 | `SnoozeMinutes`   | minutes, 1 - 240                                 | `5`                    |
 | `AlarmBell`       | `true`, `false`                                  | `true`                 |
 | `TimerDuration`   | `MM:SS`, `H:MM:SS`, or seconds; max 24h          | `05:00`                |
+| `TimeZones`       | comma-separated zone list, max 8                 | *(empty)*              |
 | `Logging`         | `Enabled`, `Disabled`                            | `Enabled`              |
 | `LogFile`         | path; missing directories are created            | `Logs/application.log` |
 | `LogLevel`        | `DEBUG`, `INFO`, `WARNING`, `ERROR`              | `INFO`                 |
@@ -192,18 +193,19 @@ file, and a missing alarm file simply means no alarms are configured.
 
 ### Stopwatch and timer
 
-Press **M** to cycle between the three modes: clock, stopwatch and timer. Each
+Press **M** to cycle between the modes: clock, stopwatch, timer, and — when
+`TimeZones` is set — the world clock. Each
 supplies the large centre readout while it is on screen. Switching modes never
 disturbs the others — a running stopwatch keeps running while you look at the
 clock, and alarms and the countdown keep working whatever is displayed.
 
-| Key | Clock | Stopwatch | Timer |
-| --- | ----- | --------- | ----- |
-| `M` | Cycle mode | Cycle mode | Cycle mode |
-| `Space` | — | Start / stop | Start / pause |
-| `L` | — | Lap | — |
-| `R` | — | Reset | Reset |
-| `Q` | Quit | Quit | Quit |
+| Key | Clock | Stopwatch | Timer | World |
+| --- | ----- | --------- | ----- | ----- |
+| `M` | Cycle mode | Cycle mode | Cycle mode | Cycle mode |
+| `Space` | — | Start / stop | Start / pause | — |
+| `L` | — | Lap | — | — |
+| `R` | — | Reset | Reset | — |
+| `Q` | Quit | Quit | Quit | Quit |
 
 While an alarm is ringing, **S** snoozes and **D** dismisses, in any mode.
 **D** also acknowledges a finished countdown.
@@ -223,6 +225,44 @@ same alert panel the alarms use:
                  | [D] Dismiss   [R] Reset                    |
                  +--------------------------------------------+
 ```
+
+---
+
+### World clock
+
+Set `TimeZones` to a comma-separated list. Each entry is a zone with an
+optional label after a pipe:
+
+```ini
+TimeZones=UTC, Asia/Kolkata | Home, America/New_York | NYC, -08:00 | Pacific
+```
+
+```text
+              UTC      03:47  (UTC+00:00)
+              Home     09:17  (UTC+05:30)
+              NYC      23:47  (UTC-04:00)
+              Pacific  19:47  (UTC-08:00)
+```
+
+Two kinds of zone, and the difference matters:
+
+| Form | Example | Daylight saving | Platforms |
+| ---- | ------- | --------------- | --------- |
+| Named | `America/New_York` | **Followed** | Linux, macOS |
+| Fixed offset | `-08:00`, `UTC+05:30` | Not applied | All, including Windows |
+
+C++17 has no timezone database — `std::chrono::time_zone` arrived in C++20 —
+so named zones are resolved through the platform's own database. That is
+present on Linux and macOS. Windows does not expose zones under these names,
+so use fixed offsets there.
+
+A fixed offset is exact and portable but has no notion of daylight saving: a
+fixed `-05:00` is an hour wrong for New York for the months it observes EDT.
+Where the platform supports it, prefer the named form. A named zone that
+cannot be resolved is marked `[unavailable on this platform]` rather than
+silently displaying UTC under the wrong label.
+
+Leave `TimeZones` empty and the world clock is skipped in the mode cycle.
 
 ---
 
@@ -259,7 +299,7 @@ A layered design; each layer depends only on the ones beneath it.
    Presentation   Console · Display · Screen · Banner · StatusBar · Notifier
                          ▲
    Business logic   Clock · Date · TimeFormatter · Alarm · AlarmManager
-                    Stopwatch · CountdownTimer
+                    Stopwatch · CountdownTimer · TimeZone · WorldClock
                          ▲
    Service        ConfigurationManager · ThemeManager · Logger
                   ResourceManager · Utility
@@ -279,6 +319,8 @@ shutdown. `main()` only parses arguments and delegates.
 | `Alarm`                | One alarm: time, label, recurrence, snooze state    |
 | `Stopwatch`            | Elapsed time with laps                              |
 | `CountdownTimer`       | Counts down and fires once at zero                  |
+| `TimeZone`             | Converts a UTC instant to another zone              |
+| `WorldClock`           | The configured zone set, rendered as rows           |
 | `AlarmManager`         | Loads alarms and decides when one fires             |
 | `Notifier`             | Composes the alert panel and sounds the bell        |
 | `Display`              | Coordinates the presentation layer                 |
@@ -344,7 +386,7 @@ make SANITIZE=address test     # under AddressSanitizer
 make SANITIZE=undefined test   # under UndefinedBehaviorSanitizer
 ```
 
-91 tests, covering TC-001 through TC-052 from
+101 tests, covering TC-001 through TC-060 from
 [`Docs/Testing_Report.md`](Docs/Testing_Report.md) plus supporting unit tests
 (`UT-*`) for the parsing and layout code. The harness is a small header in
 `Tests/TestFramework.hpp` — adding a third-party framework would have been the

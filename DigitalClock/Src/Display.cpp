@@ -87,6 +87,11 @@ void Display::clearNotification()
     layout.setNotification({});
 }
 
+void Display::showInfoLines(const std::vector<std::string> &lines)
+{
+    layout.setInfoLines(lines);
+}
+
 bool Display::loadBanner(const std::string &fileName)
 {
     return layout.banner().load(fileName);

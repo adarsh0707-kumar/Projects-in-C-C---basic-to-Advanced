@@ -100,6 +100,16 @@ public:
     void setFooterHint(const std::string &hint);
 
     /**
+     * @brief Sets informational rows shown beneath the date.
+     *
+     * Used by the world clock for its zone list. Drawn above any alert
+     * panel, so a ringing alarm still sits closest to the eye.
+     *
+     * @param lines Rows to draw. An empty vector removes them.
+     */
+    void setInfoLines(const std::vector<std::string> &lines);
+
+    /**
      * @brief Sets the alert panel shown beneath the date.
      *
      * Pass an empty vector to remove it. The panel is drawn in the theme's
@@ -155,6 +165,7 @@ private:
     std::string timeText;                 ///< Formatted time.
     std::string dateText;                 ///< Formatted date.
     std::vector<std::string> statusLines; ///< Status rows.
+    std::vector<std::string> infoLines;   ///< Informational rows, if any.
     std::vector<std::string> alertLines;  ///< Alarm alert panel, if any.
     std::string footerHint;               ///< Exit hint.
 
