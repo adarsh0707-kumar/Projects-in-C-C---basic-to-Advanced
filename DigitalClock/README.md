@@ -29,6 +29,31 @@ No third-party dependencies — the standard library only.
 
 ---
 
+## Download
+
+Prebuilt archives are attached to each
+[release](https://github.com/adarsh0707-kumar/Projects-in-C-C---basic-to-Advanced/releases).
+No installation and no dependencies — extract and run.
+
+| Platform | Archive |
+| -------- | ------- |
+| Linux (x86_64) | `digitalclock-*-linux-x86_64.tar.gz` |
+| macOS (Apple Silicon) | `digitalclock-*-macos-arm64.tar.gz` |
+| Windows (x64) | `digitalclock-*-windows-x64.zip` |
+
+```bash
+tar -xzf digitalclock-1.2.0-linux-x86_64.tar.gz
+cd digitalclock-1.2.0-linux-x86_64
+./DigitalClock
+```
+
+Run it **from inside the extracted folder**: the application reads `Config/`
+and `Resources/` relative to the working directory. Each archive ships its own
+configuration, themes and banner, and every one is extracted and run by CI
+before the release is drafted.
+
+---
+
 ## Building
 
 Requires a C++17 compiler (GCC 8+, Clang 7+ or MSVC 2019+) and either `make` or

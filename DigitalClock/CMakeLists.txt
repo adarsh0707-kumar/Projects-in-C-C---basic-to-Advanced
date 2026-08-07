@@ -130,14 +130,43 @@ endif()
 # ----------------------------
 include(GNUInstallDirs)
 
-install(TARGETS DigitalClock RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+# Two layouts, because they answer different questions.
+#
+# The default is FHS -- bin/, share/, etc/ -- which is what a system
+# install into /usr/local should look like.
+#
+# A downloadable archive needs something else. ResourceManager resolves
+# Resources/ and Config/ relative to the working directory (and its
+# parents), so an FHS tree would leave an extracted archive unable to find
+# its own theme and configuration files: it would start, silently fall back
+# to the built-in banner and default theme, and look subtly broken. The
+# portable layout puts everything in one directory so that extracting and
+# running works, which is the only promise a download makes.
+option(DIGITALCLOCK_PORTABLE_INSTALL
+       "Install a self-contained, relocatable directory tree" OFF)
 
-install(
-    DIRECTORY ${PROJECT_SOURCE_DIR}/Resources/
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/digitalclock/Resources
-)
+if(DIGITALCLOCK_PORTABLE_INSTALL)
+    install(TARGETS DigitalClock RUNTIME DESTINATION .)
 
-install(
-    DIRECTORY ${PROJECT_SOURCE_DIR}/Config/
-    DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/digitalclock
-)
+    install(DIRECTORY ${PROJECT_SOURCE_DIR}/Resources/ DESTINATION Resources)
+    install(DIRECTORY ${PROJECT_SOURCE_DIR}/Config/ DESTINATION Config)
+
+    install(
+        FILES
+            ${PROJECT_SOURCE_DIR}/README.md
+            ${PROJECT_SOURCE_DIR}/LICENSE
+        DESTINATION .
+    )
+else()
+    install(TARGETS DigitalClock RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+    install(
+        DIRECTORY ${PROJECT_SOURCE_DIR}/Resources/
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/digitalclock/Resources
+    )
+
+    install(
+        DIRECTORY ${PROJECT_SOURCE_DIR}/Config/
+        DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/digitalclock
+    )
+endif()

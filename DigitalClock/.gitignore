@@ -3,6 +3,7 @@ Build/
 Obj/
 build/
 cmake-build-*/
+stage/
 
 # Object files and libraries
 *.o

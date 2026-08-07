@@ -1,0 +1,229 @@
+# Builds downloadable Digital Clock archives for Linux, macOS and Windows
+# and attaches them to a GitHub Release.
+#
+# PLACEMENT: like the CI workflows, this must live at the *repository*
+# root -- GitHub Actions only reads <repo-root>/.github/workflows/. Every
+# step sets working-directory: DigitalClock.
+#
+# TAGGING: this repo hosts several independent projects, so the tag is
+# namespaced. Push a tag like `digitalclock-v1.2.0` to trigger a build,
+# or run it manually from the Actions tab (workflow_dispatch) to exercise
+# the pipeline without creating a tag at all.
+#
+# The release is created as a DRAFT. Nothing is publicly visible until
+# someone opens it on the Releases page and clicks Publish, so a broken
+# pipeline cannot ship a broken download.
+#
+# LAYOUT: the archives use the portable install tree, not the FHS one.
+# ResourceManager resolves Resources/ and Config/ relative to the working
+# directory, so a bin/share/etc layout would leave an extracted archive
+# unable to find its own themes and configuration -- it would start,
+# quietly fall back to the built-in banner and default theme, and look
+# subtly broken. The verify step below is what keeps that honest.
+
+name: DigitalClock Release
+
+on:
+  push:
+    tags:
+      - 'digitalclock-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version label for a manual test build (no tag created)'
+        required: false
+        default: '0.0.0-test'
+
+defaults:
+  run:
+    working-directory: DigitalClock
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: linux-x86_64
+            archive: tar.gz
+          - os: macos-latest
+            label: macos-arm64
+            archive: tar.gz
+          - os: windows-latest
+            label: windows-x64
+            archive: zip
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Configure
+        run: >
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
+          -DDIGITALCLOCK_PORTABLE_INSTALL=ON
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      # A release must never ship something that failed its own tests.
+      - name: Run test suite
+        run: ctest --test-dir build --build-config Release -V
+
+      # Staging under a versioned directory name means the archive unpacks
+      # into one clearly-named folder rather than spraying files into the
+      # user's current directory.
+      - name: Stage install tree
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#digitalclock-v}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+          STAGE="digitalclock-$VERSION-${{ matrix.label }}"
+          echo "STAGE=$STAGE" >> "$GITHUB_ENV"
+
+          cmake --install build --config Release --prefix "stage/$STAGE"
+          ls -R "stage/$STAGE"
+
+      - name: Create archive
+        shell: bash
+        run: |
+          cd stage
+          if [ "${{ matrix.archive }}" = "zip" ]; then
+            7z a -tzip "../$STAGE.zip" "$STAGE"
+          else
+            tar -czf "../$STAGE.tar.gz" "$STAGE"
+          fi
+
+      # Unpack the archive somewhere unrelated and run it from there. This
+      # is the actual claim a release makes -- that someone who downloads
+      # and extracts it can run the thing -- and it is not something the
+      # build or the unit tests can establish.
+      - name: Verify the archive a user would download
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/unpack"
+          cd "$RUNNER_TEMP/unpack"
+
+          if [ "${{ matrix.archive }}" = "zip" ]; then
+            7z x "$GITHUB_WORKSPACE/DigitalClock/$STAGE.zip" > /dev/null
+          else
+            tar -xzf "$GITHUB_WORKSPACE/DigitalClock/$STAGE.tar.gz"
+          fi
+
+          cd "$STAGE"
+          echo "--- extracted tree ---"
+          ls -R .
+
+          # The archive must carry its own configuration and assets.
+          for required in Config/config.ini Config/alarms.ini \
+                          Resources/banner.txt Resources/themes/dark.theme; do
+            [ -f "$required" ] || {
+              echo "::error::archive is missing $required"
+              exit 1
+            }
+          done
+
+          BIN=$(find . -maxdepth 1 -type f \
+                \( -name DigitalClock -o -name DigitalClock.exe \) | head -1)
+          chmod +x "$BIN" || true
+          echo "Running extracted binary: $BIN"
+
+          "$BIN" --version
+          "$BIN" --once | sed 's/\x1b\[[0-9;?]*[A-Za-z]//g' > frame.txt
+
+          echo "--- rendered frame ---"
+          cat frame.txt
+          echo "----------------------"
+
+          grep -q 'Theme' frame.txt \
+            || { echo "::error::status bar missing"; exit 1; }
+          grep -qE '[0-9]{2} : [0-9]{2} : [0-9]{2}' frame.txt \
+            || { echo "::error::clock not rendered"; exit 1; }
+
+          # The decisive check. When Resources/ cannot be found the
+          # application still starts, but falls back to a built-in banner
+          # whose text is "DIGITAL CLOCK SYSTEM"; the shipped banner.txt is
+          # ASCII art that contains no such line. Seeing the fallback here
+          # means the archive layout is wrong even though nothing crashed.
+          if grep -q 'DIGITAL CLOCK SYSTEM' frame.txt; then
+            echo "::error::fell back to the built-in banner -- the extracted archive could not find Resources/"
+            exit 1
+          fi
+
+          echo "Archive verified: runs standalone and loaded its own resources."
+
+      - name: Upload archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.STAGE }}
+          path: DigitalClock/${{ env.STAGE }}.${{ matrix.archive }}
+          if-no-files-found: error
+
+  release:
+    name: Draft GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    # A manual run builds and verifies the archives but has no tag to
+    # attach them to, so it stops after the build job.
+    if: startsWith(github.ref, 'refs/tags/digitalclock-v')
+
+    steps:
+      - name: Download all archives
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List what will be attached
+        run: ls -lR artifacts
+        working-directory: ${{ github.workspace }}
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          name: Digital Clock ${{ github.ref_name }}
+          files: artifacts/*
+          body: |
+            A console digital clock for Linux, macOS and Windows, with
+            alarms, a stopwatch and a countdown timer.
+
+            **No installation and no dependencies** — download the archive
+            for your system, extract it, and run the `DigitalClock` binary
+            from inside the extracted folder.
+
+            | Platform | Download |
+            |---|---|
+            | Linux (x86_64) | `digitalclock-*-linux-x86_64.tar.gz` |
+            | macOS (Apple Silicon) | `digitalclock-*-macos-arm64.tar.gz` |
+            | Windows (x64) | `digitalclock-*-windows-x64.zip` |
+
+            Run it from the extracted folder — the application reads
+            `Config/` and `Resources/` relative to the working directory:
+
+            ```
+            cd digitalclock-*-linux-x86_64
+            ./DigitalClock
+            ```
+
+            **Keys:** `M` cycles clock / stopwatch / timer, `Space` starts
+            and stops, `L` records a lap, `R` resets, `Q` quits. While an
+            alarm is ringing, `S` snoozes and `D` dismisses.
+
+            Edit `Config/config.ini` for the time and date format, theme
+            and refresh interval, and `Config/alarms.ini` to set alarms.
+
+            Every archive was built from this tag, passed the full test
+            suite on its own platform, and was then extracted and run to
+            confirm it works outside the build tree with its own bundled
+            configuration and themes.
