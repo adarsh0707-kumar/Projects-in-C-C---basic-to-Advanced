@@ -18,7 +18,7 @@ reason — the standard-library-only constraint is deliberate.
 
 ## Before you open a pull request
 
-1. `make test` passes — all 78 tests.
+1. `make test` passes — all 91 tests.
 2. The build is warning-free. The project compiles with `-Wall -Wextra
    -Wpedantic -Wshadow -Wconversion`; keep it at zero warnings.
 3. New behaviour comes with a test.
@@ -53,6 +53,7 @@ The layering is the thing most worth preserving:
 ```text
 Presentation   Console · Display · Screen · Banner · StatusBar · Notifier
 Business logic Clock · Date · TimeFormatter · Alarm · AlarmManager
+               Stopwatch · CountdownTimer
 Service        ConfigurationManager · ThemeManager · Logger
                ResourceManager · Utility
 ```
@@ -87,7 +88,7 @@ Available assertions: `CHECK_TRUE`, `CHECK_FALSE`, `CHECK_EQ`, `CHECK_NE`,
 `CHECK_CONTAINS`, `CHECK_NOT_CONTAINS`, `FAIL_TEST`.
 
 Identifiers: use `TC_nnn` for cases traced to `Docs/Testing_Report.md`, and
-`UT_nnn` for supporting unit tests. TC-041 is the highest currently in use.
+`UT_nnn` for supporting unit tests. TC-052 is the highest currently in use.
 Register a new file by adding it to `CMakeLists.txt`; the Makefile globs
 `Tests/*.cpp` automatically.
 

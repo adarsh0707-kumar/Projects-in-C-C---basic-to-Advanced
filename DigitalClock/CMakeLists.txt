@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project(
     DigitalClock
-    VERSION 1.1.0
+    VERSION 1.2.0
     DESCRIPTION "Digital Clock System"
     LANGUAGES CXX
 )
@@ -45,6 +45,7 @@ add_library(digitalclock_core STATIC
     Src/Banner.cpp
     Src/Clock.cpp
     Src/ConfigurationManager.cpp
+    Src/CountdownTimer.cpp
     Src/Console.cpp
     Src/Date.cpp
     Src/Display.cpp
@@ -52,6 +53,7 @@ add_library(digitalclock_core STATIC
     Src/Notifier.cpp
     Src/ResourceManager.cpp
     Src/Screen.cpp
+    Src/Stopwatch.cpp
     Src/StatusBar.cpp
     Src/Theme.cpp
     Src/ThemeManager.cpp
@@ -102,6 +104,7 @@ if(BUILD_TESTING_SUITE)
         Tests/test_display.cpp
         Tests/test_application.cpp
         Tests/test_alarm.cpp
+        Tests/test_timing.cpp
     )
 
     target_include_directories(DigitalClockTests

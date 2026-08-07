@@ -499,6 +499,7 @@ The table below summarizes the official project versions.
 | **0.5.0** | Documentation | Technical documentation completed       |
 | **1.0.0** | Stable        | Initial production release              |
 | **1.1.0** | Stable        | Alarm module and notification support   |
+| **1.2.0** | Stable        | Stopwatch and countdown timer           |
 
 These versions represent the major milestones in the development lifecycle.
 
@@ -773,6 +774,69 @@ Stable
 Version **1.1.0** delivers the alarm and notification functionality planned
 for this release in section 6.3. Verified on Linux; the Windows gap recorded
 as KI-000 is unchanged.
+
+---
+
+# 3.9b Version 1.2.0 - Stopwatch and Countdown Timer
+
+### Release Status
+
+Stable
+
+### Added
+
+- **Stopwatch** with start, stop, resume, lap and reset. Renders as
+  `MM:SS.cc`, widening to `H:MM:SS.cc` past an hour, and retains up to 99
+  laps with per-lap splits.
+- **Countdown timer** with start, pause, resume and reset, starting from the
+  `TimerDuration` setting. Announces expiry through the alert panel added in
+  v1.1.0.
+- **Three display modes** -- Clock, Stopwatch and Timer -- cycled with `M`.
+  Whichever is active supplies the large centre readout.
+- **Key bindings**: `Space` starts and stops, `L` records a lap, `R` resets.
+  `S` and `D` remain alarm controls in every mode, and `D` also acknowledges
+  a finished countdown.
+- Configuration key `TimerDuration`, accepting `MM:SS`, `H:MM:SS` or a bare
+  number of seconds, up to 24 hours.
+- `Notifier::notify(heading, detail, hint)`, a general form of the existing
+  alarm notification. The alarm overload now delegates to it.
+
+### Design Notes
+
+- **Both new components take the current time as a parameter** rather than
+  reading a clock themselves. Two reasons: a monotonic reading
+  (`std::chrono::steady_clock`) means a change to the system clock cannot
+  corrupt a measurement in progress, and expiry can be asserted at an exact
+  instant in tests without sleeping. A test that sleeps is slow and flaky.
+- **Switching mode never disturbs the others.** A stopwatch started and left
+  running keeps running while the clock is displayed, and alarms and the
+  countdown are polled every frame regardless of what is on screen.
+- **The stopwatch redraws faster than `RefreshInterval` while running.** At
+  the default one-second refresh the hundredths would otherwise jump by a
+  hundred at a time.
+- **The countdown rounds its display up to the next whole second**, so it
+  reads 3, 2, 1 and only then 00:00. Truncating would show 00:00 for the
+  whole final second, which reads as finished before it is.
+- **The timer fires exactly once per run**, matching the rule AlarmManager
+  already applies: it is expired for as long as it sits at zero, but should
+  announce itself a single time.
+
+### Release Verification
+
+| Item | Result |
+|------|--------|
+| Release date | 2026-08-07 |
+| Automated tests | 91 of 91 passed |
+| New test cases | TC-042 - TC-052 |
+| Compiler warnings | 0 under `-Wall -Wextra -Wpedantic -Wshadow -Wconversion` |
+| Platforms | Linux, Windows and macOS via CI |
+| End-to-end check | Stopwatch started, lapped and read; timer counted down, expired and raised its panel |
+| Open defects | None |
+
+### Notes
+
+Version **1.2.0** delivers the stopwatch and countdown timer planned for this
+release in section 6.3.
 
 ---
 
@@ -1128,8 +1192,8 @@ Features deferred to future releases:
 | Issue ID | Description | Severity | Status |
 | -------- | ----------- | -------- | ------ |
 | ~~KI-001~~ | ~~Alarm functionality is not implemented~~ | Enhancement | **Closed in v1.1.0** |
-| KI-002   | Stopwatch feature is unavailable | Enhancement | Open |
-| KI-003   | Countdown timer is not available | Enhancement | Open |
+| ~~KI-002~~ | ~~Stopwatch feature is unavailable~~ | Enhancement | **Closed in v1.2.0** |
+| ~~KI-003~~ | ~~Countdown timer is not available~~ | Enhancement | **Closed in v1.2.0** |
 | KI-004   | Multiple time zone support is unavailable | Enhancement | Open |
 | KI-005   | Graphical User Interface (GUI) is not implemented | Enhancement | Open |
 | KI-006   | Plugin architecture is not available | Enhancement | Open |
@@ -1318,6 +1382,7 @@ The following roadmap outlines the expected progression of future versions.
 | Version         | Planned Focus                                                       |
 | --------------- | ------------------------------------------------------------------- |
 | ~~**1.1.0**~~ | ~~Alarm module and notification support~~ - **delivered 2026-08-07** |
+| ~~**1.2.0**~~ | ~~Stopwatch and countdown timer~~ - **delivered 2026-08-07** |
 | **1.2.0** | Stopwatch and countdown timer                                       |
 | **1.3.0** | Multiple time zone support                                          |
 | **1.4.0** | Theme enhancements and improved configuration                       |
@@ -1628,14 +1693,14 @@ Developers and maintainers are encouraged to update the Change Log as an integra
 | Item | Details |
 | ---- | ------- |
 | Document | **09_ChangeLog.md** |
-| Document Version | **1.3** |
+| Document Version | **1.4** |
 | Project | **Digital Clock System** |
-| Current Version | **1.1.0** |
+| Current Version | **1.2.0** |
 | Release Date | **2026-08-07** |
 | Language | **C++17** |
 | Status | **Released** |
 | Verified On | Linux (GCC 16.1.1), Windows (MSVC 19.51) and macOS, via CI |
-| Test Result | 78 of 78 automated tests passed; no open defects |
+| Test Result | 91 of 91 automated tests passed; no open defects |
 | Known Gaps | No UAT (KI-007); line coverage not measured (KI-008) |
 | Audience | Developers, Maintainers, Test Engineers, Project Managers, End Users |
 

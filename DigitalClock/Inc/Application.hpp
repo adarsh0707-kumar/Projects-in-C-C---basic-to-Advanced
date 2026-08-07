@@ -20,11 +20,13 @@
 
 #include "AlarmManager.hpp"
 #include "Clock.hpp"
+#include "CountdownTimer.hpp"
 #include "ConfigurationManager.hpp"
 #include "Date.hpp"
 #include "Display.hpp"
 #include "Logger.hpp"
 #include "Notifier.hpp"
+#include "Stopwatch.hpp"
 #include "ResourceManager.hpp"
 #include "ThemeManager.hpp"
 #include "TimeFormatter.hpp"
@@ -36,6 +38,22 @@
 class Application
 {
 public:
+    /**
+     * @enum Mode
+     * @brief What the main readout is showing.
+     *
+     * The three modes share one screen: whichever is active supplies the
+     * large centre readout and the line beneath it. Cycling modes never
+     * disturbs the others, so a running stopwatch keeps running while the
+     * clock is on screen.
+     */
+    enum class Mode
+    {
+        Clock,     ///< Time and date (the default).
+        Stopwatch, ///< Elapsed time with laps.
+        Timer      ///< Countdown to zero.
+    };
+
     /** Exit status returned on a normal shutdown. */
     static const int EXIT_OK;
 
@@ -107,6 +125,53 @@ public:
      * @return int Interval in milliseconds.
      */
     int refreshInterval() const;
+
+    /**
+     * @brief Returns the active mode.
+     * @return Mode Current mode.
+     */
+    Mode mode() const;
+
+    /**
+     * @brief Switches to a mode.
+     * @param mode Mode to activate.
+     */
+    void setMode(Mode mode);
+
+    /**
+     * @brief Advances to the next mode, wrapping around.
+     * @return Mode The newly active mode.
+     */
+    Mode cycleMode();
+
+    /**
+     * @brief Returns the stopwatch.
+     * @return Stopwatch& The stopwatch, running or not.
+     */
+    Stopwatch &stopwatch();
+
+    /**
+     * @brief Returns the countdown timer.
+     * @return CountdownTimer& The timer, running or not.
+     */
+    CountdownTimer &timer();
+
+    /**
+     * @brief Returns a monotonic reading for the time-based components.
+     *
+     * Uses std::chrono::steady_clock, so adjusting the system clock cannot
+     * corrupt a running stopwatch or countdown.
+     *
+     * @return std::int64_t Milliseconds since an unspecified epoch.
+     */
+    static std::int64_t monotonicNow();
+
+    /**
+     * @brief Returns the name of a mode, for display.
+     * @param mode Mode to name.
+     * @return std::string Name such as "Stopwatch".
+     */
+    static std::string modeName(Mode mode);
 
     /**
      * @brief Returns the alarm manager.
@@ -184,6 +249,32 @@ private:
     void updateAlarms();
 
     /**
+     * @brief Checks the countdown timer for expiry.
+     * @param nowMs Current monotonic reading.
+     */
+    void updateTimer(std::int64_t nowMs);
+
+    /**
+     * @brief Applies the timer settings from the configuration.
+     */
+    void configureTimer();
+
+    /**
+     * @brief Handles a keystroke.
+     *
+     * @param key Character read from the console.
+     * @return true if the key was consumed and the frame should be redrawn
+     *         immediately rather than waiting out the interval.
+     */
+    bool handleKey(int key);
+
+    /**
+     * @brief Returns the footer hint for the active mode.
+     * @return std::string Key hint text.
+     */
+    std::string footerHint() const;
+
+    /**
      * @brief Sleeps for the refresh interval while polling for a quit key.
      *
      * @return true if the loop should continue, false if the user asked to
@@ -199,11 +290,14 @@ private:
     Date date;                   ///< Current date.
     TimeFormatter formatter;     ///< Applies the configured formats.
     AlarmManager alarmManager;   ///< Configured alarms.
+    Stopwatch elapsedTimer;      ///< Stopwatch state.
+    CountdownTimer countdown;    ///< Countdown timer state.
     Notifier alertNotifier;      ///< Composes the alarm alert panel.
     Display display;             ///< Presentation layer.
 
     int interval;     ///< Refresh interval in milliseconds.
     bool alarmsEnabled; ///< Whether alarm checking is active.
+    Mode currentMode;   ///< What the main readout is showing.
     bool running;     ///< Whether the refresh loop should continue.
     bool initialized; ///< Whether initialize() completed.
 };

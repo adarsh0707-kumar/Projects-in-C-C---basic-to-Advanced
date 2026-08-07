@@ -1,8 +1,9 @@
 # Digital Clock System
 
 A console digital clock in C++17. It displays the current system time and date
-in real time, refreshing on a configurable interval, with recurring alarms,
-themeable colours, external configuration and file-based logging.
+in real time, refreshing on a configurable interval, with recurring alarms, a
+stopwatch, a countdown timer, themeable colours, external configuration and
+file-based logging.
 
 No third-party dependencies — the standard library only.
 
@@ -97,6 +98,7 @@ default rather than stopping the application.
 | `AlarmFile`       | path to the alarm definitions                    | `Config/alarms.ini`    |
 | `SnoozeMinutes`   | minutes, 1 - 240                                 | `5`                    |
 | `AlarmBell`       | `true`, `false`                                  | `true`                 |
+| `TimerDuration`   | `MM:SS`, `H:MM:SS`, or seconds; max 24h          | `05:00`                |
 | `Logging`         | `Enabled`, `Disabled`                            | `Enabled`              |
 | `LogFile`         | path; missing directories are created            | `Logs/application.log` |
 | `LogLevel`        | `DEBUG`, `INFO`, `WARNING`, `ERROR`              | `INFO`                 |
@@ -163,6 +165,42 @@ file, and a missing alarm file simply means no alarms are configured.
 
 ---
 
+### Stopwatch and timer
+
+Press **M** to cycle between the three modes: clock, stopwatch and timer. Each
+supplies the large centre readout while it is on screen. Switching modes never
+disturbs the others — a running stopwatch keeps running while you look at the
+clock, and alarms and the countdown keep working whatever is displayed.
+
+| Key | Clock | Stopwatch | Timer |
+| --- | ----- | --------- | ----- |
+| `M` | Cycle mode | Cycle mode | Cycle mode |
+| `Space` | — | Start / stop | Start / pause |
+| `L` | — | Lap | — |
+| `R` | — | Reset | Reset |
+| `Q` | Quit | Quit | Quit |
+
+While an alarm is ringing, **S** snoozes and **D** dismisses, in any mode.
+**D** also acknowledges a finished countdown.
+
+The stopwatch reads `MM:SS.cc`, widening to `H:MM:SS.cc` past an hour, and
+keeps up to 99 laps. It redraws faster than `RefreshInterval` while running, so
+the hundredths do not visibly jump.
+
+The countdown starts from `TimerDuration` and announces itself through the
+same alert panel the alarms use:
+
+```text
+                 +--------------------------------------------+
+                 | TIMER  00:05                               |
+                 | Countdown finished                         |
+                 |                                            |
+                 | [D] Dismiss   [R] Reset                    |
+                 +--------------------------------------------+
+```
+
+---
+
 ### Themes
 
 Theme files live in [`Resources/themes/`](Resources/themes/) and assign a
@@ -196,6 +234,7 @@ A layered design; each layer depends only on the ones beneath it.
    Presentation   Console · Display · Screen · Banner · StatusBar · Notifier
                          ▲
    Business logic   Clock · Date · TimeFormatter · Alarm · AlarmManager
+                    Stopwatch · CountdownTimer
                          ▲
    Service        ConfigurationManager · ThemeManager · Logger
                   ResourceManager · Utility
@@ -213,6 +252,8 @@ shutdown. `main()` only parses arguments and delegates.
 | `Date`                 | System date snapshot; weekday and calendar helpers |
 | `TimeFormatter`        | Applies the configured time and date formats       |
 | `Alarm`                | One alarm: time, label, recurrence, snooze state    |
+| `Stopwatch`            | Elapsed time with laps                              |
+| `CountdownTimer`       | Counts down and fires once at zero                  |
 | `AlarmManager`         | Loads alarms and decides when one fires             |
 | `Notifier`             | Composes the alert panel and sounds the bell        |
 | `Display`              | Coordinates the presentation layer                 |
@@ -240,6 +281,10 @@ shutdown. `main()` only parses arguments and delegates.
   worked around. Only a terminal that cannot be prepared is fatal.
 - **The signal handler only sets an atomic flag.** All real shutdown work
   happens on the main thread.
+- **The stopwatch and timer are driven by a monotonic clock.** Both take the
+  current reading as a parameter rather than reading a clock themselves, so a
+  change to the system time cannot corrupt a measurement in progress, and
+  expiry can be tested at an exact instant without sleeping.
 
 ---
 
@@ -274,7 +319,7 @@ make SANITIZE=address test     # under AddressSanitizer
 make SANITIZE=undefined test   # under UndefinedBehaviorSanitizer
 ```
 
-78 tests, covering TC-001 through TC-041 from
+91 tests, covering TC-001 through TC-052 from
 [`Docs/Testing_Report.md`](Docs/Testing_Report.md) plus supporting unit tests
 (`UT-*`) for the parsing and layout code. The harness is a small header in
 `Tests/TestFramework.hpp` — adding a third-party framework would have been the

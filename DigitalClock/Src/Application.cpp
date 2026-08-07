@@ -63,6 +63,7 @@ const int Application::EXIT_STARTUP_FAILED = 1;
 Application::Application()
     : interval(DEFAULT_INTERVAL),
       alarmsEnabled(true),
+      currentMode(Mode::Clock),
       running(false),
       initialized(false)
 {
@@ -165,8 +166,9 @@ bool Application::initialize(const std::string &configPath)
     // Stage 4 - Theme.
     configureTheme();
 
-    // Stage 4b - Alarms (v1.1.0).
+    // Stage 4b - Alarms (v1.1.0) and the timer (v1.2.0).
     configureAlarms();
+    configureTimer();
 
     // Stages 5 and 7 - Console and Display.
     display.initialize(theme);
@@ -262,8 +264,12 @@ void Application::configureStatusBar()
     display.setStatusField("Refresh Rate", describeInterval(interval));
     display.setStatusField("Status", "Running");
 
+    display.setStatusField("Mode", modeName(currentMode));
+
     if (alarmsEnabled && alarmManager.count() > 0)
         display.setStatusField("Next Alarm", "-");
+
+    display.screen().setFooterHint(footerHint());
 }
 
 void Application::configureAlarms()
@@ -309,6 +315,39 @@ void Application::configureAlarms()
 
     for (std::size_t index = 0; index < alarmManager.count(); ++index)
         logger.debug("Alarm: " + alarmManager.at(index).describe());
+}
+
+void Application::configureTimer()
+{
+    const std::string configured = config.getValue("TimerDuration", "05:00");
+
+    std::int64_t milliseconds = 0;
+
+    if (CountdownTimer::parseDuration(configured, milliseconds))
+    {
+        countdown.setDuration(milliseconds);
+        return;
+    }
+
+    logger.warning(
+        "Timer duration '" + configured +
+        "' is invalid. Using " +
+        CountdownTimer::format(CountdownTimer::DEFAULT_DURATION_MS) + ".");
+
+    countdown.setDuration(CountdownTimer::DEFAULT_DURATION_MS);
+}
+
+void Application::updateTimer(std::int64_t nowMs)
+{
+    if (!countdown.poll(nowMs))
+        return;
+
+    logger.info("Countdown timer finished.");
+
+    alertNotifier.notify(
+        "TIMER  " + CountdownTimer::format(countdown.duration()),
+        "Countdown finished",
+        "[D] Dismiss   [R] Reset");
 }
 
 void Application::updateAlarms()
@@ -390,6 +429,90 @@ bool Application::dismissAlarm()
     return true;
 }
 
+std::int64_t Application::monotonicNow()
+{
+    const auto now = std::chrono::steady_clock::now().time_since_epoch();
+
+    return std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
+}
+
+std::string Application::modeName(Mode mode)
+{
+    switch (mode)
+    {
+    case Mode::Stopwatch:
+        return "Stopwatch";
+
+    case Mode::Timer:
+        return "Timer";
+
+    case Mode::Clock:
+        break;
+    }
+
+    return "Clock";
+}
+
+Application::Mode Application::mode() const
+{
+    return currentMode;
+}
+
+void Application::setMode(Mode mode)
+{
+    currentMode = mode;
+
+    display.setStatusField("Mode", modeName(mode));
+    display.screen().setFooterHint(footerHint());
+}
+
+Application::Mode Application::cycleMode()
+{
+    switch (currentMode)
+    {
+    case Mode::Clock:
+        setMode(Mode::Stopwatch);
+        break;
+
+    case Mode::Stopwatch:
+        setMode(Mode::Timer);
+        break;
+
+    case Mode::Timer:
+        setMode(Mode::Clock);
+        break;
+    }
+
+    return currentMode;
+}
+
+Stopwatch &Application::stopwatch()
+{
+    return elapsedTimer;
+}
+
+CountdownTimer &Application::timer()
+{
+    return countdown;
+}
+
+std::string Application::footerHint() const
+{
+    switch (currentMode)
+    {
+    case Mode::Stopwatch:
+        return "[Space] Start/Stop  [L] Lap  [R] Reset  [M] Mode  [Q] Quit";
+
+    case Mode::Timer:
+        return "[Space] Start/Pause  [R] Reset  [M] Mode  [Q] Quit";
+
+    case Mode::Clock:
+        break;
+    }
+
+    return "[M] Mode  Press Q or Ctrl+C to Exit";
+}
+
 AlarmManager &Application::alarms()
 {
     return alarmManager;
@@ -402,14 +525,153 @@ Notifier &Application::notifier()
 
 void Application::renderFrame()
 {
+    const std::int64_t nowMs = monotonicNow();
+
     clock.update();
     date.update();
 
+    // Alarms and the countdown run regardless of which mode is on screen, so
+    // neither is missed while the user is looking at something else.
     updateAlarms();
+    updateTimer(nowMs);
 
-    display.renderClock(formatter.formatTimeWide(clock));
-    display.renderDate(formatter.formatDate(date));
+    switch (currentMode)
+    {
+    case Mode::Stopwatch:
+    {
+        display.renderClock(elapsedTimer.formatted(nowMs));
+
+        std::string state = elapsedTimer.isRunning() ? "Running" : "Stopped";
+
+        if (elapsedTimer.lapCount() > 0)
+        {
+            state += "   Lap " + std::to_string(elapsedTimer.lapCount()) +
+                     ": " +
+                     Stopwatch::format(
+                         elapsedTimer.lapSplit(elapsedTimer.lapCount() - 1));
+        }
+
+        display.renderDate("Stopwatch - " + state);
+        break;
+    }
+
+    case Mode::Timer:
+    {
+        display.renderClock(countdown.formatted(nowMs));
+
+        std::string state;
+
+        if (countdown.isRunning())
+            state = "Running";
+        else if (countdown.hasExpired(nowMs))
+            state = "Finished";
+        else if (countdown.remaining(nowMs) == countdown.duration())
+            state = "Ready";
+        else
+            state = "Paused";
+
+        display.renderDate(
+            "Timer - " + state + "   of " +
+            CountdownTimer::format(countdown.duration()));
+        break;
+    }
+
+    case Mode::Clock:
+        display.renderClock(formatter.formatTimeWide(clock));
+        display.renderDate(formatter.formatDate(date));
+        break;
+    }
+
     display.renderScreen();
+}
+
+bool Application::handleKey(int key)
+{
+    if (key < 0)
+        return false;
+
+    const std::int64_t nowMs = monotonicNow();
+
+    // Acknowledging an alert comes first: whatever the mode, a ringing alarm
+    // or a finished countdown is what the user is responding to.
+    if (key == 's' || key == 'S')
+    {
+        if (snoozeAlarm())
+            return true;
+    }
+
+    if (key == 'd' || key == 'D')
+    {
+        if (dismissAlarm())
+            return true;
+
+        if (countdown.isFinished())
+        {
+            countdown.acknowledge();
+            alertNotifier.clear();
+            display.clearNotification();
+
+            logger.info("Countdown acknowledged.");
+
+            return true;
+        }
+    }
+
+    if (key == 'm' || key == 'M')
+    {
+        logger.debug("Mode changed to " + modeName(cycleMode()) + ".");
+        return true;
+    }
+
+    switch (currentMode)
+    {
+    case Mode::Stopwatch:
+        if (key == ' ')
+        {
+            logger.debug(
+                elapsedTimer.toggle(nowMs) ? "Stopwatch started."
+                                           : "Stopwatch stopped.");
+            return true;
+        }
+
+        if (key == 'l' || key == 'L')
+            return elapsedTimer.lap(nowMs);
+
+        if (key == 'r' || key == 'R')
+        {
+            elapsedTimer.reset();
+            logger.debug("Stopwatch reset.");
+            return true;
+        }
+
+        break;
+
+    case Mode::Timer:
+        if (key == ' ')
+        {
+            logger.debug(
+                countdown.toggle(nowMs) ? "Timer started." : "Timer paused.");
+            return true;
+        }
+
+        if (key == 'r' || key == 'R')
+        {
+            countdown.reset();
+            alertNotifier.clear();
+            display.clearNotification();
+
+            logger.debug("Timer reset.");
+
+            return true;
+        }
+
+        break;
+
+    case Mode::Clock:
+        break;
+    }
+
+    return false;
 }
 
 bool Application::waitForNextFrame()
@@ -436,12 +698,17 @@ bool Application::waitForNextFrame()
             return false;
         }
 
-        // Acknowledging an alarm redraws at once, rather than waiting for the
-        // rest of the interval to elapse.
-        if ((key == 's' || key == 'S') && snoozeAlarm())
+        /*
+        A consumed key redraws at once. Waiting out the rest of the interval
+        would make the stopwatch feel unresponsive: at the default one-second
+        refresh, a lap keypress could sit invisible for most of a second.
+        */
+        if (handleKey(key))
             return true;
 
-        if ((key == 'd' || key == 'D') && dismissAlarm())
+        // A running stopwatch needs a faster redraw than the configured
+        // interval, or the hundredths would visibly jump.
+        if (currentMode == Mode::Stopwatch && elapsedTimer.isRunning())
             return true;
     }
 

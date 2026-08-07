@@ -32,12 +32,24 @@ Notifier::Notifier()
 
 void Notifier::notify(const Alarm &alarm, int snoozeMinutes)
 {
-    active = true;
-    alarmTime = alarm.timeString();
-    alarmLabel = alarm.getLabel();
+    notify(
+        "ALARM  " + alarm.timeString(),
+        alarm.getLabel(),
+        "[S] Snooze " + std::to_string(snoozeMinutes) + "m   [D] Dismiss");
 
-    hint = "[S] Snooze " + std::to_string(snoozeMinutes) +
-           "m   [D] Dismiss";
+    // Keep the structured time available to callers that ask for it.
+    alarmTime = alarm.timeString();
+}
+
+void Notifier::notify(const std::string &heading,
+                      const std::string &detail,
+                      const std::string &keyHint)
+{
+    active = true;
+    title = heading;
+    alarmLabel = detail;
+    alarmTime.clear();
+    hint = keyHint;
 
     ring();
 }
@@ -64,6 +76,7 @@ void Notifier::ring()
 void Notifier::clear()
 {
     active = false;
+    title.clear();
     alarmTime.clear();
     alarmLabel.clear();
     hint.clear();
@@ -82,6 +95,11 @@ std::string Notifier::label() const
 std::string Notifier::time() const
 {
     return alarmTime;
+}
+
+std::string Notifier::heading() const
+{
+    return title;
 }
 
 void Notifier::setBellEnabled(bool enabled)
@@ -125,7 +143,7 @@ std::vector<std::string> Notifier::lines(int width) const
 
     panel.push_back(pad + border);
 
-    row("ALARM  " + alarmTime);
+    row(title);
 
     if (!alarmLabel.empty())
         row(alarmLabel);

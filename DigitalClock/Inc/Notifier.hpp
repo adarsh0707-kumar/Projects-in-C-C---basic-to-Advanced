@@ -44,6 +44,22 @@ public:
     void notify(const Alarm &alarm, int snoozeMinutes);
 
     /**
+     * @brief Announces an arbitrary event.
+     *
+     * The alarm overload above delegates here. Kept general so that any
+     * component needing the user's attention -- the countdown timer in
+     * v1.2.0, and whatever follows -- can reuse the panel rather than
+     * growing a parallel one.
+     *
+     * @param heading Short heading, such as "ALARM" or "TIMER".
+     * @param detail  Detail line, such as the alarm label. May be empty.
+     * @param keyHint Key hint line, such as "[D] Dismiss".
+     */
+    void notify(const std::string &heading,
+                const std::string &detail,
+                const std::string &keyHint);
+
+    /**
      * @brief Re-emits the terminal bell while an alarm is still ringing.
      *
      * Called once per refresh so an unattended alarm keeps signalling. Does
@@ -78,9 +94,19 @@ public:
 
     /**
      * @brief Returns the time of the alarm being announced, as @c HH:MM.
+     *
+     * For a non-alarm notification this is the heading's trailing text, or
+     * empty.
+     *
      * @return std::string Formatted time, empty when inactive.
      */
     std::string time() const;
+
+    /**
+     * @brief Returns the heading of the active notification.
+     * @return std::string Heading such as "ALARM", empty when inactive.
+     */
+    std::string heading() const;
 
     /**
      * @brief Enables or disables the terminal bell.
@@ -110,9 +136,10 @@ private:
      */
     void ring();
 
-    bool active;        ///< Whether the panel is being shown.
+    bool active;            ///< Whether the panel is being shown.
+    std::string title;      ///< Heading, such as "ALARM" or "TIMER".
     std::string alarmTime;  ///< Time of the ringing alarm, as HH:MM.
-    std::string alarmLabel; ///< Label of the ringing alarm.
+    std::string alarmLabel; ///< Detail line.
     std::string hint;       ///< Key hint line.
     bool bell;          ///< Whether the terminal bell is enabled.
     int bells;          ///< Number of bells emitted.

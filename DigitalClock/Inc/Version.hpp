@@ -46,7 +46,7 @@ namespace Version
      * Incremented when new features are introduced while
      * maintaining backward compatibility.
      */
-    inline constexpr int MINOR = 1;
+    inline constexpr int MINOR = 2;
 
     /**
      * @brief Patch version number.

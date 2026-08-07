@@ -888,7 +888,8 @@ The table below records the unit tests that were implemented and executed. Count
 | Presentation Layer | `test_display.cpp` | 7 | 7 | 0 |
 | Application Lifecycle | `test_application.cpp` | 6 | 6 | 0 |
 | Alarm Module | `test_alarm.cpp` | 18 | 18 | 0 |
-| **Total** | | **78** | **78** | **0** |
+| Stopwatch & Timer | `test_timing.cpp` | 13 | 13 | 0 |
+| **Total** | | **91** | **91** | **0** |
 
 The suite exceeds the 26 tests originally planned because several planned cases needed more than one assertion group to cover their boundary conditions.
 
@@ -1119,8 +1120,9 @@ Integration is exercised through the `Application` and presentation-layer tests,
 | Screen + StatusBar + Console | `UT-080`, `UT-081`, `UT-083` | **Pass** |
 | Startup & Shutdown | `TC-001`, `TC-002`, `TC-020` | **Pass** |
 | Alarm + Clock + Notifier + Screen | `TC-034`, `TC-037`, `TC-041` | **Pass** |
+| Stopwatch + Timer + Application modes | `TC-052`, `UT-110` | **Pass** |
 
-All nine integration paths passed.
+All ten integration paths passed.
 
 One defect was found at a module boundary rather than inside a module:
 `AlarmManager::poll()` and `Alarm::minutesUntil()` were each correct alone,
@@ -1793,6 +1795,30 @@ section 3.9a.
 
 ---
 
+# 7.12b Stopwatch and Timer Test Cases (v1.2.0)
+
+Executed 2026-08-07; all passed.
+
+| Test ID | Objective | Actual Result | Status |
+|---------|-----------|---------------|--------|
+| TC-042 | Verify the stopwatch measures elapsed time | Elapsed advanced with the supplied reading; starting an already-running stopwatch was refused; a reading before the start yielded zero rather than a negative | **Pass** |
+| TC-043 | Verify stop and resume accumulate correctly | A stopped stopwatch held its value indefinitely; resuming continued from the banked total rather than restarting | **Pass** |
+| TC-044 | Verify stopwatch laps and splits | Laps recorded total elapsed time; splits reported per-lap durations; an out-of-range index yielded zero | **Pass** |
+| TC-045 | Verify the stopwatch caps its lap history | Laps were refused beyond MAX_LAPS rather than growing without bound | **Pass** |
+| TC-046 | Verify stopwatch formatting | `MM:SS.cc` throughout, widening to `H:MM:SS.cc` at an hour; negatives rendered as zero | **Pass** |
+| TC-047 | Verify the countdown timer counts down | Remaining decreased with the reading and never went negative | **Pass** |
+| TC-048 | Verify the countdown timer pauses and resumes | A paused timer held its remainder; pausing twice did not subtract twice | **Pass** |
+| TC-049 | Verify the countdown timer fires exactly once | Fired on the poll observing the zero crossing, never again for that run; expiry stopped the countdown; a reset allowed it to fire again | **Pass** |
+| TC-050 | Verify countdown duration parsing | `MM:SS`, `H:MM:SS` and bare seconds accepted; malformed and out-of-range values rejected; 24 hours enforced as the cap | **Pass** |
+| TC-051 | Verify countdown formatting rounds up | Any non-zero remainder rendered as at least `00:01`, so the display reaches zero only when the timer does | **Pass** |
+| TC-052 | Verify mode switching leaves the other modes undisturbed | Cycling wrapped Clock to Stopwatch to Timer; a running stopwatch continued while other modes were displayed; every mode rendered without error | **Pass** |
+
+TC-051 is worth noting. Truncating rather than rounding would display `00:00`
+for the whole of the final second, which reads as finished a second before it
+is. The rounding rule is asserted rather than left to inspection.
+
+---
+
 # 7.13 Test Case Execution Summary
 
 | Category | Test Cases | Executed | Passed | Failed |
@@ -1808,13 +1834,15 @@ section 3.9a.
 | Shutdown | 1 | 1 | 1 | 0 |
 | Boundary & Negative | 5 | 5 | 5 | 0 |
 | Alarm Module (v1.1.0) | 16 | 16 | 16 | 0 |
-| **Total** | **41** | **41** | **41** | **0** |
+| Stopwatch & Timer (v1.2.0) | 11 | 11 | 11 | 0 |
+| **Total** | **52** | **52** | **52** | **0** |
 
 Executed 2026-08-07. Two additional boundary cases, TC-005A and TC-006A, were
 added during implementation to cover the midnight and noon conversions that
 the FR-004 acceptance criteria require; both pass. TC-026 to TC-041 arrived
-with the v1.1.0 alarm module. The wider automated suite contains 78 tests in
-total, the remainder carrying `UT-` identifiers.
+with the v1.1.0 alarm module, and TC-042 to TC-052 with the v1.2.0 stopwatch
+and timer. The wider automated suite contains 91 tests in total, the remainder
+carrying `UT-` identifiers.
 
 ---
 
@@ -1857,17 +1885,17 @@ Once development is completed, this chapter should be updated with the actual ex
 # 8.2 Test Execution Summary
 
 The table below records actual execution. The automated suite is a single
-binary, `Build/DigitalClockTests`, containing 78 tests; the phases below
+binary, `Build/DigitalClockTests`, containing 91 tests; the phases below
 describe what those tests cover rather than separate executables, so a single
 test may contribute to more than one phase.
 
 | Testing Phase | Test Cases | Executed | Passed | Failed | Status |
 |---------------|-----------:|---------:|-------:|-------:|--------|
-| Unit Testing | 78 | 78 | 78 | 0 | **Complete** |
-| Integration Testing | 9 paths | 9 | 9 | 0 | **Complete** |
+| Unit Testing | 91 | 91 | 91 | 0 | **Complete** |
+| Integration Testing | 10 paths | 10 | 10 | 0 | **Complete** |
 | System Testing | 6 categories | 6 | 6 | 0 | **Complete** |
-| Functional Testing (TC-001 – TC-041) | 41 | 41 | 41 | 0 | **Complete** |
-| **Automated suite total** | **78** | **78** | **78** | **0** | **Pass** |
+| Functional Testing (TC-001 – TC-052) | 52 | 52 | 52 | 0 | **Complete** |
+| **Automated suite total** | **91** | **91** | **91** | **0** | **Pass** |
 
 Reproduce with:
 
@@ -1886,8 +1914,8 @@ boundary.
 
 | Test Category | Expected Result | Actual Result | Status |
 |---------------|-----------------|---------------|--------|
-| Unit Testing | All modules operate correctly | 78 of 78 tests passed | **Pass** |
-| Integration Testing | Modules communicate without errors | All 9 integration paths passed | **Pass** |
+| Unit Testing | All modules operate correctly | 91 of 91 tests passed | **Pass** |
+| Integration Testing | Modules communicate without errors | All 10 integration paths passed | **Pass** |
 | System Testing | Complete application functions correctly | Application ran and rendered correctly | **Pass** |
 | Performance Testing | Meets target performance requirements | All targets met with margin (see 8.5) | **Pass** |
 | Compatibility Testing | Runs on all supported platforms | Verified by CI on Linux, Windows and macOS (see 8.6) | **Pass** |
@@ -2042,6 +2070,7 @@ Every component has direct automated coverage.
 | Utility | 8 | ✔ |
 | Application (startup & shutdown) | 6 | ✔ |
 | Alarm / AlarmManager / Notifier | 18 | ✔ |
+| Stopwatch / CountdownTimer | 13 | ✔ |
 | Error handling | across all files | ✔ |
 
 Two areas are covered only indirectly and are worth stating plainly:
@@ -2121,7 +2150,7 @@ execution statistics, per-requirement outcomes, measured performance figures,
 the compatibility matrix, the defects found and closed, coverage, and the
 acceptance verdict.
 
-The headline result is 78 of 78 automated tests passing, with all documented
+The headline result is 91 of 91 automated tests passing, with all documented
 test cases executed and passed, and no open defects. Continuous integration
 verifies Linux, Windows and macOS on every change, so the compatibility matrix
 reflects executed runs rather than intent. The remaining gap is User
@@ -2323,16 +2352,16 @@ first two are the ones that matter for a release decision.
 # 9.11 Final Validation Statement
 
 Based on the testing and validation activities actually carried out, the
-**Digital Clock System v1.1.0 satisfies its defined functional and
+**Digital Clock System v1.2.0 satisfies its defined functional and
 non-functional requirements on Linux**, with the two exceptions recorded
 below.
 
 Completed and passed:
 
-- Unit Testing — 78 of 78
-- Integration Testing — 9 of 9 paths
+- Unit Testing — 91 of 91
+- Integration Testing — 10 of 10 paths
 - System Testing — 6 of 6 categories
-- Functional Testing — TC-001 to TC-041, all passed
+- Functional Testing — TC-001 to TC-052, all passed
 
 Not completed:
 
@@ -2372,10 +2401,10 @@ The Digital Clock System was tested across multiple levels. Results:
 
 | Testing Level | Result |
 |---------------|--------|
-| Unit Testing | **Pass** — 78 of 78 |
-| Integration Testing | **Pass** — 9 of 9 paths |
+| Unit Testing | **Pass** — 91 of 91 |
+| Integration Testing | **Pass** — 10 of 10 paths |
 | System Testing | **Pass** — 6 of 6 categories |
-| Functional Testing | **Pass** — TC-001 to TC-041 |
+| Functional Testing | **Pass** — TC-001 to TC-052 |
 | Performance Testing | **Pass** — all targets met with margin |
 | Compatibility Testing | **Pass** — Linux, Windows and macOS verified in CI |
 | Recovery Testing | **Pass** — every degraded path exercised |
@@ -2396,6 +2425,7 @@ Every major module carries automated coverage.
 | Date Module | **Covered** |
 | Time Formatter | **Covered** |
 | Alarm Module | **Covered** |
+| Stopwatch and Timer | **Covered** |
 | Display / Screen / StatusBar | **Covered** |
 | Configuration Manager | **Covered** |
 | Theme Manager | **Covered** |
@@ -2502,11 +2532,11 @@ This completes the **06_Testing_Report.md** document.
 | Document | **06_Testing_Report.md** |
 | Project | **Digital Clock System** |
 | Language | **C++17** |
-| Application Version | **1.1.0** |
-| Document Version | **1.3** |
+| Application Version | **1.2.0** |
+| Document Version | **1.4** |
 | Status | **Executed** |
 | Test Execution Date | **2026-08-07** |
-| Result | **78 of 78 automated tests passed; TC-001 – TC-041 all passed** |
+| Result | **91 of 91 automated tests passed; TC-001 – TC-052 all passed** |
 | Open Defects | **None** |
 | Known Gaps | No UAT; line coverage not measured |
 | Environment | Garuda Linux (kernel 7.1.5-zen1-2-zen, x86_64), GCC 16.1.1, GNU Make 4.4.1, CMake 4.4.2 |
