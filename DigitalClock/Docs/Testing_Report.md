@@ -1259,20 +1259,27 @@ Compatibility testing verifies that the application functions correctly on suppo
 
 | Platform | Status | Basis |
 |----------|--------|-------|
-| Linux | **Verified** | Suite executed; application run |
-| Windows | **Implemented, not verified** | `_WIN32` code paths written but never compiled or executed |
-| macOS | Not supported yet | No platform-specific work done |
+| Linux | **Verified** | Suite executed; application run; CI job |
+| Windows | **Verified** | CI job: MSVC 19.51, 78 tests passed, frame rendered |
+| macOS | **Verified** | CI job: suite passed, frame rendered |
 | Different Terminal Sizes | **Verified** | UT-082 |
 | Redirected Output | **Verified** | UT-084 |
-| GCC Compiler | **Verified** | GCC 16.1.1, zero warnings |
-| Clang / MSVC | Not verified | Not exercised |
-| Make Build | **Verified** | `make` and `make test` |
-| CMake Build | **Verified** | `cmake --build` and `ctest` |
+| GCC Compiler | **Verified** | GCC 16.1.1, zero warnings, `-Werror` in CI |
+| MSVC | **Verified** | MSVC 19.51.36252 via Visual Studio 18 2026 |
+| Make Build | **Verified** | `make`, `make debug`, `make test` in CI |
+| CMake Build | **Verified** | `cmake --build` and `ctest` on all three platforms |
+| AddressSanitizer | **Verified** | Suite and application clean |
+| UndefinedBehaviorSanitizer | **Verified** | Suite and application clean |
 
-Windows is deliberately recorded as *implemented but not verified* rather than
-*supported*. The code is present and should compile, but no run has been
-recorded, and an untested platform should not be reported as a passing one.
-Future releases may extend compatibility to additional environments.
+**Windows and macOS were verified on 2026-08-07** by the continuous
+integration pipeline added in `.github/workflows/digitalclock-ci.yml`. Both
+compile the project, run all 78 tests, and execute the application itself with
+`--once` so the terminal and rendering paths are exercised rather than merely
+built. Evidence: [CI run 31142229662](https://github.com/adarsh0707-kumar/Projects-in-C-C---basic-to-Advanced/actions/runs/31142229662).
+
+This replaces the earlier "implemented, not verified" record. The distinction
+mattered: the code was written to be portable, but until this run nothing had
+demonstrated it.
 
 ---
 
@@ -1320,7 +1327,7 @@ observing the result, in addition to the automated suite.
 | Functional Testing | Automated suite, `TC-001` – `TC-025` | **Pass** |
 | User Interface Testing | Rendered frame compared against the User Manual layout | **Pass** |
 | Performance Testing | Measured startup, memory and CPU (see 8.5) | **Pass** |
-| Compatibility Testing | Both build systems; TTY and redirected output (see 8.6) | **Pass** |
+| Compatibility Testing | CI across Linux, Windows and macOS; both build systems (see 8.6) | **Pass** |
 | Reliability Testing | Continuous run with a stable resident set | **Pass** |
 | Recovery Testing | Missing config, unknown theme, absent banner, unwritable log | **Pass** |
 
@@ -1883,7 +1890,7 @@ boundary.
 | Integration Testing | Modules communicate without errors | All 9 integration paths passed | **Pass** |
 | System Testing | Complete application functions correctly | Application ran and rendered correctly | **Pass** |
 | Performance Testing | Meets target performance requirements | All targets met with margin (see 8.5) | **Pass** |
-| Compatibility Testing | Runs on all supported platforms | Verified on Linux with both build systems; Windows not yet exercised (see 8.6) | **Partial** |
+| Compatibility Testing | Runs on all supported platforms | Verified by CI on Linux, Windows and macOS (see 8.6) | **Pass** |
 | Regression Testing | Existing functionality remains unchanged | Full suite re-run after each change | **Pass** |
 
 ---
@@ -1903,7 +1910,7 @@ Each functional requirement was verified against the test cases listed below.
 | Logging | FR-007 | TC-014, TC-015, TC-019, TC-024 | **Pass** |
 | Console Refresh | FR-008 | UT-080, UT-081 | **Pass** |
 | Graceful Shutdown | FR-009 | TC-020 | **Pass** |
-| Cross-Platform Support | FR-010 | Both build systems on Linux; see 8.6 | **Partial** |
+| Cross-Platform Support | FR-010 | CI on Linux, Windows and macOS; see 8.6 | **Pass** |
 | Theme Loading | — | TC-012, TC-013, TC-025 | **Pass** |
 | Resource Loading | — | TC-016, TC-017, TC-023 | **Pass** |
 | Startup | — | TC-001, TC-002 | **Pass** |
@@ -1933,19 +1940,25 @@ confirms the refresh loop allocates nothing per frame.
 
 | Platform | Expected Result | Actual Result | Status |
 |----------|-----------------|---------------|--------|
-| Linux | Pass | Verified on Garuda Linux, kernel 7.1.5-zen1-2-zen | **Pass** |
-| Windows | Pass | Code paths implemented (`_WIN32` branches in `Console`, `Logger`, `Clock`, `Date`) but **not executed** on Windows | **Not Tested** |
-| GCC Compiler | Pass | GCC 16.1.1, zero warnings under `-Wall -Wextra -Wpedantic -Wshadow -Wconversion` | **Pass** |
-| Clang / MSVC | Pass | Not exercised | **Not Tested** |
-| Make Build | Pass | `make` and `make test` both succeed | **Pass** |
-| CMake Build | Pass | `cmake --build` and `ctest` both succeed | **Pass** |
-| Multiple Terminal Sizes | Pass | Layout adapts to width; banner is dropped below 18 rows (UT-082) | **Pass** |
-| Redirected Output | — | Colour suppressed automatically when stdout is not a TTY (UT-084) | **Pass** |
+| Linux | Pass | Verified locally and in CI (ubuntu-latest) | **Pass** |
+| Windows | Pass | CI: MSVC 19.51 via Visual Studio 18 2026; 78 tests passed; application rendered a frame | **Pass** |
+| macOS | Pass | CI: suite passed; application rendered a frame | **Pass** |
+| GCC Compiler | Pass | GCC 16.1.1, zero warnings; a dedicated CI job builds with `-Werror` | **Pass** |
+| MSVC | Pass | MSVC 19.51.36252 | **Pass** |
+| Make Build | Pass | `make`, `make debug` and `make test` all succeed in CI | **Pass** |
+| CMake Build | Pass | `cmake --build` and `ctest` succeed on all three platforms | **Pass** |
+| Multiple Terminal Sizes | Pass | Layout adapts to width; banner dropped below 18 rows (UT-082) | **Pass** |
+| Redirected Output | — | Colour suppressed when stdout is not a TTY (UT-084) | **Pass** |
+| AddressSanitizer | — | Suite and application clean | **Pass** |
+| UndefinedBehaviorSanitizer | — | Suite and application clean | **Pass** |
 
-**This is the report's principal gap.** Windows support is written but
-unverified, so the FR-010 cross-platform claim rests on inspection rather than
-execution. It should not be treated as tested until a Windows run is
-recorded.
+**The gap recorded in earlier revisions of this report is now closed.**
+Windows and macOS were both verified by CI on 2026-08-07, so FR-010 rests on
+execution rather than inspection. Evidence: [CI run 31142229662](https://github.com/adarsh0707-kumar/Projects-in-C-C---basic-to-Advanced/actions/runs/31142229662).
+
+Verification runs automatically on every change to `DigitalClock/`, so the
+matrix above stays evidence-based rather than drifting from the code as it
+previously did.
 
 ---
 
@@ -2037,7 +2050,8 @@ Two areas are covered only indirectly and are worth stating plainly:
   directly, because its behaviour is terminal state that cannot be asserted
   without a pseudo-terminal. Its output was confirmed manually under a pty.
 - **The `_WIN32` branches** in `Console`, `Logger`, `Clock` and `Date` are
-  never compiled on Linux and therefore carry no coverage at all.
+  not compiled on Linux, so a local run leaves them uncovered. The Windows CI
+  job compiles and executes them, which is where their coverage comes from.
 
 Line coverage was not measured; no coverage instrumentation is configured.
 
@@ -2051,16 +2065,16 @@ Measured against the release criteria:
 |-----------|--------|
 | All planned test cases executed | **Met** — TC-001 to TC-025, all executed |
 | Critical and high-severity defects resolved | **Met** — DEF-001 to DEF-003 closed |
-| Functional requirements verified | **Met** for FR-001 to FR-009; **partial** for FR-010 |
+| Functional requirements verified | **Met** for FR-001 to FR-010 |
 | Performance targets achieved | **Met** — all targets met with margin |
 | Integration testing complete | **Met** |
 | System testing complete | **Met** |
 | User Acceptance Testing approved | **Not performed** — no UAT participants |
 
-**Verdict: accepted for release on Linux.** Two criteria are not fully
-satisfied — Windows execution and UAT — and neither should be represented as
-complete. Neither blocks a Linux release; both block a claim of
-cross-platform verification.
+**Verdict: accepted for release on Linux, Windows and macOS.** Windows
+execution, previously the principal gap, was closed by CI on 2026-08-07. UAT
+remains unperformed and should not be represented as complete, but it does not
+block a release.
 
 ---
 
@@ -2085,10 +2099,11 @@ These artifacts provide proof that testing has been performed according to the p
 
 Arising from this cycle:
 
-1. **Run the suite on Windows.** This is the one substantive gap. The
-   `_WIN32` code paths are written but have never been compiled or executed.
-2. **Add CI** covering Linux and Windows, so the compatibility matrix stays
-   evidence-based rather than becoming stale again.
+1. ~~**Run the suite on Windows.**~~ **Done 2026-08-07.** The `_WIN32` paths
+   now compile and execute under MSVC in CI.
+2. ~~**Add CI** covering Linux and Windows.~~ **Done 2026-08-07.**
+   `.github/workflows/digitalclock-ci.yml` covers Linux, Windows and macOS,
+   plus sanitizers and a `-Werror` build, on every change to `DigitalClock/`.
 3. **Consider coverage instrumentation** (`gcov`/`lcov`) to replace the
    component-level coverage claim in 8.10 with a measured figure.
 4. **Exercise `Console` directly** using a pseudo-terminal, which would close
@@ -2106,10 +2121,11 @@ execution statistics, per-requirement outcomes, measured performance figures,
 the compatibility matrix, the defects found and closed, coverage, and the
 acceptance verdict.
 
-The headline result is 60 of 60 automated tests passing, with all twenty-five
-documented test cases executed and passed, and no open defects. The one
-material gap is Windows, which is implemented but unverified and is recorded
-as **Not Tested** rather than assumed to work.
+The headline result is 78 of 78 automated tests passing, with all documented
+test cases executed and passed, and no open defects. Continuous integration
+verifies Linux, Windows and macOS on every change, so the compatibility matrix
+reflects executed runs rather than intent. The remaining gap is User
+Acceptance Testing, which has not been performed.
 
 ---
 
@@ -2179,7 +2195,7 @@ Each major requirement is mapped to one or more validation activities.
 | Logging | System Testing | **Pass** |
 | Error Handling | Recovery Testing | **Pass** |
 | Resource Management | Integration Testing | **Pass** |
-| Cross-Platform Support | Compatibility Testing | **Partial** — Linux only |
+| Cross-Platform Support | Compatibility Testing | **Pass** — Linux, Windows, macOS |
 
 Validated 2026-08-07. See section 9.8 for the full SRS-numbered matrix.
 
@@ -2257,7 +2273,7 @@ numbering that did not correspond to the SRS; it has been corrected.
 | FR-007 | Application Logging | System Testing | TC-014, TC-015, TC-019, TC-024 | **Validated** |
 | FR-008 | Console Display Refresh | System Testing | UT-080, UT-081 | **Validated** |
 | FR-009 | Graceful Shutdown | Recovery Testing | TC-020 | **Validated** |
-| FR-010 | Cross-Platform Compatibility | Compatibility Testing | Both build systems on Linux only | **Partially Validated** |
+| FR-010 | Cross-Platform Compatibility | Compatibility Testing | CI on Linux, Windows and macOS; both build systems | **Validated** |
 
 Theme support and resource management, which the earlier matrix listed as
 requirements, are covered by TC-012, TC-013, TC-025 and TC-016, TC-017,
@@ -2286,9 +2302,9 @@ Completed 2026-08-07.
 
 The following limitations apply to the validation process.
 
-- **Validation was performed on Linux only.** The Windows code paths were
-  never compiled or executed, so FR-010 is validated by inspection, not by
-  test.
+- Validation now covers Linux, Windows and macOS through continuous
+  integration. The Windows limitation recorded in earlier revisions is
+  closed.
 - **No User Acceptance Testing was performed**, as no UAT participants were
   involved.
 - **Line coverage was not measured**; coverage in section 8.10 is stated at
@@ -2320,15 +2336,13 @@ Completed and passed:
 
 Not completed:
 
-- **Windows execution.** FR-010 is validated by inspection only.
 - **User Acceptance Testing.** No participants were involved.
 
 All critical and high-severity defects (DEF-001 to DEF-003) are closed, and no
 defect remains open.
 
-**The application is considered ready for deployment on Linux.** A
-cross-platform release should not be declared until the suite has been
-executed on Windows.
+**The application is considered ready for deployment on Linux, Windows and
+macOS**, each verified by an automated run rather than by inspection.
 
 ---
 
@@ -2363,7 +2377,7 @@ The Digital Clock System was tested across multiple levels. Results:
 | System Testing | **Pass** — 6 of 6 categories |
 | Functional Testing | **Pass** — TC-001 to TC-041 |
 | Performance Testing | **Pass** — all targets met with margin |
-| Compatibility Testing | **Partial** — Linux verified, Windows not executed |
+| Compatibility Testing | **Pass** — Linux, Windows and macOS verified in CI |
 | Recovery Testing | **Pass** — every degraded path exercised |
 | User Acceptance Testing | **Not performed** |
 
@@ -2392,7 +2406,7 @@ Every major module carries automated coverage.
 | Shutdown Process | **Covered** |
 | Error Handling | **Covered** |
 | Console | **Indirect** — via Display and Application |
-| Windows code paths | **Not covered** — never compiled |
+| Windows code paths | **Covered** — compiled and executed in CI |
 
 Complete functional coverage was achieved for the first release on Linux.
 
@@ -2489,12 +2503,12 @@ This completes the **06_Testing_Report.md** document.
 | Project | **Digital Clock System** |
 | Language | **C++17** |
 | Application Version | **1.1.0** |
-| Document Version | **1.2** |
+| Document Version | **1.3** |
 | Status | **Executed** |
 | Test Execution Date | **2026-08-07** |
 | Result | **78 of 78 automated tests passed; TC-001 – TC-041 all passed** |
 | Open Defects | **None** |
-| Known Gaps | Windows not executed; no UAT; line coverage not measured |
+| Known Gaps | No UAT; line coverage not measured |
 | Environment | Garuda Linux (kernel 7.1.5-zen1-2-zen, x86_64), GCC 16.1.1, GNU Make 4.4.1, CMake 4.4.2 |
 | Reproduce With | `make test` or `ctest --test-dir build --output-on-failure` |
 | Target Audience | Developers, Test Engineers, Reviewers, Project Maintainers |

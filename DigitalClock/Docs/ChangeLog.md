@@ -1005,12 +1005,12 @@ only written:
 | GNU Make | **Verified** | GNU Make 4.4.1 |
 | CMake | **Verified** | CMake 4.4.2, with CTest |
 | Linux | **Verified** | Garuda Linux, kernel 7.1.5-zen1-2-zen (x86_64) |
-| Windows | **Implemented, not verified** | `_WIN32` paths written; never compiled or run |
-| Clang / MSVC | Not verified | Not exercised |
-| macOS | Not supported | No platform work done |
+| Windows | **Verified** | CI: MSVC 19.51, 78 tests passed, frame rendered |
+| MSVC | **Verified** | MSVC 19.51.36252, Visual Studio 18 2026 |
+| macOS | **Verified** | CI: suite passed, frame rendered |
 
-Future releases may extend compatibility with additional platforms and
-toolchains. Verifying the Windows build is the highest-value next step.
+Verified by CI run 31142229662 on 2026-08-07. Every change to `DigitalClock/`
+re-runs this matrix, so it stays evidence-based.
 
 ---
 
@@ -1118,7 +1118,7 @@ Verification gaps carried by this release:
 
 | Issue ID | Description | Severity | Status |
 | -------- | ----------- | -------- | ------ |
-| KI-000   | Windows support is implemented but has never been compiled or executed, so the cross-platform claim (FR-010) rests on inspection rather than testing | Medium | Open |
+| ~~KI-000~~ | ~~Windows support is implemented but has never been compiled or executed~~ | Medium | **Closed 2026-08-07** — verified by CI under MSVC 19.51; 78 tests passed and the application rendered a frame |
 | KI-007   | No User Acceptance Testing was performed | Low | Open |
 | KI-008   | Line coverage is not measured; coverage is stated at component level only | Low | Open |
 | KI-009   | `Console` has no direct automated tests; it is covered indirectly and by one manual check under a pseudo-terminal | Low | Open |
@@ -1134,9 +1134,16 @@ Features deferred to future releases:
 | KI-005   | Graphical User Interface (GUI) is not implemented | Enhancement | Open |
 | KI-006   | Plugin architecture is not available | Enhancement | Open |
 
-KI-000 is the only item that affects a claim already made about this release;
-the rest describe work not yet attempted. The enhancement items are planned
-for consideration in future releases.
+KI-000 is closed. It was the only item that affected a claim already made
+about a release, and it was closed by evidence — a Windows CI run — rather
+than by revising the claim. macOS was verified by the same run and is now
+supported in practice as well as in intent.
+
+KI-009 is partly addressed: `Console` still has no direct unit tests, but the
+CI smoke step now executes it on all three platforms via `--once`.
+
+The remaining items describe work not yet attempted. The enhancement items are
+planned for consideration in future releases.
 
 ---
 
@@ -1162,8 +1169,8 @@ Current platform-related limitations include:
 | Platform | Limitation |
 | -------- | ---------- |
 | Linux | Fully supported and verified |
-| Windows | Code paths implemented but never compiled or executed. Should build with a C++17 compiler, but this is untested — see KI-000 |
-| macOS | Not supported; no platform-specific work has been done |
+| Windows | Supported and verified in CI under MSVC. The Makefile is POSIX-only, so use the CMake build on Windows |
+| macOS | Supported and verified in CI |
 | Mobile Platforms | Not supported |
 
 Additional platform support may be introduced in future versions.
@@ -1621,15 +1628,15 @@ Developers and maintainers are encouraged to update the Change Log as an integra
 | Item | Details |
 | ---- | ------- |
 | Document | **09_ChangeLog.md** |
-| Document Version | **1.2** |
+| Document Version | **1.3** |
 | Project | **Digital Clock System** |
 | Current Version | **1.1.0** |
 | Release Date | **2026-08-07** |
 | Language | **C++17** |
 | Status | **Released** |
-| Verified On | Linux (Garuda, kernel 7.1.5-zen1-2-zen, x86_64), GCC 16.1.1 |
+| Verified On | Linux (GCC 16.1.1), Windows (MSVC 19.51) and macOS, via CI |
 | Test Result | 78 of 78 automated tests passed; no open defects |
-| Known Gaps | Windows unverified (KI-000); no UAT (KI-007) |
+| Known Gaps | No UAT (KI-007); line coverage not measured (KI-008) |
 | Audience | Developers, Maintainers, Test Engineers, Project Managers, End Users |
 
 ---

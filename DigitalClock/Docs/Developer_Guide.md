@@ -274,9 +274,9 @@ Development can be performed on the following operating systems.
 | Operating System | Support Status |
 |------------------|----------------|
 | Linux | Fully supported and verified |
-| Windows 10 | Implemented, not yet verified |
-| Windows 11 | Implemented, not yet verified |
-| macOS | Planned |
+| Windows 10 | Supported and verified (CMake build) |
+| Windows 11 | Supported and verified (CMake build) |
+| macOS | Supported and verified |
 | Other UNIX Systems | Planned |
 
 Linux is the primary development platform for this project.

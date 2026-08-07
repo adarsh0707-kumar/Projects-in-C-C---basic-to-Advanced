@@ -50,7 +50,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release
@@ -124,7 +124,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Build (${{ matrix.build }})
         run: |
@@ -149,7 +149,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Build with -Werror
         run: make OPTIMIZE="-O2 -Werror"
@@ -168,16 +168,19 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # halt_on_error makes UBSan fail the job rather than printing a
       # diagnostic and carrying on, which would let a real defect pass as
       # a green run.
-      - name: Run test suite under ${{ matrix.sanitizer }}
+      # `all` as well as `test`: the test target builds only the test
+      # binary, so without it the smoke step below has no application to
+      # run.
+      - name: Build and run test suite under ${{ matrix.sanitizer }}
         env:
           UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
           ASAN_OPTIONS: detect_leaks=1
-        run: make SANITIZE=${{ matrix.sanitizer }} test
+        run: make SANITIZE=${{ matrix.sanitizer }} all test
 
       - name: Smoke test under ${{ matrix.sanitizer }}
         env:
