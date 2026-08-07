@@ -71,6 +71,16 @@ void Screen::setFooterHint(const std::string &hint)
     footerHint = hint;
 }
 
+void Screen::setNotification(const std::vector<std::string> &lines)
+{
+    alertLines = lines;
+}
+
+bool Screen::hasNotification() const
+{
+    return !alertLines.empty();
+}
+
 void Screen::resize(int width, int height)
 {
     layoutWidth = (width < MINIMUM_WIDTH) ? MINIMUM_WIDTH : width;
@@ -91,6 +101,7 @@ void Screen::reset()
     timeText.clear();
     dateText.clear();
     statusLines.clear();
+    alertLines.clear();
 
     footerHint = "Press Q or Ctrl+C to Exit";
 
@@ -145,6 +156,13 @@ std::vector<std::string> Screen::compose() const
     lines.push_back(Utility::center(dateText, layoutWidth));
     lines.push_back("");
 
+    // A ringing alarm sits directly under the clock, where the eye already is.
+    for (const std::string &alert : alertLines)
+        lines.push_back(alert);
+
+    if (!alertLines.empty())
+        lines.push_back("");
+
     lines.push_back(rule('-'));
 
     for (const std::string &status : statusLines)
@@ -197,6 +215,14 @@ void Screen::draw()
                 element = ThemeManager::Element::Date;
             else if (index + 1 == lines.size() && !footerHint.empty())
                 element = ThemeManager::Element::Footer;
+
+            // The alert panel overrides every other classification.
+            if (!alertLines.empty() &&
+                std::find(alertLines.begin(), alertLines.end(), line) !=
+                    alertLines.end())
+            {
+                element = ThemeManager::Element::Alert;
+            }
 
             color = theme->colorFor(element);
             clear = color.empty() ? "" : theme->reset();

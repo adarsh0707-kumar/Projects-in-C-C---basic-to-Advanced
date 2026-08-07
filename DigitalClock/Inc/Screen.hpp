@@ -100,6 +100,22 @@ public:
     void setFooterHint(const std::string &hint);
 
     /**
+     * @brief Sets the alert panel shown beneath the date.
+     *
+     * Pass an empty vector to remove it. The panel is drawn in the theme's
+     * alert colour so a ringing alarm is unmistakable.
+     *
+     * @param lines Panel lines produced by Notifier.
+     */
+    void setNotification(const std::vector<std::string> &lines);
+
+    /**
+     * @brief Reports whether an alert panel is currently part of the layout.
+     * @return true when a panel will be drawn.
+     */
+    bool hasNotification() const;
+
+    /**
      * @brief Composes the screen without drawing it.
      *
      * Exposed so that layout can be verified in tests without a terminal.
@@ -139,6 +155,7 @@ private:
     std::string timeText;                 ///< Formatted time.
     std::string dateText;                 ///< Formatted date.
     std::vector<std::string> statusLines; ///< Status rows.
+    std::vector<std::string> alertLines;  ///< Alarm alert panel, if any.
     std::string footerHint;               ///< Exit hint.
 
     int layoutWidth;  ///< Layout width in columns.

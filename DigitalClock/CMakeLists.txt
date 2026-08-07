@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project(
     DigitalClock
-    VERSION 1.0.0
+    VERSION 1.1.0
     DESCRIPTION "Digital Clock System"
     LANGUAGES CXX
 )
@@ -39,6 +39,8 @@ endif()
 # Everything except main() lives in a library so that the executable and the
 # test runner link the same objects.
 add_library(digitalclock_core STATIC
+    Src/Alarm.cpp
+    Src/AlarmManager.cpp
     Src/Application.cpp
     Src/Banner.cpp
     Src/Clock.cpp
@@ -47,6 +49,7 @@ add_library(digitalclock_core STATIC
     Src/Date.cpp
     Src/Display.cpp
     Src/Logger.cpp
+    Src/Notifier.cpp
     Src/ResourceManager.cpp
     Src/Screen.cpp
     Src/StatusBar.cpp
@@ -98,6 +101,7 @@ if(BUILD_TESTING_SUITE)
         Tests/test_resource.cpp
         Tests/test_display.cpp
         Tests/test_application.cpp
+        Tests/test_alarm.cpp
     )
 
     target_include_directories(DigitalClockTests

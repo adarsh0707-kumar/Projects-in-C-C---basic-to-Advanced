@@ -50,6 +50,7 @@ public:
         Status, ///< Status bar rows.
         Footer, ///< Exit hint and separators.
         Accent, ///< Separator rules and highlights.
+        Alert,  ///< Alarm notification panel.
         Error   ///< Error and warning text.
     };
 

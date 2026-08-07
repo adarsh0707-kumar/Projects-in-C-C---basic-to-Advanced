@@ -24,6 +24,7 @@ void ThemeManager::applyDefaultTheme()
     colors[Element::Status] = Theme::Color::White;
     colors[Element::Footer] = Theme::Color::BrightBlack;
     colors[Element::Accent] = Theme::Color::Blue;
+    colors[Element::Alert]  = Theme::Color::BrightYellow;
     colors[Element::Error]  = Theme::Color::Red;
 
     themeName = DEFAULT_THEME_NAME;
@@ -72,6 +73,12 @@ bool ThemeManager::elementFromKey(const std::string &key, Element &element)
     if (name == "ACCENT" || name == "SEPARATOR")
     {
         element = Element::Accent;
+        return true;
+    }
+
+    if (name == "ALERT" || name == "ALARM")
+    {
+        element = Element::Alert;
         return true;
     }
 
@@ -126,6 +133,7 @@ bool ThemeManager::loadTheme(const std::string &requestedName)
         {"STATUS", Element::Status},
         {"FOOTER", Element::Footer},
         {"ACCENT", Element::Accent},
+        {"ALERT", Element::Alert},
         {"ERROR", Element::Error}};
 
     for (const auto &entry : KEYS)

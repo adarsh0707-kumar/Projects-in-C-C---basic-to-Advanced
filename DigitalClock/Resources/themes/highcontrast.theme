@@ -8,3 +8,4 @@ STATUS=BrightWhite
 FOOTER=BrightWhite
 ACCENT=BrightYellow
 ERROR=BrightRed
+ALERT=BrightYellow

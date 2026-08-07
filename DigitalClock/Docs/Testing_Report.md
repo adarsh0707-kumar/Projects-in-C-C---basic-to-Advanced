@@ -887,7 +887,8 @@ The table below records the unit tests that were implemented and executed. Count
 | Resource Manager | `test_resource.cpp` | 6 | 6 | 0 |
 | Presentation Layer | `test_display.cpp` | 7 | 7 | 0 |
 | Application Lifecycle | `test_application.cpp` | 6 | 6 | 0 |
-| **Total** | | **60** | **60** | **0** |
+| Alarm Module | `test_alarm.cpp` | 18 | 18 | 0 |
+| **Total** | | **78** | **78** | **0** |
 
 The suite exceeds the 26 tests originally planned because several planned cases needed more than one assertion group to cover their boundary conditions.
 
@@ -1117,8 +1118,15 @@ Integration is exercised through the `Application` and presentation-layer tests,
 | Resource Manager + Banner | `TC-016`, `TC-017`, `TC-023` | **Pass** |
 | Screen + StatusBar + Console | `UT-080`, `UT-081`, `UT-083` | **Pass** |
 | Startup & Shutdown | `TC-001`, `TC-002`, `TC-020` | **Pass** |
+| Alarm + Clock + Notifier + Screen | `TC-034`, `TC-037`, `TC-041` | **Pass** |
 
-All integration paths passed. No defects were found at the module boundaries.
+All nine integration paths passed.
+
+One defect was found at a module boundary rather than inside a module:
+`AlarmManager::poll()` and `Alarm::minutesUntil()` were each correct alone,
+but together left the status bar claiming an alarm was due after it had
+already rung and been acknowledged (DEF-007). It was caught by running the
+application, not by the suite, and TC-041 now covers it.
 
 ---
 
@@ -1748,6 +1756,36 @@ Executed 2026-08-07.
 
 ---
 
+# 7.12a Alarm Module Test Cases (v1.1.0)
+
+Introduced with the alarm module. All were executed on 2026-08-07 and passed.
+
+| Test ID | Objective | Actual Result | Status |
+|---------|-----------|---------------|--------|
+| TC-026 | Verify alarm parsing from configuration text | Full, label-only and time-only forms all parsed; whitespace tolerated; a leading `!` disarmed the alarm without discarding it | **Pass** |
+| TC-027 | Verify malformed alarm text is rejected | Empty, non-numeric, out-of-range and structurally wrong entries were all rejected; `00:00` and `23:59` accepted | **Pass** |
+| TC-028 | Verify recurrence rules select the correct days | Daily, Weekdays, Weekends and explicit day lists each matched the expected weekdays; a list equal to a named set reported the friendlier name | **Pass** |
+| TC-029 | Verify an alarm is due only at its configured time | Due for the whole of its minute regardless of seconds; not due a minute either side; never due when disarmed | **Pass** |
+| TC-030 | Verify recurrence is honoured by due detection | A weekday alarm did not ring on Saturday; a weekend alarm did not ring on Monday | **Pass** |
+| TC-031 | Verify snooze postpones an alarm by the configured delay | Snooze moved the alarm forward and wrapped correctly across an hour and across midnight; zero and negative delays rejected | **Pass** |
+| TC-032 | Verify AlarmManager loads alarms from a file | Three alarms loaded from non-contiguous indices; a missing file returned false with no alarms and no error | **Pass** |
+| TC-033 | Verify malformed alarm entries are skipped, not fatal | Two valid entries survived alongside two malformed ones, which were counted | **Pass** |
+| TC-034 | Verify an alarm fires exactly once per occurrence | Fired once on the first poll of its minute, not again within that minute nor after dismissal, but did fire again the next day | **Pass** |
+| TC-035 | Verify dismissing a one-shot alarm disarms it | The one-shot alarm disarmed itself; the recurring alarm stayed armed | **Pass** |
+| TC-036 | Verify snoozing through the manager re-arms the alarm | Ringing stopped, the alarm rang again when the snooze expired, and dismissal cleared the snooze | **Pass** |
+| TC-037 | Verify only one alarm rings at a time | The second alarm waited until the first was dismissed rather than replacing it | **Pass** |
+| TC-038 | Verify the next-alarm summary and countdown | The nearer alarm was reported and the countdown advanced correctly across the day boundary | **Pass** |
+| TC-039 | Verify the notification panel renders the ringing alarm | The panel carried the time, label and both key hints, and every row was the same width | **Pass** |
+| TC-040 | Verify the alarm bell is emitted and can be disabled | Three bells emitted across notify and two pulses; none when disabled; none when pulsing an inactive notifier | **Pass** |
+| TC-041 | Verify the countdown skips an alarm that already fired | After dismissal the countdown reported the next occurrence rather than "due now" | **Pass** |
+
+TC-041 covers a defect found during end-to-end verification rather than by the
+suite: the countdown claimed an alarm was due for the remainder of the minute
+in which it had already rung and been acknowledged. See the Change Log,
+section 3.9a.
+
+---
+
 # 7.13 Test Case Execution Summary
 
 | Category | Test Cases | Executed | Passed | Failed |
@@ -1762,12 +1800,14 @@ Executed 2026-08-07.
 | Error Handling | 2 | 2 | 2 | 0 |
 | Shutdown | 1 | 1 | 1 | 0 |
 | Boundary & Negative | 5 | 5 | 5 | 0 |
-| **Total** | **25** | **25** | **25** | **0** |
+| Alarm Module (v1.1.0) | 16 | 16 | 16 | 0 |
+| **Total** | **41** | **41** | **41** | **0** |
 
 Executed 2026-08-07. Two additional boundary cases, TC-005A and TC-006A, were
 added during implementation to cover the midnight and noon conversions that
-the FR-004 acceptance criteria require; both pass. The wider automated suite
-contains 60 tests in total, the remainder carrying `UT-` identifiers.
+the FR-004 acceptance criteria require; both pass. TC-026 to TC-041 arrived
+with the v1.1.0 alarm module. The wider automated suite contains 78 tests in
+total, the remainder carrying `UT-` identifiers.
 
 ---
 
@@ -1810,17 +1850,17 @@ Once development is completed, this chapter should be updated with the actual ex
 # 8.2 Test Execution Summary
 
 The table below records actual execution. The automated suite is a single
-binary, `Build/DigitalClockTests`, containing 60 tests; the phases below
+binary, `Build/DigitalClockTests`, containing 78 tests; the phases below
 describe what those tests cover rather than separate executables, so a single
 test may contribute to more than one phase.
 
 | Testing Phase | Test Cases | Executed | Passed | Failed | Status |
 |---------------|-----------:|---------:|-------:|-------:|--------|
-| Unit Testing | 60 | 60 | 60 | 0 | **Complete** |
-| Integration Testing | 8 paths | 8 | 8 | 0 | **Complete** |
+| Unit Testing | 78 | 78 | 78 | 0 | **Complete** |
+| Integration Testing | 9 paths | 9 | 9 | 0 | **Complete** |
 | System Testing | 6 categories | 6 | 6 | 0 | **Complete** |
-| Functional Testing (TC-001 – TC-025) | 25 | 25 | 25 | 0 | **Complete** |
-| **Automated suite total** | **60** | **60** | **60** | **0** | **Pass** |
+| Functional Testing (TC-001 – TC-041) | 41 | 41 | 41 | 0 | **Complete** |
+| **Automated suite total** | **78** | **78** | **78** | **0** | **Pass** |
 
 Reproduce with:
 
@@ -1839,8 +1879,8 @@ boundary.
 
 | Test Category | Expected Result | Actual Result | Status |
 |---------------|-----------------|---------------|--------|
-| Unit Testing | All modules operate correctly | 60 of 60 tests passed | **Pass** |
-| Integration Testing | Modules communicate without errors | All 8 integration paths passed | **Pass** |
+| Unit Testing | All modules operate correctly | 78 of 78 tests passed | **Pass** |
+| Integration Testing | Modules communicate without errors | All 9 integration paths passed | **Pass** |
 | System Testing | Complete application functions correctly | Application ran and rendered correctly | **Pass** |
 | Performance Testing | Meets target performance requirements | All targets met with margin (see 8.5) | **Pass** |
 | Compatibility Testing | Runs on all supported platforms | Verified on Linux with both build systems; Windows not yet exercised (see 8.6) | **Partial** |
@@ -1923,8 +1963,20 @@ during this cycle. All are closed; no defect remains open.
 | DEF-005 | Banner artwork was centred per line, shearing multi-line ASCII art | Cosmetic | **Closed** |
 | DEF-006 | `Logs/application.log` was tracked in version control despite the `*.log` ignore rule | Low | **Closed** |
 
-No defects were found by the test suite after implementation; the suite has
-passed at 60 of 60 on every run since completion.
+Found during v1.1.0 development:
+
+| Defect ID | Description | Severity | Status |
+|-----------|-------------|----------|--------|
+| DEF-007 | The next-alarm countdown reported "due now" for the rest of the minute in which an alarm had already rung and been acknowledged, implying a pending alarm when none existed | Medium | **Closed** |
+| DEF-008 | A zero countdown rendered as "in now" rather than "due now" | Cosmetic | **Closed** |
+
+Both were found by running the application end to end rather than by the
+suite, which is why TC-041 was added: the unit tests exercised
+`AlarmManager::poll()` and `Alarm::minutesUntil()` separately and neither
+revealed the interaction between them.
+
+No defects remain open; the suite has passed at 78 of 78 on every run since
+completion.
 
 ---
 
@@ -1976,6 +2028,7 @@ Every component has direct automated coverage.
 | ResourceManager / Banner | 6 | ✔ |
 | Utility | 8 | ✔ |
 | Application (startup & shutdown) | 6 | ✔ |
+| Alarm / AlarmManager / Notifier | 18 | ✔ |
 | Error handling | across all files | ✔ |
 
 Two areas are covered only indirectly and are worth stating plainly:
@@ -2254,16 +2307,16 @@ first two are the ones that matter for a release decision.
 # 9.11 Final Validation Statement
 
 Based on the testing and validation activities actually carried out, the
-**Digital Clock System v1.0.0 satisfies its defined functional and
+**Digital Clock System v1.1.0 satisfies its defined functional and
 non-functional requirements on Linux**, with the two exceptions recorded
 below.
 
 Completed and passed:
 
-- Unit Testing — 60 of 60
-- Integration Testing — 8 of 8 paths
+- Unit Testing — 78 of 78
+- Integration Testing — 9 of 9 paths
 - System Testing — 6 of 6 categories
-- Functional Testing — TC-001 to TC-025, all passed
+- Functional Testing — TC-001 to TC-041, all passed
 
 Not completed:
 
@@ -2305,10 +2358,10 @@ The Digital Clock System was tested across multiple levels. Results:
 
 | Testing Level | Result |
 |---------------|--------|
-| Unit Testing | **Pass** — 60 of 60 |
-| Integration Testing | **Pass** — 8 of 8 paths |
+| Unit Testing | **Pass** — 78 of 78 |
+| Integration Testing | **Pass** — 9 of 9 paths |
 | System Testing | **Pass** — 6 of 6 categories |
-| Functional Testing | **Pass** — TC-001 to TC-025 |
+| Functional Testing | **Pass** — TC-001 to TC-041 |
 | Performance Testing | **Pass** — all targets met with margin |
 | Compatibility Testing | **Partial** — Linux verified, Windows not executed |
 | Recovery Testing | **Pass** — every degraded path exercised |
@@ -2328,6 +2381,7 @@ Every major module carries automated coverage.
 | Clock Module | **Covered** |
 | Date Module | **Covered** |
 | Time Formatter | **Covered** |
+| Alarm Module | **Covered** |
 | Display / Screen / StatusBar | **Covered** |
 | Configuration Manager | **Covered** |
 | Theme Manager | **Covered** |
@@ -2434,11 +2488,11 @@ This completes the **06_Testing_Report.md** document.
 | Document | **06_Testing_Report.md** |
 | Project | **Digital Clock System** |
 | Language | **C++17** |
-| Application Version | **1.0.0** |
-| Document Version | **1.1** |
+| Application Version | **1.1.0** |
+| Document Version | **1.2** |
 | Status | **Executed** |
 | Test Execution Date | **2026-08-07** |
-| Result | **60 of 60 automated tests passed; TC-001 – TC-025 all passed** |
+| Result | **78 of 78 automated tests passed; TC-001 – TC-041 all passed** |
 | Open Defects | **None** |
 | Known Gaps | Windows not executed; no UAT; line coverage not measured |
 | Environment | Garuda Linux (kernel 7.1.5-zen1-2-zen, x86_64), GCC 16.1.1, GNU Make 4.4.1, CMake 4.4.2 |

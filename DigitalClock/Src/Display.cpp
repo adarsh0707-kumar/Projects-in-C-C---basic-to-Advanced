@@ -77,6 +77,16 @@ void Display::setStatusField(const std::string &name, const std::string &value)
     status.setField(name, value);
 }
 
+void Display::showNotification(const std::vector<std::string> &lines)
+{
+    layout.setNotification(lines);
+}
+
+void Display::clearNotification()
+{
+    layout.setNotification({});
+}
+
 bool Display::loadBanner(const std::string &fileName)
 {
     return layout.banner().load(fileName);

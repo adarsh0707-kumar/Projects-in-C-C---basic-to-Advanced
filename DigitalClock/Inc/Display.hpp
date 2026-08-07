@@ -16,6 +16,7 @@
  ******************************************************************************/
 
 #include <string>
+#include <vector>
 
 #include "Console.hpp"
 #include "Screen.hpp"
@@ -109,6 +110,19 @@ public:
      * @param value Field value, such as "Dark".
      */
     void setStatusField(const std::string &name, const std::string &value);
+
+    /**
+     * @brief Shows an alert panel beneath the clock.
+     *
+     * @param lines Panel lines, typically produced by Notifier. An empty
+     *              vector removes the panel.
+     */
+    void showNotification(const std::vector<std::string> &lines);
+
+    /**
+     * @brief Removes the alert panel.
+     */
+    void clearNotification();
 
     /**
      * @brief Loads banner artwork from a resource file.

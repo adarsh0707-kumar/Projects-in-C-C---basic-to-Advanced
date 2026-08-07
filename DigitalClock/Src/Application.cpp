@@ -62,6 +62,7 @@ const int Application::EXIT_STARTUP_FAILED = 1;
 
 Application::Application()
     : interval(DEFAULT_INTERVAL),
+      alarmsEnabled(true),
       running(false),
       initialized(false)
 {
@@ -164,6 +165,9 @@ bool Application::initialize(const std::string &configPath)
     // Stage 4 - Theme.
     configureTheme();
 
+    // Stage 4b - Alarms (v1.1.0).
+    configureAlarms();
+
     // Stages 5 and 7 - Console and Display.
     display.initialize(theme);
 
@@ -257,12 +261,151 @@ void Application::configureStatusBar()
     display.setStatusField("Theme", theme.currentTheme());
     display.setStatusField("Refresh Rate", describeInterval(interval));
     display.setStatusField("Status", "Running");
+
+    if (alarmsEnabled && alarmManager.count() > 0)
+        display.setStatusField("Next Alarm", "-");
+}
+
+void Application::configureAlarms()
+{
+    alarmsEnabled = config.getBool("Alarms", true);
+
+    alertNotifier.setBellEnabled(config.getBool("AlarmBell", true));
+
+    alarmManager.setSnoozeMinutes(
+        config.getInt(
+            "SnoozeMinutes",
+            AlarmManager::DEFAULT_SNOOZE_MINUTES,
+            1,
+            240));
+
+    if (!alarmsEnabled)
+    {
+        logger.info("Alarms disabled by configuration.");
+        return;
+    }
+
+    const std::string alarmFile =
+        config.getValue("AlarmFile", "Config/alarms.ini");
+
+    if (!alarmManager.load(alarmFile))
+    {
+        // No alarm file is a normal state, not a failure.
+        logger.info(
+            "No alarm file at '" + alarmFile + "'; running without alarms.");
+        return;
+    }
+
+    logger.info(
+        "Loaded " + std::to_string(alarmManager.count()) +
+        " alarm(s) from " + alarmFile + ".");
+
+    if (alarmManager.invalidCount() > 0)
+    {
+        logger.warning(
+            std::to_string(alarmManager.invalidCount()) +
+            " alarm entr(y/ies) could not be parsed and were skipped.");
+    }
+
+    for (std::size_t index = 0; index < alarmManager.count(); ++index)
+        logger.debug("Alarm: " + alarmManager.at(index).describe());
+}
+
+void Application::updateAlarms()
+{
+    if (!alarmsEnabled)
+        return;
+
+    // Fire at most one alarm per frame; poll() handles the once-per-minute rule.
+    if (alarmManager.poll(clock, date))
+    {
+        const Alarm *ringing = alarmManager.active();
+
+        if (ringing != nullptr)
+        {
+            logger.info("Alarm fired: " + ringing->describe());
+
+            alertNotifier.notify(*ringing, alarmManager.snoozeMinutes());
+            display.setStatusField("Status", "ALARM");
+        }
+    }
+    else if (alertNotifier.isActive())
+    {
+        // Keep signalling while the alarm waits to be acknowledged.
+        alertNotifier.pulse();
+    }
+
+    display.showNotification(
+        alertNotifier.lines(display.screen().width()));
+
+    if (alarmManager.count() > 0)
+    {
+        const std::string next = alarmManager.nextSummary(clock, date);
+
+        display.setStatusField("Next Alarm", next.empty() ? "none" : next);
+    }
+}
+
+bool Application::snoozeAlarm()
+{
+    if (!alarmManager.isRinging())
+        return false;
+
+    const Alarm *ringing = alarmManager.active();
+    const std::string description =
+        (ringing != nullptr) ? ringing->describe() : "";
+
+    if (!alarmManager.snoozeActive(clock))
+        return false;
+
+    alertNotifier.clear();
+    display.clearNotification();
+    display.setStatusField("Status", "Running");
+
+    logger.info(
+        "Alarm snoozed for " + std::to_string(alarmManager.snoozeMinutes()) +
+        " minutes: " + description);
+
+    return true;
+}
+
+bool Application::dismissAlarm()
+{
+    if (!alarmManager.isRinging())
+        return false;
+
+    const Alarm *ringing = alarmManager.active();
+    const std::string description =
+        (ringing != nullptr) ? ringing->describe() : "";
+
+    if (!alarmManager.dismissActive())
+        return false;
+
+    alertNotifier.clear();
+    display.clearNotification();
+    display.setStatusField("Status", "Running");
+
+    logger.info("Alarm dismissed: " + description);
+
+    return true;
+}
+
+AlarmManager &Application::alarms()
+{
+    return alarmManager;
+}
+
+Notifier &Application::notifier()
+{
+    return alertNotifier;
 }
 
 void Application::renderFrame()
 {
     clock.update();
     date.update();
+
+    updateAlarms();
 
     display.renderClock(formatter.formatTimeWide(clock));
     display.renderDate(formatter.formatDate(date));
@@ -292,6 +435,14 @@ bool Application::waitForNextFrame()
             logger.info("Exit requested by keypress.");
             return false;
         }
+
+        // Acknowledging an alarm redraws at once, rather than waiting for the
+        // rest of the interval to elapse.
+        if ((key == 's' || key == 'S') && snoozeAlarm())
+            return true;
+
+        if ((key == 'd' || key == 'D') && dismissAlarm())
+            return true;
     }
 
     return !terminationRequested.load();

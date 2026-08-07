@@ -18,11 +18,13 @@
 
 #include <string>
 
+#include "AlarmManager.hpp"
 #include "Clock.hpp"
 #include "ConfigurationManager.hpp"
 #include "Date.hpp"
 #include "Display.hpp"
 #include "Logger.hpp"
+#include "Notifier.hpp"
 #include "ResourceManager.hpp"
 #include "ThemeManager.hpp"
 #include "TimeFormatter.hpp"
@@ -107,6 +109,30 @@ public:
     int refreshInterval() const;
 
     /**
+     * @brief Returns the alarm manager.
+     * @return AlarmManager& The configured alarms.
+     */
+    AlarmManager &alarms();
+
+    /**
+     * @brief Returns the notifier.
+     * @return Notifier& The alert composer.
+     */
+    Notifier &notifier();
+
+    /**
+     * @brief Snoozes the ringing alarm, if one is ringing.
+     * @return true if an alarm was snoozed.
+     */
+    bool snoozeAlarm();
+
+    /**
+     * @brief Dismisses the ringing alarm, if one is ringing.
+     * @return true if an alarm was dismissed.
+     */
+    bool dismissAlarm();
+
+    /**
      * @brief Returns the default configuration file path.
      * @return std::string @c Config/config.ini.
      */
@@ -148,6 +174,16 @@ private:
     void configureStatusBar();
 
     /**
+     * @brief Loads alarms and applies the alarm-related settings.
+     */
+    void configureAlarms();
+
+    /**
+     * @brief Fires, re-signals and clears alarms for the current frame.
+     */
+    void updateAlarms();
+
+    /**
      * @brief Sleeps for the refresh interval while polling for a quit key.
      *
      * @return true if the loop should continue, false if the user asked to
@@ -162,9 +198,12 @@ private:
     Clock clock;                 ///< Current time.
     Date date;                   ///< Current date.
     TimeFormatter formatter;     ///< Applies the configured formats.
+    AlarmManager alarmManager;   ///< Configured alarms.
+    Notifier alertNotifier;      ///< Composes the alarm alert panel.
     Display display;             ///< Presentation layer.
 
     int interval;     ///< Refresh interval in milliseconds.
+    bool alarmsEnabled; ///< Whether alarm checking is active.
     bool running;     ///< Whether the refresh loop should continue.
     bool initialized; ///< Whether initialize() completed.
 };

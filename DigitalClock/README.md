@@ -1,8 +1,8 @@
 # Digital Clock System
 
 A console digital clock in C++17. It displays the current system time and date
-in real time, refreshing on a configurable interval, with themeable colours,
-external configuration and file-based logging.
+in real time, refreshing on a configurable interval, with recurring alarms,
+themeable colours, external configuration and file-based logging.
 
 No third-party dependencies — the standard library only.
 
@@ -70,7 +70,8 @@ Or via the helper scripts:
 ```
 
 Press **Q** or **Ctrl+C** to exit. Both paths shut down gracefully: the
-terminal state is restored and the shutdown is recorded in the log.
+terminal state is restored and the shutdown is recorded in the log. While an
+alarm is ringing, **S** snoozes it and **D** dismisses it.
 
 Run from the project root so that `Resources/` and `Config/` resolve. The
 resource loader also searches the parent and grandparent directories, so
@@ -91,6 +92,10 @@ default rather than stopping the application.
 | `Theme`           | `Dark`, `Light`, `Blue`, `Green`, `HighContrast` | `Dark`                 |
 | `RefreshInterval` | milliseconds, 50-60000                           | `1000`                 |
 | `Banner`          | path to banner artwork                           | `Resources/banner.txt` |
+| `Alarms`          | `Enabled`, `Disabled`                            | `Enabled`              |
+| `AlarmFile`       | path to the alarm definitions                    | `Config/alarms.ini`    |
+| `SnoozeMinutes`   | minutes, 1 - 240                                 | `5`                    |
+| `AlarmBell`       | `true`, `false`                                  | `true`                 |
 | `Logging`         | `Enabled`, `Disabled`                            | `Enabled`              |
 | `LogFile`         | path; missing directories are created            | `Logs/application.log` |
 | `LogLevel`        | `DEBUG`, `INFO`, `WARNING`, `ERROR`              | `INFO`                 |
@@ -112,6 +117,51 @@ DateFormat=MM-DD-YYYY    ->  08-03-2026
 DateFormat=YYYY-MM-DD    ->  2026-08-03
 ```
 
+### Alarms
+
+Alarms live in [`Config/alarms.ini`](Config/alarms.ini), one per numbered key:
+
+```ini
+Alarm1=07:30 | Wake up     | Weekdays
+Alarm2=13:00 | Lunch break | Daily
+Alarm3=22:30 | Wind down   | Sun,Mon,Tue,Wed,Thu
+Alarm4=09:00 | One-off     | Once
+!Alarm5=06:00 | Kept but disarmed | Daily
+```
+
+The label and recurrence are optional; `07:30` on its own is a valid one-shot
+alarm. Indices need not be contiguous. A leading `!` keeps an alarm on file
+but disarmed.
+
+| Recurrence | Meaning |
+| ---------- | ------- |
+| `Once` | Rings at the next occurrence, then disarms itself |
+| `Daily` | Every day |
+| `Weekdays` | Monday to Friday |
+| `Weekends` | Saturday and Sunday |
+| `Mon,Wed,Fri` | An explicit comma-separated day list |
+
+When an alarm fires, an alert panel appears beneath the clock and the terminal
+bell sounds each refresh until it is acknowledged:
+
+```text
+                 +--------------------------------------------+
+                 | ALARM  07:30                               |
+                 | Wake up                                    |
+                 |                                            |
+                 | [S] Snooze 5m   [D] Dismiss                |
+                 +--------------------------------------------+
+```
+
+Press **S** to snooze for `SnoozeMinutes`, or **D** to dismiss. A one-shot
+alarm disarms itself once dismissed; a recurring one stays armed for its next
+occurrence. The status bar shows a countdown to whichever alarm is next.
+
+A malformed entry is skipped and logged rather than discarding the rest of the
+file, and a missing alarm file simply means no alarms are configured.
+
+---
+
 ### Themes
 
 Theme files live in [`Resources/themes/`](Resources/themes/) and assign a
@@ -124,6 +174,7 @@ DATE=Yellow
 STATUS=White
 FOOTER=BrightBlack
 ACCENT=Blue
+ALERT=BrightYellow
 ERROR=BrightRed
 ```
 
@@ -141,9 +192,9 @@ A layered design; each layer depends only on the ones beneath it.
 ```text
                         User
                          ▲
-   Presentation   Console · Display · Screen · Banner · StatusBar
+   Presentation   Console · Display · Screen · Banner · StatusBar · Notifier
                          ▲
-   Business logic        Clock · Date · TimeFormatter
+   Business logic   Clock · Date · TimeFormatter · Alarm · AlarmManager
                          ▲
    Service        ConfigurationManager · ThemeManager · Logger
                   ResourceManager · Utility
@@ -160,6 +211,9 @@ shutdown. `main()` only parses arguments and delegates.
 | `Clock`                | System time snapshot; 12- and 24-hour accessors    |
 | `Date`                 | System date snapshot; weekday and calendar helpers |
 | `TimeFormatter`        | Applies the configured time and date formats       |
+| `Alarm`                | One alarm: time, label, recurrence, snooze state    |
+| `AlarmManager`         | Loads alarms and decides when one fires             |
+| `Notifier`             | Composes the alert panel and sounds the bell        |
 | `Display`              | Coordinates the presentation layer                 |
 | `Screen`               | Composes the layout; flicker-free redraw           |
 | `Console`              | All terminal I/O: cursor, clearing, key polling    |
@@ -216,7 +270,7 @@ make test                      # all tests
 ./Build/DigitalClockTests TC-0 # filter by identifier
 ```
 
-60 tests, covering TC-001 through TC-025 from
+78 tests, covering TC-001 through TC-041 from
 [`Docs/Testing_Report.md`](Docs/Testing_Report.md) plus supporting unit tests
 (`UT-*`) for the parsing and layout code. The harness is a small header in
 `Tests/TestFramework.hpp` — adding a third-party framework would have been the

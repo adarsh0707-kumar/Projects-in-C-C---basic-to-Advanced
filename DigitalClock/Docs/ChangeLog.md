@@ -498,6 +498,7 @@ The table below summarizes the official project versions.
 | **0.4.0** | Testing       | Unit and integration testing introduced |
 | **0.5.0** | Documentation | Technical documentation completed       |
 | **1.0.0** | Stable        | Initial production release              |
+| **1.1.0** | Stable        | Alarm module and notification support   |
 
 These versions represent the major milestones in the development lifecycle.
 
@@ -708,6 +709,70 @@ is intended for general use and future development.
 It is verified on Linux. The Windows code paths are implemented but have not
 been compiled or executed, so this release should not be described as
 cross-platform verified. See section 5.6.
+
+---
+
+# 3.9a Version 1.1.0 - Alarm Module
+
+### Release Status
+
+Stable
+
+### Added
+
+- **Alarm module.** `Alarm` holds a time, label and recurrence rule;
+  `AlarmManager` owns the configured set and decides when one fires.
+- **Multiple alarms**, defined in `Config/alarms.ini` with numbered keys.
+  Indices need not be contiguous.
+- **Recurrence rules**: `Once`, `Daily`, `Weekdays`, `Weekends`, and explicit
+  day lists such as `Mon,Wed,Fri`.
+- **Snooze**, with the delay set by `SnoozeMinutes` (1-240, default 5).
+  A snooze that crosses an hour or midnight wraps correctly.
+- **Notification support.** `Notifier` composes an alert panel drawn beneath
+  the clock and sounds the terminal bell each refresh until acknowledged.
+- **Keyboard control**: `S` snoozes a ringing alarm, `D` dismisses it. Both
+  redraw immediately rather than waiting out the refresh interval.
+- **Next-alarm countdown** in the status bar.
+- New theme element `ALERT`, added to all five bundled themes.
+- Configuration keys `Alarms`, `AlarmFile`, `SnoozeMinutes` and `AlarmBell`.
+
+### Design Notes
+
+- An alarm reports itself due for its whole minute, so `AlarmManager` records
+  the date and minute of each firing to keep it to a single ring. The date is
+  part of the key so the same alarm still fires again the following day.
+- Only one alarm rings at a time. A second alarm due in the same minute waits
+  until the first is acknowledged rather than replacing it on screen.
+- A one-shot alarm disarms itself when dismissed; a recurring one stays armed.
+- A malformed alarm entry is skipped and counted, not fatal, so one bad line
+  does not discard the rest of the file.
+
+### Fixed
+
+- The next-alarm countdown reported "due now" for the remainder of the minute
+  in which an alarm had already rung and been acknowledged, implying an alarm
+  was pending when none was. The countdown now excludes an alarm that has
+  already fired in the current minute (TC-041).
+- The countdown rendered a zero duration as "in now"; an alarm due this minute
+  now reads "due now".
+
+### Release Verification
+
+| Item | Result |
+|------|--------|
+| Release date | 2026-08-07 |
+| Automated tests | 78 of 78 passed |
+| New test cases | TC-026 - TC-041 |
+| Compiler warnings | 0 under `-Wall -Wextra -Wpedantic -Wshadow -Wconversion` |
+| Build systems | `make` and CMake + CTest, both clean |
+| End-to-end check | Alarm fired, snoozed and dismissed in the running application |
+| Open defects | None |
+
+### Notes
+
+Version **1.1.0** delivers the alarm and notification functionality planned
+for this release in section 6.3. Verified on Linux; the Windows gap recorded
+as KI-000 is unchanged.
 
 ---
 
@@ -1062,7 +1127,7 @@ Features deferred to future releases:
 
 | Issue ID | Description | Severity | Status |
 | -------- | ----------- | -------- | ------ |
-| KI-001   | Alarm functionality is not implemented | Enhancement | Open |
+| ~~KI-001~~ | ~~Alarm functionality is not implemented~~ | Enhancement | **Closed in v1.1.0** |
 | KI-002   | Stopwatch feature is unavailable | Enhancement | Open |
 | KI-003   | Countdown timer is not available | Enhancement | Open |
 | KI-004   | Multiple time zone support is unavailable | Enhancement | Open |
@@ -1245,7 +1310,7 @@ The following roadmap outlines the expected progression of future versions.
 
 | Version         | Planned Focus                                                       |
 | --------------- | ------------------------------------------------------------------- |
-| **1.1.0** | Alarm module and notification support                               |
+| ~~**1.1.0**~~ | ~~Alarm module and notification support~~ - **delivered 2026-08-07** |
 | **1.2.0** | Stopwatch and countdown timer                                       |
 | **1.3.0** | Multiple time zone support                                          |
 | **1.4.0** | Theme enhancements and improved configuration                       |
@@ -1556,14 +1621,14 @@ Developers and maintainers are encouraged to update the Change Log as an integra
 | Item | Details |
 | ---- | ------- |
 | Document | **09_ChangeLog.md** |
-| Document Version | **1.1** |
+| Document Version | **1.2** |
 | Project | **Digital Clock System** |
-| Current Version | **1.0.0** |
+| Current Version | **1.1.0** |
 | Release Date | **2026-08-07** |
 | Language | **C++17** |
 | Status | **Released** |
 | Verified On | Linux (Garuda, kernel 7.1.5-zen1-2-zen, x86_64), GCC 16.1.1 |
-| Test Result | 60 of 60 automated tests passed; no open defects |
+| Test Result | 78 of 78 automated tests passed; no open defects |
 | Known Gaps | Windows unverified (KI-000); no UAT (KI-007) |
 | Audience | Developers, Maintainers, Test Engineers, Project Managers, End Users |
 
