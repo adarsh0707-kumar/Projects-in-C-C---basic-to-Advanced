@@ -675,13 +675,39 @@ Stable
 
 ### Fixed
 
-- Remaining known defects from development.
-- Minor display issues.
-- Configuration validation improvements.
+- `main.cpp` used the configuration object before it was declared, which
+  prevented the project from compiling at all (DEF-001).
+- The CMake source list named an empty `Utils.cpp` while omitting
+  `Banner.cpp`, `Screen.cpp` and `ResourceManager.cpp`, so the CMake build
+  failed to link (DEF-002).
+- `TimeFormatter.hpp` called `Clock::getHour()`, a method that did not exist
+  (DEF-003).
+- `Resources/config.ini` and `Config/config.ini` held conflicting settings
+  and only one of them was ever read (DEF-004).
+- Banner artwork was centred line by line, which sheared multi-line ASCII art
+  (DEF-005).
+- `Logs/application.log` was tracked in version control despite the `*.log`
+  ignore rule (DEF-006).
+
+### Release Verification
+
+| Item | Result |
+|------|--------|
+| Release date | 2026-08-07 |
+| Automated tests | 60 of 60 passed |
+| Documented test cases | TC-001 – TC-025, all passed |
+| Compiler warnings | 0 under `-Wall -Wextra -Wpedantic -Wshadow -Wconversion` |
+| Build systems | `make` and CMake + CTest, both clean |
+| Open defects | None |
 
 ### Notes
 
-Version **1.0.0** represents the first stable release of the Digital Clock System and is intended for general use and future development.
+Version **1.0.0** is the first stable release of the Digital Clock System and
+is intended for general use and future development.
+
+It is verified on Linux. The Windows code paths are implemented but have not
+been compiled or executed, so this release should not be described as
+cross-platform verified. See section 5.6.
 
 ---
 
@@ -709,18 +735,33 @@ This comprehensive documentation supports both users and developers.
 
 Project summary at Version **1.0.0**.
 
-| Category                 | Status |
-| ------------------------ | ------ |
-| Architecture Designed    | ✔     |
-| Core Modules Implemented | ✔     |
-| Configuration System     | ✔     |
-| Resource Management      | ✔     |
-| Logging System           | ✔     |
-| Testing Completed        | ✔     |
-| Documentation Completed  | ✔     |
-| Stable Release Published | ✔     |
+| Category                 | Status | Detail |
+| ------------------------ | ------ | ------ |
+| Architecture Designed    | ✔ | Four layers, 14 classes |
+| Core Modules Implemented | ✔ | Clock, Date, TimeFormatter |
+| Configuration System     | ✔ | INI parser with validation and defaults |
+| Resource Management      | ✔ | Banner, logo and five themes |
+| Logging System           | ✔ | Thread-safe, timestamped, severity-filtered |
+| Testing Completed        | ✔ | 60 tests, all passing |
+| Documentation Completed  | ✔ | Nine documents |
+| Stable Release Published | ✔ | 2026-08-07 |
 
-These milestones indicate that the project has reached its initial production-ready state.
+Measured figures at v1.0.0:
+
+| Metric | Value |
+|--------|-------|
+| Classes | 14 |
+| Header files | 16 |
+| Source files | 16 |
+| Test files | 11 |
+| Automated tests | 60 |
+| Test pass rate | 100% |
+| Compiler warnings | 0 |
+| External dependencies | 0 |
+| Resident memory at runtime | 4,612 kB, stable |
+
+These milestones indicate that the project has reached its initial
+production-ready state on Linux.
 
 ---
 
@@ -850,17 +891,20 @@ These improvements enhance software quality and maintainability.
 
 # 4.7 Bug Fixes
 
-The following issues were resolved before the stable release.
+The following issues were resolved before the stable release. Identifiers
+match the defect summary in the Testing Report, section 8.7.
 
-| Issue                               | Resolution |
-| ----------------------------------- | ---------- |
-| Display formatting inconsistencies  | Fixed      |
-| Configuration parsing errors        | Fixed      |
-| Resource loading issues             | Fixed      |
-| Minor logging defects               | Fixed      |
-| Build configuration inconsistencies | Fixed      |
+| ID | Issue | Severity | Resolution |
+|----|-------|----------|------------|
+| DEF-001 | `main.cpp` referenced the configuration object before declaring it, so the project did not compile | Critical | Fixed — configuration is now loaded before the components that read it |
+| DEF-002 | CMake listed an empty `Utils.cpp` and omitted three real sources, so the build failed to link | Critical | Fixed — sources are built into a shared library used by both the executable and the tests |
+| DEF-003 | `TimeFormatter.hpp` called a `Clock` method that did not exist | High | Fixed — the formatter now uses the documented accessors |
+| DEF-004 | Two configuration files held conflicting settings and only one was read | Medium | Fixed — configuration lives solely in `Config/config.ini` |
+| DEF-005 | Multi-line banner artwork was centred per line and appeared sheared | Cosmetic | Fixed — artwork is offset as a block |
+| DEF-006 | The runtime log was tracked in version control | Low | Fixed — untracked; the logger recreates the directory |
 
-Resolving these issues improves application stability and reliability.
+All six are closed. Resolving DEF-001 through DEF-003 is what made the project
+build for the first time.
 
 ---
 
@@ -886,18 +930,22 @@ Complete documentation supports future development, testing, deployment, and mai
 
 # 4.9 Compatibility Information
 
-Version **1.0.0** has been designed for compatibility with:
+Version **1.0.0** compatibility, separating what was verified from what was
+only written:
 
-| Component                     | Supported                            |
-| ----------------------------- | ------------------------------------ |
-| C++ Standard                  | C++17                                |
-| GNU Compiler Collection (GCC) | Supported                            |
-| GNU Make                      | Supported                            |
-| CMake                         | Supported                            |
-| Linux                         | Supported                            |
-| Windows                       | Supported (with compatible compiler) |
+| Component | Status | Basis |
+| --------- | ------ | ----- |
+| C++ Standard | C++17 | Required |
+| GNU Compiler Collection (GCC) | **Verified** | GCC 16.1.1, zero warnings |
+| GNU Make | **Verified** | GNU Make 4.4.1 |
+| CMake | **Verified** | CMake 4.4.2, with CTest |
+| Linux | **Verified** | Garuda Linux, kernel 7.1.5-zen1-2-zen (x86_64) |
+| Windows | **Implemented, not verified** | `_WIN32` paths written; never compiled or run |
+| Clang / MSVC | Not verified | Not exercised |
+| macOS | Not supported | No platform work done |
 
-Future releases may extend compatibility with additional platforms and toolchains.
+Future releases may extend compatibility with additional platforms and
+toolchains. Verifying the Windows build is the highest-value next step.
 
 ---
 
@@ -1001,16 +1049,29 @@ This classification helps prioritize maintenance and future development efforts.
 
 The following issues have been identified for Version **1.0.0**.
 
-| Issue ID | Description                                       | Severity    | Status |
-| -------- | ------------------------------------------------- | ----------- | ------ |
-| KI-001   | Alarm functionality is not implemented            | Enhancement | Open   |
-| KI-002   | Stopwatch feature is unavailable                  | Enhancement | Open   |
-| KI-003   | Countdown timer is not available                  | Enhancement | Open   |
-| KI-004   | Multiple time zone support is unavailable         | Enhancement | Open   |
-| KI-005   | Graphical User Interface (GUI) is not implemented | Enhancement | Open   |
-| KI-006   | Plugin architecture is not available              | Enhancement | Open   |
+Verification gaps carried by this release:
 
-These items are planned for consideration in future releases.
+| Issue ID | Description | Severity | Status |
+| -------- | ----------- | -------- | ------ |
+| KI-000   | Windows support is implemented but has never been compiled or executed, so the cross-platform claim (FR-010) rests on inspection rather than testing | Medium | Open |
+| KI-007   | No User Acceptance Testing was performed | Low | Open |
+| KI-008   | Line coverage is not measured; coverage is stated at component level only | Low | Open |
+| KI-009   | `Console` has no direct automated tests; it is covered indirectly and by one manual check under a pseudo-terminal | Low | Open |
+
+Features deferred to future releases:
+
+| Issue ID | Description | Severity | Status |
+| -------- | ----------- | -------- | ------ |
+| KI-001   | Alarm functionality is not implemented | Enhancement | Open |
+| KI-002   | Stopwatch feature is unavailable | Enhancement | Open |
+| KI-003   | Countdown timer is not available | Enhancement | Open |
+| KI-004   | Multiple time zone support is unavailable | Enhancement | Open |
+| KI-005   | Graphical User Interface (GUI) is not implemented | Enhancement | Open |
+| KI-006   | Plugin architecture is not available | Enhancement | Open |
+
+KI-000 is the only item that affects a claim already made about this release;
+the rest describe work not yet attempted. The enhancement items are planned
+for consideration in future releases.
 
 ---
 
@@ -1033,12 +1094,12 @@ These limitations do not prevent normal clock functionality but define the scope
 
 Current platform-related limitations include:
 
-| Platform         | Limitation                                 |
-| ---------------- | ------------------------------------------ |
-| Linux            | Fully supported                            |
-| Windows          | Supported with a compatible C++17 compiler |
-| macOS            | Requires validation and testing            |
-| Mobile Platforms | Not supported                              |
+| Platform | Limitation |
+| -------- | ---------- |
+| Linux | Fully supported and verified |
+| Windows | Code paths implemented but never compiled or executed. Should build with a C++17 compiler, but this is untested — see KI-000 |
+| macOS | Not supported; no platform-specific work has been done |
+| Mobile Platforms | Not supported |
 
 Additional platform support may be introduced in future versions.
 
@@ -1492,14 +1553,19 @@ Developers and maintainers are encouraged to update the Change Log as an integra
 
 # 7.9 Document Information
 
-| Item            | Details                                                              |
-| --------------- | -------------------------------------------------------------------- |
-| Document        | **09_ChangeLog.md**                                            |
-| Project         | **Digital Clock System**                                       |
-| Current Version | **1.0.0**                                                      |
-| Language        | **C++17**                                                      |
-| Status          | **Completed**                                                  |
-| Audience        | Developers, Maintainers, Test Engineers, Project Managers, End Users |
+| Item | Details |
+| ---- | ------- |
+| Document | **09_ChangeLog.md** |
+| Document Version | **1.1** |
+| Project | **Digital Clock System** |
+| Current Version | **1.0.0** |
+| Release Date | **2026-08-07** |
+| Language | **C++17** |
+| Status | **Released** |
+| Verified On | Linux (Garuda, kernel 7.1.5-zen1-2-zen, x86_64), GCC 16.1.1 |
+| Test Result | 60 of 60 automated tests passed; no open defects |
+| Known Gaps | Windows unverified (KI-000); no UAT (KI-007) |
+| Audience | Developers, Maintainers, Test Engineers, Project Managers, End Users |
 
 ---
 

@@ -490,17 +490,20 @@ The Digital Clock System has minimal hardware requirements due to its lightweigh
 
 # 3.4 Software Environment
 
-The software environment used during testing is shown below.
+The environment in which the recorded results were produced is shown below.
 
-| Component | Version / Requirement |
-|-----------|-----------------------|
-| Operating System | Linux / Windows |
-| Programming Language | C++17 |
-| Compiler | GCC / G++ (C++17 compatible) |
-| Build Tool | Make / CMake |
-| Version Control | Git |
-| Terminal | Bash, Command Prompt, PowerShell |
-| Documentation Format | Markdown (`.md`) |
+| Component | Supported | Used for This Run |
+|-----------|-----------|-------------------|
+| Operating System | Linux / Windows | Garuda Linux, kernel 7.1.5-zen1-2-zen (x86_64) |
+| Programming Language | C++17 | C++17 |
+| Compiler | GCC / G++, Clang, MSVC (C++17) | GCC 16.1.1 (20260728) |
+| Build Tool | Make / CMake | GNU Make 4.4.1 and CMake 4.4.2 |
+| Version Control | Git | Git |
+| Terminal | Bash, Command Prompt, PowerShell | Bash |
+| Documentation Format | Markdown (`.md`) | Markdown |
+
+The application depends on the C++ standard library only; no third-party
+libraries are required to build or run the tests.
 
 ---
 
@@ -870,20 +873,23 @@ The application should respond correctly to unexpected conditions.
 
 # 4.12 Unit Test Execution Summary
 
-The following table summarizes the planned unit testing activities.
+The table below records the unit tests that were implemented and executed. Counts are per source file in `Tests/`, and every test is automated.
 
-| Module | Planned Tests |
-|--------|---------------:|
-| Clock Module | 4 |
-| Date Module | 4 |
-| Configuration Manager | 4 |
-| Theme Manager | 3 |
-| Logger | 4 |
-| Resource Manager | 3 |
-| Error Handling | 4 |
-| **Total** | **26** |
+| Module | Test File | Executed | Passed | Failed |
+|--------|-----------|---------:|-------:|-------:|
+| Utility | `test_utility.cpp` | 8 | 8 | 0 |
+| Clock Module | `test_clock.cpp` | 5 | 5 | 0 |
+| Date Module | `test_date.cpp` | 5 | 5 | 0 |
+| Time Formatter | `test_formatter.cpp` | 5 | 5 | 0 |
+| Configuration Manager | `test_config.cpp` | 7 | 7 | 0 |
+| Logger | `test_logger.cpp` | 6 | 6 | 0 |
+| Theme Manager | `test_theme.cpp` | 5 | 5 | 0 |
+| Resource Manager | `test_resource.cpp` | 6 | 6 | 0 |
+| Presentation Layer | `test_display.cpp` | 7 | 7 | 0 |
+| Application Lifecycle | `test_application.cpp` | 6 | 6 | 0 |
+| **Total** | | **60** | **60** | **0** |
 
-The exact number of tests may increase as new features are added.
+The suite exceeds the 26 tests originally planned because several planned cases needed more than one assertion group to cover their boundary conditions.
 
 ---
 
@@ -1099,18 +1105,20 @@ Verify complete application initialization and cleanup.
 
 # 5.12 Integration Test Execution Summary
 
-| Module Integration | Planned Tests |
-|--------------------|--------------:|
-| Clock + Display | 3 |
-| Date + Display | 3 |
-| Configuration | 3 |
-| Theme Manager | 3 |
-| Logger | 4 |
-| Resource Manager | 3 |
-| Startup & Shutdown | 3 |
-| **Total** | **22** |
+Integration is exercised through the `Application` and presentation-layer tests, which drive real components together rather than in isolation.
 
-The number of integration tests may increase as new modules are introduced.
+| Module Integration | Covered By | Result |
+|--------------------|------------|--------|
+| Clock + Formatter + Display | `TC-002`, `UT-086`, `UT-091` | **Pass** |
+| Date + Formatter + Display | `TC-002`, `UT-086`, `UT-091` | **Pass** |
+| Configuration + Application | `TC-001`, `UT-090`, `UT-091` | **Pass** |
+| Theme Manager + Screen | `UT-084`, `UT-085`, `UT-091` | **Pass** |
+| Logger + Application | `TC-001`, `TC-024` | **Pass** |
+| Resource Manager + Banner | `TC-016`, `TC-017`, `TC-023` | **Pass** |
+| Screen + StatusBar + Console | `UT-080`, `UT-081`, `UT-083` | **Pass** |
+| Startup & Shutdown | `TC-001`, `TC-002`, `TC-020` | **Pass** |
+
+All integration paths passed. No defects were found at the module boundaries.
 
 ---
 
@@ -1241,15 +1249,21 @@ The Digital Clock System is expected to operate efficiently even during extended
 
 Compatibility testing verifies that the application functions correctly on supported platforms.
 
-| Platform | Status |
-|----------|--------|
-| Linux | Supported |
-| Windows | Supported |
-| macOS | Planned |
-| Different Terminal Sizes | Supported |
-| GCC Compiler | Supported |
-| CMake Build | Supported |
+| Platform | Status | Basis |
+|----------|--------|-------|
+| Linux | **Verified** | Suite executed; application run |
+| Windows | **Implemented, not verified** | `_WIN32` code paths written but never compiled or executed |
+| macOS | Not supported yet | No platform-specific work done |
+| Different Terminal Sizes | **Verified** | UT-082 |
+| Redirected Output | **Verified** | UT-084 |
+| GCC Compiler | **Verified** | GCC 16.1.1, zero warnings |
+| Clang / MSVC | Not verified | Not exercised |
+| Make Build | **Verified** | `make` and `make test` |
+| CMake Build | **Verified** | `cmake --build` and `ctest` |
 
+Windows is deliberately recorded as *implemented but not verified* rather than
+*supported*. The code is present and should compile, but no run has been
+recorded, and an untested platform should not be reported as a passing one.
 Future releases may extend compatibility to additional environments.
 
 ---
@@ -1290,17 +1304,21 @@ The application should recover whenever possible without terminating unexpectedl
 
 # 6.10 System Test Execution Summary
 
-| Test Category | Planned Tests |
-|---------------|--------------:|
-| Functional Testing | 7 |
-| User Interface Testing | 5 |
-| Performance Testing | 5 |
-| Compatibility Testing | 6 |
-| Reliability Testing | 5 |
-| Recovery Testing | 5 |
-| **Total** | **33** |
+System-level behaviour was verified by running the application itself and
+observing the result, in addition to the automated suite.
 
-Additional tests may be introduced as new features are implemented.
+| Test Category | Method | Result |
+|---------------|--------|--------|
+| Functional Testing | Automated suite, `TC-001` – `TC-025` | **Pass** |
+| User Interface Testing | Rendered frame compared against the User Manual layout | **Pass** |
+| Performance Testing | Measured startup, memory and CPU (see 8.5) | **Pass** |
+| Compatibility Testing | Both build systems; TTY and redirected output (see 8.6) | **Pass** |
+| Reliability Testing | Continuous run with a stable resident set | **Pass** |
+| Recovery Testing | Missing config, unknown theme, absent banner, unwritable log | **Pass** |
+
+Recovery testing deserves particular note: each degraded condition was induced
+deliberately, and in every case the application logged the problem and
+continued running on its documented fallback.
 
 ---
 
@@ -1390,7 +1408,9 @@ The following format is used throughout this report.
 | Preconditions | Application is built successfully |
 | Test Steps | Run the executable |
 | Expected Result | Application starts without errors |
-| Status | Not Executed |
+| Actual Result | Application started and rendered its first frame; the full initialization sequence was recorded in `Logs/application.log`. |
+| Executed | 2026-08-07 |
+| Status | **Pass** |
 
 ---
 
@@ -1404,7 +1424,9 @@ The following format is used throughout this report.
 | Preconditions | Required files available |
 | Test Steps | Launch application |
 | Expected Result | All modules initialize correctly |
-| Status | Not Executed |
+| Actual Result | Logger, configuration, resources, theme, console, clock, date and display all initialized; a frame rendered immediately afterwards. |
+| Executed | 2026-08-07 |
+| Status | **Pass** |
 
 ---
 
@@ -1420,7 +1442,9 @@ The following format is used throughout this report.
 | Preconditions | System clock configured correctly |
 | Test Steps | Start application |
 | Expected Result | Current time displayed accurately |
-| Status | Not Executed |
+| Actual Result | Displayed hour and minute matched an independent read of the system clock; seconds agreed within one tick. |
+| Executed | 2026-08-07 |
+| Status | **Pass** |
 
 ---
 
@@ -1434,7 +1458,9 @@ The following format is used throughout this report.
 | Preconditions | Application running |
 | Test Steps | Observe display for one minute |
 | Expected Result | Time updates according to refresh interval |
-| Status | Not Executed |
+| Actual Result | The displayed second advanced across the refresh interval; a snapshot did not drift between updates. |
+| Executed | 2026-08-07 |
+| Status | **Pass** |
 
 ---
 
@@ -1448,7 +1474,9 @@ The following format is used throughout this report.
 | Preconditions | TimeFormat=12 |
 | Test Steps | Restart application |
 | Expected Result | Time displayed in 12-hour format with AM/PM |
-| Status | Not Executed |
+| Actual Result | 20:45:30 rendered as `08:45:30 PM`. Midnight rendered as `12:00:00 AM` and noon as `12:00:00 PM`. |
+| Executed | 2026-08-07 |
+| Status | **Pass** |
 
 ---
 
@@ -1462,7 +1490,9 @@ The following format is used throughout this report.
 | Preconditions | TimeFormat=24 |
 | Test Steps | Restart application |
 | Expected Result | Time displayed in 24-hour format |
-| Status | Not Executed |
+| Actual Result | 20:45:30 rendered as `20:45:30`; 09:05:03 kept its leading zeros and no meridiem indicator was emitted. |
+| Executed | 2026-08-07 |
+| Status | **Pass** |
 
 ---
 
@@ -1478,7 +1508,9 @@ The following format is used throughout this report.
 | Preconditions | Correct system date |
 | Test Steps | Launch application |
 | Expected Result | Current date displayed correctly |
-| Status | Not Executed |
+| Actual Result | Day, month, year and weekday all matched an independent read of the system date. |
+| Executed | 2026-08-07 |
+| Status | **Pass** |
 
 ---
 
@@ -1492,7 +1524,9 @@ The following format is used throughout this report.
 | Preconditions | Date format configured |
 | Test Steps | Launch application |
 | Expected Result | Date displayed in selected format |
-| Status | Not Executed |
+| Actual Result | All four documented formats rendered correctly: `Monday, 03 August 2026`, `03-08-2026`, `08-03-2026` and `2026-08-03`. |
+| Executed | 2026-08-07 |
+| Status | **Pass** |
 
 ---
 
@@ -1508,7 +1542,9 @@ The following format is used throughout this report.
 | Preconditions | Valid `config.ini` |
 | Test Steps | Start application |
 | Expected Result | Configuration loaded successfully |
-| Status | Not Executed |
+| Actual Result | `Config/config.ini` loaded; every documented key was read, and lookups matched case-insensitively. |
+| Executed | 2026-08-07 |
+| Status | **Pass** |
 
 ---
 
@@ -1522,7 +1558,9 @@ The following format is used throughout this report.
 | Preconditions | Remove configuration file |
 | Test Steps | Launch application |
 | Expected Result | Default settings applied |
-| Status | Not Executed |
+| Actual Result | A missing file returned false without throwing; every getter then returned its supplied default. |
+| Executed | 2026-08-07 |
+| Status | **Pass** |
 
 ---
 
@@ -1536,7 +1574,9 @@ The following format is used throughout this report.
 | Preconditions | Invalid configuration values |
 | Test Steps | Start application |
 | Expected Result | Error handled without application crash |
-| Status | Not Executed |
+| Actual Result | Malformed lines were skipped and the valid entries either side of them were retained; a non-numeric integer fell back to its default. |
+| Executed | 2026-08-07 |
+| Status | **Pass** |
 
 ---
 
@@ -1552,7 +1592,9 @@ The following format is used throughout this report.
 | Preconditions | Valid theme available |
 | Test Steps | Launch application |
 | Expected Result | Selected theme applied |
-| Status | Not Executed |
+| Actual Result | All five bundled themes loaded, each reporting its own name and element colours. |
+| Executed | 2026-08-07 |
+| Status | **Pass** |
 
 ---
 
@@ -1566,7 +1608,9 @@ The following format is used throughout this report.
 | Preconditions | Theme removed |
 | Test Steps | Start application |
 | Expected Result | Default theme loaded |
-| Status | Not Executed |
+| Actual Result | An unknown theme fell back to the built-in default, which supplied a complete colour set. A warning was logged. |
+| Executed | 2026-08-07 |
+| Status | **Pass** |
 
 ---
 
@@ -1582,7 +1626,9 @@ The following format is used throughout this report.
 | Preconditions | Logging enabled |
 | Test Steps | Launch application |
 | Expected Result | Log file created |
-| Status | Not Executed |
+| Actual Result | The log file was created together with its missing parent directories, and a session header was written. |
+| Executed | 2026-08-07 |
+| Status | **Pass** |
 
 ---
 
@@ -1596,7 +1642,9 @@ The following format is used throughout this report.
 | Preconditions | Logging enabled |
 | Test Steps | Run application |
 | Expected Result | Events recorded in log |
-| Status | Not Executed |
+| Actual Result | Timestamped entries were recorded at all four severities; entries below the minimum level were discarded. |
+| Executed | 2026-08-07 |
+| Status | **Pass** |
 
 ---
 
@@ -1612,7 +1660,9 @@ The following format is used throughout this report.
 | Preconditions | Resource available |
 | Test Steps | Start application |
 | Expected Result | Banner displayed successfully |
-| Status | Not Executed |
+| Actual Result | Banner and logo both loaded from `Resources/`, and the banner reported a non-zero line count. |
+| Executed | 2026-08-07 |
+| Status | **Pass** |
 
 ---
 
@@ -1626,7 +1676,9 @@ The following format is used throughout this report.
 | Preconditions | Remove banner file |
 | Test Steps | Launch application |
 | Expected Result | Warning displayed without crash |
-| Status | Not Executed |
+| Actual Result | A missing banner left the built-in artwork in place, so the header was still drawn. A warning was logged. |
+| Executed | 2026-08-07 |
+| Status | **Pass** |
 
 ---
 
@@ -1642,7 +1694,9 @@ The following format is used throughout this report.
 | Preconditions | Invalid resource path |
 | Test Steps | Launch application |
 | Expected Result | Appropriate error message generated |
-| Status | Not Executed |
+| Actual Result | Empty, whitespace, missing and directory paths were each rejected without throwing; content came back empty. |
+| Executed | 2026-08-07 |
+| Status | **Pass** |
 
 ---
 
@@ -1656,7 +1710,9 @@ The following format is used throughout this report.
 | Preconditions | Restricted file permissions |
 | Test Steps | Start application |
 | Expected Result | Error logged and application continues safely |
-| Status | Not Executed |
+| Actual Result | An unwritable path was reported by `initialize()`; subsequent logging calls were safe no-ops and the application continued. |
+| Executed | 2026-08-07 |
+| Status | **Pass** |
 
 ---
 
@@ -1672,37 +1728,46 @@ The following format is used throughout this report.
 | Preconditions | Application running |
 | Test Steps | Exit application |
 | Expected Result | Resources released and application exits normally |
-| Status | Not Executed |
+| Actual Result | The terminal was restored, shutdown was logged, and repeated `shutdown()` calls were safe. `run()` on an uninitialized application returned the failure status rather than looping. |
+| Executed | 2026-08-07 |
+| Status | **Pass** |
 
 ---
 
 # 7.12 Boundary and Negative Test Cases
 
-| Test ID | Scenario | Expected Result |
-|---------|----------|-----------------|
-| TC-021 | Empty configuration file | Default settings applied |
-| TC-022 | Invalid refresh interval | Configuration validation error |
-| TC-023 | Corrupted resource file | Warning displayed |
-| TC-024 | Log directory unavailable | Logging disabled safely |
-| TC-025 | Unsupported theme name | Default theme loaded |
+| Test ID | Scenario | Expected Result | Actual Result | Status |
+|---------|----------|-----------------|---------------|--------|
+| TC-021 | Empty configuration file | Default settings applied | Load succeeded with zero settings; a file of only comments behaved identically. Defaults applied. | **Pass** |
+| TC-022 | Invalid refresh interval | Configuration validation error | Zero, negative, oversized and non-numeric values were all replaced by the default, and the rejection was logged as a warning. | **Pass** |
+| TC-023 | Corrupted resource file | Warning displayed | An empty banner was rejected in favour of the built-in artwork; binary content and CRLF line endings were both handled without error. | **Pass** |
+| TC-024 | Log directory unavailable | Logging disabled safely | `initialize()` returned false and the application continued; all subsequent logging calls were safe no-ops. | **Pass** |
+| TC-025 | Unsupported theme name | Default theme loaded | Empty, whitespace, unknown and path-traversal names all resolved to the built-in default theme. | **Pass** |
+
+Executed 2026-08-07.
 
 ---
 
 # 7.13 Test Case Execution Summary
 
-| Category | Number of Test Cases |
-|----------|---------------------:|
-| Startup | 2 |
-| Clock Module | 4 |
-| Date Module | 2 |
-| Configuration | 3 |
-| Theme Manager | 2 |
-| Logger | 2 |
-| Resource Manager | 2 |
-| Error Handling | 2 |
-| Shutdown | 1 |
-| Boundary & Negative | 5 |
-| **Total Planned Test Cases** | **25** |
+| Category | Test Cases | Executed | Passed | Failed |
+|----------|-----------:|---------:|-------:|-------:|
+| Startup | 2 | 2 | 2 | 0 |
+| Clock Module | 4 | 4 | 4 | 0 |
+| Date Module | 2 | 2 | 2 | 0 |
+| Configuration | 3 | 3 | 3 | 0 |
+| Theme Manager | 2 | 2 | 2 | 0 |
+| Logger | 2 | 2 | 2 | 0 |
+| Resource Manager | 2 | 2 | 2 | 0 |
+| Error Handling | 2 | 2 | 2 | 0 |
+| Shutdown | 1 | 1 | 1 | 0 |
+| Boundary & Negative | 5 | 5 | 5 | 0 |
+| **Total** | **25** | **25** | **25** | **0** |
+
+Executed 2026-08-07. Two additional boundary cases, TC-005A and TC-006A, were
+added during implementation to cover the midnight and noon conversions that
+the FR-004 acceptance criteria require; both pass. The wider automated suite
+contains 60 tests in total, the remainder carrying `UT-` identifiers.
 
 ---
 
@@ -1744,98 +1809,122 @@ Once development is completed, this chapter should be updated with the actual ex
 
 # 8.2 Test Execution Summary
 
-The following table summarizes the planned execution of all testing phases.
+The table below records actual execution. The automated suite is a single
+binary, `Build/DigitalClockTests`, containing 60 tests; the phases below
+describe what those tests cover rather than separate executables, so a single
+test may contribute to more than one phase.
 
-| Testing Phase | Planned Test Cases | Executed | Passed | Failed | Status |
-|---------------|-------------------:|---------:|-------:|-------:|--------|
-| Unit Testing | 26 | 0 | 0 | 0 | Planned |
-| Integration Testing | 22 | 0 | 0 | 0 | Planned |
-| System Testing | 33 | 0 | 0 | 0 | Planned |
-| Functional Testing | 25 | 0 | 0 | 0 | Planned |
-| **Total** | **106** | **0** | **0** | **0** | **Planned** |
+| Testing Phase | Test Cases | Executed | Passed | Failed | Status |
+|---------------|-----------:|---------:|-------:|-------:|--------|
+| Unit Testing | 60 | 60 | 60 | 0 | **Complete** |
+| Integration Testing | 8 paths | 8 | 8 | 0 | **Complete** |
+| System Testing | 6 categories | 6 | 6 | 0 | **Complete** |
+| Functional Testing (TC-001 – TC-025) | 25 | 25 | 25 | 0 | **Complete** |
+| **Automated suite total** | **60** | **60** | **60** | **0** | **Pass** |
 
-> **Note:** Replace these values with actual execution statistics after testing is completed.
+Reproduce with:
+
+```bash
+make test                                    # or
+ctest --test-dir build --output-on-failure
+```
+
+Suite runtime is approximately 1.2 seconds, most of which is the deliberate
+1.1-second sleep in TC-004 that verifies the clock advances across a second
+boundary.
 
 ---
 
-# 8.3 Planned Test Results
+# 8.3 Test Results by Category
 
-The expected outcome of each testing phase is shown below.
-
-| Test Category | Expected Result |
-|---------------|-----------------|
-| Unit Testing | All modules operate correctly |
-| Integration Testing | Modules communicate without errors |
-| System Testing | Complete application functions correctly |
-| Performance Testing | Meets target performance requirements |
-| Compatibility Testing | Runs on all supported platforms |
-| Regression Testing | Existing functionality remains unchanged |
+| Test Category | Expected Result | Actual Result | Status |
+|---------------|-----------------|---------------|--------|
+| Unit Testing | All modules operate correctly | 60 of 60 tests passed | **Pass** |
+| Integration Testing | Modules communicate without errors | All 8 integration paths passed | **Pass** |
+| System Testing | Complete application functions correctly | Application ran and rendered correctly | **Pass** |
+| Performance Testing | Meets target performance requirements | All targets met with margin (see 8.5) | **Pass** |
+| Compatibility Testing | Runs on all supported platforms | Verified on Linux with both build systems; Windows not yet exercised (see 8.6) | **Partial** |
+| Regression Testing | Existing functionality remains unchanged | Full suite re-run after each change | **Pass** |
 
 ---
 
 # 8.4 Functional Test Results
 
-The following functional requirements are expected to pass after implementation.
+Each functional requirement was verified against the test cases listed below.
 
-| Feature | Expected Status |
-|----------|-----------------|
-| Display Current Time | Pass |
-| Display Current Date | Pass |
-| 12-Hour Format | Pass |
-| 24-Hour Format | Pass |
-| Theme Loading | Pass |
-| Configuration Loading | Pass |
-| Logging | Pass |
-| Resource Loading | Pass |
-| Startup | Pass |
-| Shutdown | Pass |
+| Feature | Requirement | Verified By | Status |
+|---------|-------------|-------------|--------|
+| Display Current Time | FR-001 | TC-003, TC-004 | **Pass** |
+| Display Current Date | FR-002 | TC-007, TC-008 | **Pass** |
+| Automatic Refresh | FR-003 | TC-004, UT-081 | **Pass** |
+| 12-Hour Format | FR-004 | TC-005, TC-005A | **Pass** |
+| 24-Hour Format | FR-005 | TC-006, TC-006A | **Pass** |
+| Configuration Loading | FR-006 | TC-009 – TC-011, TC-021, TC-022 | **Pass** |
+| Logging | FR-007 | TC-014, TC-015, TC-019, TC-024 | **Pass** |
+| Console Refresh | FR-008 | UT-080, UT-081 | **Pass** |
+| Graceful Shutdown | FR-009 | TC-020 | **Pass** |
+| Cross-Platform Support | FR-010 | Both build systems on Linux; see 8.6 | **Partial** |
+| Theme Loading | — | TC-012, TC-013, TC-025 | **Pass** |
+| Resource Loading | — | TC-016, TC-017, TC-023 | **Pass** |
+| Startup | — | TC-001, TC-002 | **Pass** |
 
 ---
 
 # 8.5 Performance Test Results
 
-The Digital Clock System is expected to meet the following performance targets.
+Measured on the environment described in section 3.4.
 
-| Metric | Target | Expected Result |
-|--------|--------|-----------------|
-| Startup Time | < 2 Seconds | Pass |
-| Shutdown Time | < 1 Second | Pass |
-| Refresh Interval | Configurable | Pass |
-| CPU Usage | Low | Pass |
-| Memory Usage | Stable | Pass |
+| Metric | Target | Measured | Status |
+|--------|--------|----------|--------|
+| Startup Time | < 2 seconds | ~14 ms, startup through first frame to shutdown (mean of 5 runs: 1013–1016 ms against a 1000 ms hold) | **Pass** |
+| Shutdown Time | < 1 second | Included in the figure above; not separately measurable at this resolution | **Pass** |
+| Refresh Interval | Configurable | Verified at 500 ms and 1000 ms; validated range 50–60000 ms | **Pass** |
+| CPU Usage | Low | 0 clock ticks accumulated over 4.5 seconds of continuous refresh, i.e. below the 10 ms sampling resolution | **Pass** |
+| Memory Usage | Stable | Resident set 4,612 kB, unchanged across six samples over 4.5 seconds — no growth | **Pass** |
 
-Actual measurements should be recorded after performance testing.
+The startup figure is dominated by process creation; the application's own
+initialization is a small fraction of it. The flat resident set is the
+substantive result, since a clock is expected to run indefinitely: it
+confirms the refresh loop allocates nothing per frame.
 
 ---
 
 # 8.6 Compatibility Test Results
 
-The application is planned to be tested on the following platforms.
+| Platform | Expected Result | Actual Result | Status |
+|----------|-----------------|---------------|--------|
+| Linux | Pass | Verified on Garuda Linux, kernel 7.1.5-zen1-2-zen | **Pass** |
+| Windows | Pass | Code paths implemented (`_WIN32` branches in `Console`, `Logger`, `Clock`, `Date`) but **not executed** on Windows | **Not Tested** |
+| GCC Compiler | Pass | GCC 16.1.1, zero warnings under `-Wall -Wextra -Wpedantic -Wshadow -Wconversion` | **Pass** |
+| Clang / MSVC | Pass | Not exercised | **Not Tested** |
+| Make Build | Pass | `make` and `make test` both succeed | **Pass** |
+| CMake Build | Pass | `cmake --build` and `ctest` both succeed | **Pass** |
+| Multiple Terminal Sizes | Pass | Layout adapts to width; banner is dropped below 18 rows (UT-082) | **Pass** |
+| Redirected Output | — | Colour suppressed automatically when stdout is not a TTY (UT-084) | **Pass** |
 
-| Platform | Expected Result |
-|----------|-----------------|
-| Linux | Pass |
-| Windows | Pass |
-| GCC Compiler | Pass |
-| Make Build | Pass |
-| CMake Build | Pass |
-| Multiple Terminal Sizes | Pass |
-
-Additional platforms may be included in future testing.
+**This is the report's principal gap.** Windows support is written but
+unverified, so the FR-010 cross-platform claim rests on inspection rather than
+execution. It should not be treated as tested until a Windows run is
+recorded.
 
 ---
 
 # 8.7 Defect Summary
 
-During actual testing, all identified defects should be documented in the following format.
+The defects below were found in the pre-implementation source and fixed
+during this cycle. All are closed; no defect remains open.
 
 | Defect ID | Description | Severity | Status |
 |-----------|-------------|----------|--------|
-| DEF-001 | *To Be Updated* | - | Open |
-| DEF-002 | *To Be Updated* | - | Open |
-| DEF-003 | *To Be Updated* | - | Open |
+| DEF-001 | `main.cpp` referenced `config` before the object was declared, so the project did not compile | Critical | **Closed** |
+| DEF-002 | `CMakeLists.txt` listed an empty `Utils.cpp` while omitting `Banner.cpp`, `Screen.cpp` and `ResourceManager.cpp`, so the CMake build failed to link | Critical | **Closed** |
+| DEF-003 | `TimeFormatter.hpp` called `Clock::getHour()`, which does not exist; the header could not be included | High | **Closed** |
+| DEF-004 | `Resources/config.ini` and `Config/config.ini` held conflicting settings and only one was read | Medium | **Closed** |
+| DEF-005 | Banner artwork was centred per line, shearing multi-line ASCII art | Cosmetic | **Closed** |
+| DEF-006 | `Logs/application.log` was tracked in version control despite the `*.log` ignore rule | Low | **Closed** |
 
-This table should be updated as defects are discovered and resolved.
+No defects were found by the test suite after implementation; the suite has
+passed at 60 of 60 on every run since completion.
 
 ---
 
@@ -1873,36 +1962,52 @@ Maintaining this information improves project tracking and quality assurance.
 
 # 8.10 Test Coverage Summary
 
-The planned testing provides coverage for all major software components.
+Every component has direct automated coverage.
 
-| Module | Coverage |
-|---------|----------|
-| Clock Module | ✔ |
-| Date Module | ✔ |
-| Display Module | ✔ |
-| Configuration Manager | ✔ |
-| Theme Manager | ✔ |
-| Logger | ✔ |
-| Resource Manager | ✔ |
-| Startup Process | ✔ |
-| Shutdown Process | ✔ |
-| Error Handling | ✔ |
+| Module | Tests | Coverage |
+|--------|------:|----------|
+| Clock | 5 | ✔ |
+| Date | 5 | ✔ |
+| TimeFormatter | 5 | ✔ |
+| Display / Screen / StatusBar | 7 | ✔ |
+| ConfigurationManager | 7 | ✔ |
+| ThemeManager / Theme | 5 | ✔ |
+| Logger | 6 | ✔ |
+| ResourceManager / Banner | 6 | ✔ |
+| Utility | 8 | ✔ |
+| Application (startup & shutdown) | 6 | ✔ |
+| Error handling | across all files | ✔ |
 
-The goal is to achieve complete functional coverage before release.
+Two areas are covered only indirectly and are worth stating plainly:
+
+- **`Console`** is exercised through `Display` and `Application` rather than
+  directly, because its behaviour is terminal state that cannot be asserted
+  without a pseudo-terminal. Its output was confirmed manually under a pty.
+- **The `_WIN32` branches** in `Console`, `Logger`, `Clock` and `Date` are
+  never compiled on Linux and therefore carry no coverage at all.
+
+Line coverage was not measured; no coverage instrumentation is configured.
 
 ---
 
 # 8.11 Acceptance Status
 
-The Digital Clock System will be considered ready for release when:
+Measured against the release criteria:
 
-- All planned test cases have been executed.
-- Critical and high-severity defects have been resolved.
-- Functional requirements have been verified.
-- Performance targets have been achieved.
-- Integration testing has completed successfully.
-- System testing has completed successfully.
-- User Acceptance Testing (UAT) has been approved.
+| Criterion | Status |
+|-----------|--------|
+| All planned test cases executed | **Met** — TC-001 to TC-025, all executed |
+| Critical and high-severity defects resolved | **Met** — DEF-001 to DEF-003 closed |
+| Functional requirements verified | **Met** for FR-001 to FR-009; **partial** for FR-010 |
+| Performance targets achieved | **Met** — all targets met with margin |
+| Integration testing complete | **Met** |
+| System testing complete | **Met** |
+| User Acceptance Testing approved | **Not performed** — no UAT participants |
+
+**Verdict: accepted for release on Linux.** Two criteria are not fully
+satisfied — Windows execution and UAT — and neither should be represented as
+complete. Neither blocks a Linux release; both block a claim of
+cross-platform verification.
 
 ---
 
@@ -1925,23 +2030,33 @@ These artifacts provide proof that testing has been performed according to the p
 
 # 8.13 Recommendations
 
-After completing testing:
+Arising from this cycle:
 
-- Resolve all critical and high-priority defects.
-- Re-execute failed test cases.
-- Perform regression testing after each major fix.
-- Update this report with actual execution results.
-- Archive all testing artifacts for future reference.
-
-Following these recommendations ensures accurate documentation and improves software quality.
+1. **Run the suite on Windows.** This is the one substantive gap. The
+   `_WIN32` code paths are written but have never been compiled or executed.
+2. **Add CI** covering Linux and Windows, so the compatibility matrix stays
+   evidence-based rather than becoming stale again.
+3. **Consider coverage instrumentation** (`gcov`/`lcov`) to replace the
+   component-level coverage claim in 8.10 with a measured figure.
+4. **Exercise `Console` directly** using a pseudo-terminal, which would close
+   the last indirect-coverage gap.
+5. **Keep this report in step with the code.** It previously described a
+   system that did not compile; the discipline worth adopting is to update it
+   in the same commit as the behaviour it describes.
 
 ---
 
 # 8.14 Chapter Summary
 
-This chapter presented the planned Test Results section for the Digital Clock System. It included the test execution summary, expected outcomes, performance and compatibility targets, defect tracking, bug classification, coverage summary, acceptance criteria, evidence collection, and recommendations for updating the report after implementation.
+This chapter recorded the actual test results for the Digital Clock System:
+execution statistics, per-requirement outcomes, measured performance figures,
+the compatibility matrix, the defects found and closed, coverage, and the
+acceptance verdict.
 
-Once development and testing are complete, this chapter should be revised with actual execution statistics, measured performance values, defect records, and supporting evidence.
+The headline result is 60 of 60 automated tests passing, with all twenty-five
+documented test cases executed and passed, and no open defects. The one
+material gap is Windows, which is implemented but unverified and is recorded
+as **Not Tested** rather than assumed to work.
 
 ---
 
@@ -2001,18 +2116,19 @@ Each stage contributes to confirming that the system is ready for release.
 
 Each major requirement is mapped to one or more validation activities.
 
-| Requirement | Validation Method | Status* |
-|-------------|-------------------|---------|
-| Display Current Time | Functional Testing | Planned |
-| Display Current Date | Functional Testing | Planned |
-| 12/24-Hour Format | Functional Testing | Planned |
-| Theme Support | System Testing | Planned |
-| Configuration Management | Integration Testing | Planned |
-| Logging | System Testing | Planned |
-| Error Handling | Recovery Testing | Planned |
-| Resource Management | Integration Testing | Planned |
+| Requirement | Validation Method | Status |
+|-------------|-------------------|--------|
+| Display Current Time | Functional Testing | **Pass** |
+| Display Current Date | Functional Testing | **Pass** |
+| 12/24-Hour Format | Functional Testing | **Pass** |
+| Theme Support | System Testing | **Pass** |
+| Configuration Management | Integration Testing | **Pass** |
+| Logging | System Testing | **Pass** |
+| Error Handling | Recovery Testing | **Pass** |
+| Resource Management | Integration Testing | **Pass** |
+| Cross-Platform Support | Compatibility Testing | **Partial** — Linux only |
 
-> **Note:** Update the **Status** column with *Pass* or *Fail* after validation.
+Validated 2026-08-07. See section 9.8 for the full SRS-numbered matrix.
 
 ---
 
@@ -2020,17 +2136,18 @@ Each major requirement is mapped to one or more validation activities.
 
 Functional validation confirms that every user-facing feature operates correctly.
 
-| Feature | Expected Outcome |
-|----------|------------------|
-| Application Startup | Starts successfully |
-| Time Display | Accurate and continuously updated |
-| Date Display | Correct system date shown |
-| Theme Loading | Selected theme applied |
-| Configuration Loading | Settings loaded correctly |
-| Logging | Events recorded successfully |
-| Shutdown | Application exits cleanly |
+| Feature | Expected Outcome | Observed | Status |
+|---------|------------------|----------|--------|
+| Application Startup | Starts successfully | Started and rendered its first frame; sequence logged | **Pass** |
+| Time Display | Accurate and continuously updated | Matched the system clock and advanced each interval | **Pass** |
+| Date Display | Correct system date shown | Matched the system date in all four formats | **Pass** |
+| Theme Loading | Selected theme applied | All five themes applied; unknown names fell back to default | **Pass** |
+| Configuration Loading | Settings loaded correctly | All keys read; invalid values replaced by defaults | **Pass** |
+| Logging | Events recorded successfully | Timestamped entries at all four severities | **Pass** |
+| Shutdown | Application exits cleanly | Terminal restored and shutdown logged, on both Q and Ctrl+C | **Pass** |
 
-Successful completion demonstrates compliance with the functional requirements.
+Every user-facing feature behaved as specified, demonstrating compliance with
+the functional requirements.
 
 ---
 
@@ -2038,15 +2155,15 @@ Successful completion demonstrates compliance with the functional requirements.
 
 Performance validation verifies that the application satisfies expected performance targets.
 
-| Metric | Target | Validation Status* |
-|--------|--------|--------------------|
-| Startup Time | < 2 seconds | Planned |
-| Shutdown Time | < 1 second | Planned |
-| CPU Usage | Low | Planned |
-| Memory Usage | Stable | Planned |
-| Refresh Rate | Configurable | Planned |
+| Metric | Target | Measured | Status |
+|--------|--------|----------|--------|
+| Startup Time | < 2 seconds | ~14 ms through to shutdown | **Pass** |
+| Shutdown Time | < 1 second | Below measurement resolution | **Pass** |
+| CPU Usage | Low | 0 ticks over 4.5 s of continuous refresh | **Pass** |
+| Memory Usage | Stable | 4,612 kB, unchanged across six samples | **Pass** |
+| Refresh Rate | Configurable | Verified at 500 ms and 1000 ms | **Pass** |
 
-Actual measurements should be recorded after performance testing.
+Measurement method and interpretation are given in section 8.5.
 
 ---
 
@@ -2072,37 +2189,43 @@ Successful completion of UAT indicates that the software is suitable for release
 
 The following matrix links project requirements with their corresponding validation activities.
 
-| Requirement ID | Requirement | Validation Activity |
-|----------------|-------------|---------------------|
-| FR-01 | Display Current Time | Functional Testing |
-| FR-02 | Display Current Date | Functional Testing |
-| FR-03 | Time Format Selection | Functional Testing |
-| FR-04 | Theme Support | System Testing |
-| FR-05 | Configuration Management | Integration Testing |
-| FR-06 | Logging | System Testing |
-| FR-07 | Resource Management | Integration Testing |
-| FR-08 | Error Handling | Recovery Testing |
+Requirement identifiers below follow the Software Requirements Specification
+(FR-001 – FR-010). An earlier revision of this matrix used a different, shorter
+numbering that did not correspond to the SRS; it has been corrected.
 
-This traceability matrix helps ensure that every major requirement has been validated.
+| Requirement ID | Requirement | Validation Activity | Test Cases | Result |
+|----------------|-------------|---------------------|------------|--------|
+| FR-001 | Display Current System Time | Functional Testing | TC-003, TC-004 | **Validated** |
+| FR-002 | Display Current Date | Functional Testing | TC-007, TC-008 | **Validated** |
+| FR-003 | Automatic Clock Refresh | Functional Testing | TC-004, UT-081 | **Validated** |
+| FR-004 | 12-Hour Time Format | Functional Testing | TC-005, TC-005A | **Validated** |
+| FR-005 | 24-Hour Time Format | Functional Testing | TC-006, TC-006A | **Validated** |
+| FR-006 | Load Configuration File | Integration Testing | TC-009 – TC-011, TC-021, TC-022 | **Validated** |
+| FR-007 | Application Logging | System Testing | TC-014, TC-015, TC-019, TC-024 | **Validated** |
+| FR-008 | Console Display Refresh | System Testing | UT-080, UT-081 | **Validated** |
+| FR-009 | Graceful Shutdown | Recovery Testing | TC-020 | **Validated** |
+| FR-010 | Cross-Platform Compatibility | Compatibility Testing | Both build systems on Linux only | **Partially Validated** |
+
+Theme support and resource management, which the earlier matrix listed as
+requirements, are covered by TC-012, TC-013, TC-025 and TC-016, TC-017,
+TC-023 respectively.
 
 ---
 
 # 9.9 Validation Checklist
 
-Before approving the software for release, verify the following.
+Completed 2026-08-07.
 
-| Validation Item | Status* |
-|-----------------|---------|
-| Functional Requirements Verified | Planned |
-| Integration Testing Completed | Planned |
-| System Testing Completed | Planned |
-| Performance Targets Achieved | Planned |
-| Error Handling Validated | Planned |
-| Configuration Tested | Planned |
-| Documentation Reviewed | Planned |
-| User Acceptance Completed | Planned |
-
-> **Note:** Replace **Planned** with **Pass** or **Fail** after validation.
+| Validation Item | Status |
+|-----------------|--------|
+| Functional Requirements Verified | **Pass** (FR-010 partial) |
+| Integration Testing Completed | **Pass** |
+| System Testing Completed | **Pass** |
+| Performance Targets Achieved | **Pass** |
+| Error Handling Validated | **Pass** |
+| Configuration Tested | **Pass** |
+| Documentation Reviewed | **Pass** |
+| User Acceptance Completed | **Not Performed** |
 
 ---
 
@@ -2110,28 +2233,49 @@ Before approving the software for release, verify the following.
 
 The following limitations apply to the validation process.
 
+- **Validation was performed on Linux only.** The Windows code paths were
+  never compiled or executed, so FR-010 is validated by inspection, not by
+  test.
+- **No User Acceptance Testing was performed**, as no UAT participants were
+  involved.
+- **Line coverage was not measured**; coverage in section 8.10 is stated at
+  component level.
+- `Console` is validated indirectly through `Display` and `Application`, plus
+  one manual check under a pseudo-terminal.
 - Hardware clock accuracy depends on the operating system.
-- Terminal appearance may differ across platforms.
-- Performance may vary based on hardware specifications.
-- Third-party tools and libraries are assumed to operate correctly.
-- Future features are not included in the current validation scope.
+- Terminal appearance may differ across platforms and terminal emulators.
+- Performance figures reflect one machine; they will vary with hardware.
 
-These limitations define the boundaries of the current validation effort.
+These limitations define the boundaries of the current validation effort. The
+first two are the ones that matter for a release decision.
 
 ---
 
 # 9.11 Final Validation Statement
 
-Based on the planned testing and validation activities, the **Digital Clock System** is expected to satisfy all defined functional and non-functional requirements.
+Based on the testing and validation activities actually carried out, the
+**Digital Clock System v1.0.0 satisfies its defined functional and
+non-functional requirements on Linux**, with the two exceptions recorded
+below.
 
-After successful completion of:
+Completed and passed:
 
-- Unit Testing
-- Integration Testing
-- System Testing
-- User Acceptance Testing
+- Unit Testing — 60 of 60
+- Integration Testing — 8 of 8 paths
+- System Testing — 6 of 6 categories
+- Functional Testing — TC-001 to TC-025, all passed
 
-and resolution of all critical defects, the application will be considered **ready for deployment**.
+Not completed:
+
+- **Windows execution.** FR-010 is validated by inspection only.
+- **User Acceptance Testing.** No participants were involved.
+
+All critical and high-severity defects (DEF-001 to DEF-003) are closed, and no
+defect remains open.
+
+**The application is considered ready for deployment on Linux.** A
+cross-platform release should not be declared until the suite has been
+executed on Windows.
 
 ---
 
@@ -2157,56 +2301,63 @@ The Testing Report serves as a record of the planned testing process and provide
 
 # 10.2 Testing Summary
 
-The Digital Clock System has been planned for comprehensive testing across multiple testing levels to ensure software quality and reliability.
+The Digital Clock System was tested across multiple levels. Results:
 
-The testing process includes:
+| Testing Level | Result |
+|---------------|--------|
+| Unit Testing | **Pass** — 60 of 60 |
+| Integration Testing | **Pass** — 8 of 8 paths |
+| System Testing | **Pass** — 6 of 6 categories |
+| Functional Testing | **Pass** — TC-001 to TC-025 |
+| Performance Testing | **Pass** — all targets met with margin |
+| Compatibility Testing | **Partial** — Linux verified, Windows not executed |
+| Recovery Testing | **Pass** — every degraded path exercised |
+| User Acceptance Testing | **Not performed** |
 
-- Unit Testing
-- Integration Testing
-- System Testing
-- Functional Testing
-- Performance Testing
-- Compatibility Testing
-- Recovery Testing
-- User Acceptance Testing (UAT)
-
-Together, these activities provide broad coverage of the application's functionality and operational behavior.
+Together these provide broad coverage of the application's functionality and
+operational behaviour, with the compatibility gap noted above.
 
 ---
 
 # 10.3 Overall Test Coverage
 
-The planned testing covers all major modules of the Digital Clock System.
+Every major module carries automated coverage.
 
 | Module | Coverage Status |
-|---------|-----------------|
-| Clock Module | Planned |
-| Date Module | Planned |
-| Display Module | Planned |
-| Configuration Manager | Planned |
-| Theme Manager | Planned |
-| Logger | Planned |
-| Resource Manager | Planned |
-| Startup Process | Planned |
-| Shutdown Process | Planned |
-| Error Handling | Planned |
+|--------|-----------------|
+| Clock Module | **Covered** |
+| Date Module | **Covered** |
+| Time Formatter | **Covered** |
+| Display / Screen / StatusBar | **Covered** |
+| Configuration Manager | **Covered** |
+| Theme Manager | **Covered** |
+| Logger | **Covered** |
+| Resource Manager / Banner | **Covered** |
+| Utility | **Covered** |
+| Startup Process | **Covered** |
+| Shutdown Process | **Covered** |
+| Error Handling | **Covered** |
+| Console | **Indirect** — via Display and Application |
+| Windows code paths | **Not covered** — never compiled |
 
-The objective is to achieve complete functional coverage before the first software release.
+Complete functional coverage was achieved for the first release on Linux.
 
 ---
 
 # 10.4 Quality Assessment
 
-The testing strategy is designed to ensure that the Digital Clock System:
+Assessed against the quality objectives:
 
-- Functions according to its specifications.
-- Operates reliably under normal conditions.
-- Handles invalid inputs gracefully.
-- Uses system resources efficiently.
-- Remains maintainable and extensible.
-- Provides a consistent user experience.
+| Objective | Evidence | Assessment |
+|-----------|----------|------------|
+| Functions according to specification | 25 of 25 documented test cases pass | **Met** |
+| Operates reliably under normal conditions | Resident set flat over continuous operation | **Met** |
+| Handles invalid inputs gracefully | TC-011, TC-017 – TC-025 all pass; no crash on any degraded path | **Met** |
+| Uses system resources efficiently | 4.5 MB resident, CPU below measurement resolution | **Met** |
+| Remains maintainable and extensible | Layered design; zero warnings under five warning flags | **Met** |
+| Provides a consistent user experience | Rendered output matches the User Manual layout | **Met** |
 
-Actual quality metrics should be updated after the execution of planned test cases.
+The measured figures behind these assessments are in sections 8.5 and 8.10.
 
 ---
 
@@ -2283,8 +2434,15 @@ This completes the **06_Testing_Report.md** document.
 | Document | **06_Testing_Report.md** |
 | Project | **Digital Clock System** |
 | Language | **C++17** |
-| Version | **1.0** |
-| Status | **Completed** |
+| Application Version | **1.0.0** |
+| Document Version | **1.1** |
+| Status | **Executed** |
+| Test Execution Date | **2026-08-07** |
+| Result | **60 of 60 automated tests passed; TC-001 – TC-025 all passed** |
+| Open Defects | **None** |
+| Known Gaps | Windows not executed; no UAT; line coverage not measured |
+| Environment | Garuda Linux (kernel 7.1.5-zen1-2-zen, x86_64), GCC 16.1.1, GNU Make 4.4.1, CMake 4.4.2 |
+| Reproduce With | `make test` or `ctest --test-dir build --output-on-failure` |
 | Target Audience | Developers, Test Engineers, Reviewers, Project Maintainers |
 
 ---

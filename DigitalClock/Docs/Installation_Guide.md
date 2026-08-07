@@ -65,10 +65,13 @@ The Digital Clock System is designed to operate on the following platforms.
 
 | Platform                | Support Status |
 | ----------------------- | -------------- |
-| Linux                   | Supported      |
-| Windows                 | Supported      |
-| macOS                   | Planned        |
-| Other UNIX-like Systems | Planned        |
+| Linux                   | Supported and verified |
+| Windows                 | Implemented, not yet verified |
+| macOS                   | Planned |
+| Other UNIX-like Systems | Planned |
+
+The Windows code paths are present but have not been compiled or executed as
+of v1.0.0. See the Change Log, section 5.4 (KI-000).
 
 Future releases may expand support to additional operating systems.
 
@@ -246,10 +249,10 @@ The Digital Clock System is designed to support the following operating systems.
 
 | Operating System        | Support Status  |
 | ----------------------- | --------------- |
-| Linux                   | Fully Supported |
-| Windows 10 / 11         | Fully Supported |
-| macOS                   | Planned         |
-| Other UNIX-like Systems | Planned         |
+| Linux                   | Fully supported and verified |
+| Windows 10 / 11         | Implemented, not yet verified |
+| macOS                   | Planned |
+| Other UNIX-like Systems | Planned |
 
 The software has been designed to remain portable across multiple platforms.
 

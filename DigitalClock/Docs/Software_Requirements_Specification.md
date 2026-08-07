@@ -1765,6 +1765,11 @@ Increase portability and broaden platform support.
 | Linux    | Supported |
 | macOS    | Supported |
 
+> **Verification status (v1.0.0):** the table above states design intent. As
+> of v1.0.0 only Linux has been built and tested. Windows code paths are
+> implemented but unverified, and no macOS-specific work has been done. See
+> the Testing Report, section 8.6.
+
 ---
 
 ## Supported Compilers
@@ -6429,6 +6434,11 @@ The application is designed for:
 | Windows  | Supported |
 | Linux    | Supported |
 | macOS    | Supported |
+
+> **Verification status (v1.0.0):** the table above states design intent. As
+> of v1.0.0 only Linux has been built and tested. Windows code paths are
+> implemented but unverified, and no macOS-specific work has been done. See
+> the Testing Report, section 8.6.
 
 ---
 

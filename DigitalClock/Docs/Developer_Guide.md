@@ -273,9 +273,9 @@ Development can be performed on the following operating systems.
 
 | Operating System | Support Status |
 |------------------|----------------|
-| Linux | Fully Supported |
-| Windows 10 | Supported |
-| Windows 11 | Supported |
+| Linux | Fully supported and verified |
+| Windows 10 | Implemented, not yet verified |
+| Windows 11 | Implemented, not yet verified |
 | macOS | Planned |
 | Other UNIX Systems | Planned |
 
