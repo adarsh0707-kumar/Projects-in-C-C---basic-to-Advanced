@@ -28,8 +28,14 @@ Also worth running:
 
 ```bash
 make debug                                  # -O0 -g
+make coverage                               # per-file line coverage
+make SANITIZE=address test                  # AddressSanitizer
+make SANITIZE=undefined test                # UndefinedBehaviorSanitizer
 cmake -S . -B build && ctest --test-dir build --output-on-failure
 ```
+
+CI enforces an 80% line-coverage floor, so a change that meaningfully reduces
+coverage will fail. `make coverage` lists the worst-covered files first.
 
 ## Code style
 

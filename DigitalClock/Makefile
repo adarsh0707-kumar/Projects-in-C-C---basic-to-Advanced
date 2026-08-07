@@ -15,6 +15,12 @@
 #
 # SANITIZE is passed straight to -fsanitize=, so any sanitizer the compiler
 # supports works. It also forces -O1 -g, which keeps stack traces readable.
+#
+# Coverage:
+#   make coverage
+#
+# Builds instrumented, runs the suite, and reports line coverage per file.
+# Uses gcov, which ships with GCC, so there is nothing extra to install.
 # =============================================================================
 
 CXX      ?= g++
@@ -22,6 +28,7 @@ CXXSTD    = -std=c++17
 WARNINGS  = -Wall -Wextra -Wpedantic -Wshadow -Wconversion
 OPTIMIZE ?= -O2
 SANFLAGS  =
+COVFLAGS  =
 LDLIBS    = -pthread
 
 ifdef SANITIZE
@@ -29,8 +36,15 @@ ifdef SANITIZE
   OPTIMIZE = -O1
 endif
 
-CXXFLAGS  = $(CXXSTD) $(WARNINGS) $(OPTIMIZE) $(SANFLAGS) -IInc
-LDFLAGS   = $(SANFLAGS)
+# Coverage counters are meaningless against an optimised build, because the
+# optimiser reorders and merges the lines being counted.
+ifdef COVERAGE
+  COVFLAGS = --coverage -fprofile-abs-path -g
+  OPTIMIZE = -O0
+endif
+
+CXXFLAGS  = $(CXXSTD) $(WARNINGS) $(OPTIMIZE) $(SANFLAGS) $(COVFLAGS) -IInc
+LDFLAGS   = $(SANFLAGS) $(COVFLAGS)
 
 INCDIR    = Inc
 SRCDIR    = Src
@@ -52,7 +66,7 @@ TEST_OBJECTS = $(TEST_SOURCES:$(TESTDIR)/%.cpp=$(OBJDIR)/tests/%.o)
 
 HEADERS = $(wildcard $(INCDIR)/*.hpp)
 
-.PHONY: all run test debug clean distclean help
+.PHONY: all run test debug coverage clean distclean help
 
 all: $(TARGET)
 
@@ -83,8 +97,18 @@ test: $(TEST_TARGET)
 debug: OPTIMIZE = -O0 -g
 debug: clean $(TARGET)
 
+# A separate target rather than a flag on `test`, because coverage needs a
+# full instrumented rebuild -- reusing existing objects would report stale or
+# missing counters.
+coverage:
+	$(MAKE) clean
+	$(MAKE) COVERAGE=1 $(TEST_TARGET)
+	./$(TEST_TARGET) > /dev/null
+	@./Scripts/coverage.sh
+
 clean:
-	rm -rf $(OBJDIR) $(BUILDDIR)
+	rm -rf $(OBJDIR) $(BUILDDIR) coverage
+	rm -f *.gcov
 	@echo "Removed build output"
 
 distclean: clean
@@ -97,6 +121,7 @@ help:
 	@echo "  make run      Build and run the application"
 	@echo "  make test     Build and run the test suite"
 	@echo "  make debug    Build with debug symbols"
+	@echo "  make coverage Report line coverage from the test suite"
 	@echo "  make SANITIZE=address test    Run the suite under ASan"
 	@echo "  make SANITIZE=undefined test  Run the suite under UBSan"
 	@echo "  make clean    Remove build output"

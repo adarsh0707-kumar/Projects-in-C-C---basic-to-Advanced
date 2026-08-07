@@ -157,6 +157,27 @@ jobs:
       - name: Build the test suite with -Werror
         run: make OPTIMIZE="-O2 -Werror" test
 
+  # Replaces the component-level coverage claim the Testing Report used to
+  # carry with a measured figure. Uses gcov, which ships with GCC, so the
+  # job installs nothing and the same command works locally.
+  #
+  # The threshold guards against backsliding rather than demanding a number:
+  # it sits just below the current total, so a change that meaningfully
+  # reduces coverage fails while ordinary churn does not.
+  coverage:
+    name: Line coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Build instrumented and run the suite
+        run: make COVERAGE=1 Build/DigitalClockTests && ./Build/DigitalClockTests > /dev/null
+
+      - name: Report coverage
+        run: ./Scripts/coverage.sh 80
+
   sanitizers:
     name: Sanitizer (${{ matrix.sanitizer }})
     runs-on: ubuntu-latest

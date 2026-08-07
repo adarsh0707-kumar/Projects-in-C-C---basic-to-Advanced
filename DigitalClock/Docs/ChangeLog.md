@@ -1245,7 +1245,7 @@ Verification gaps carried by this release:
 | -------- | ----------- | -------- | ------ |
 | ~~KI-000~~ | ~~Windows support is implemented but has never been compiled or executed~~ | Medium | **Closed 2026-08-07** — verified by CI under MSVC 19.51; 78 tests passed and the application rendered a frame |
 | KI-007   | No User Acceptance Testing was performed | Low | Open |
-| KI-008   | Line coverage is not measured; coverage is stated at component level only | Low | Open |
+| ~~KI-008~~ | ~~Line coverage is not measured~~ | Low | **Closed 2026-08-07** — measured at 83.03% via `make coverage`, enforced at 80% in CI |
 | KI-009   | `Console` has no direct automated tests; it is covered indirectly and by one manual check under a pseudo-terminal | Low | Open |
 
 Features deferred to future releases:
