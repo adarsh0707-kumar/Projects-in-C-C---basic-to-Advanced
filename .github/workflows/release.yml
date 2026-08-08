@@ -60,7 +60,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # GUI explicitly OFF: these archives ship no Qt runtime, and an
       # unbundled calculator-gui would fail to start on a clean
@@ -133,7 +133,7 @@ jobs:
           echo "$OUT" | grep -q "2+3\*4 = 14" || { echo "::error::history did not record the calculation -- the per-user data dir may be broken on this platform"; exit 1; }
 
       - name: Upload archive
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ env.STAGE }}
           path: Calculator/${{ env.STAGE }}.${{ matrix.archive }}
@@ -148,8 +148,17 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/calculator-v')
 
     steps:
+      # This repository hosts several projects, so tags are namespaced and
+      # github.ref_name is the whole tag: "calculator-v1.1.0". Using it
+      # directly titles the release "Calculator calculator-v1.1.0". Strip
+      # the prefix so it reads as a version.
+      - name: Derive the version from the tag
+        id: version
+        run: echo "value=${GITHUB_REF_NAME#calculator-}" >> "$GITHUB_OUTPUT"
+        working-directory: ${{ github.workspace }}
+
       - name: Download all archives
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: artifacts
           merge-multiple: true
@@ -162,7 +171,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           draft: true
-          name: Calculator ${{ github.ref_name }}
+          name: Calculator ${{ steps.version.outputs.value }}
           files: artifacts/*
           body: |
             Command-line Calculator for Linux, macOS, and Windows.
