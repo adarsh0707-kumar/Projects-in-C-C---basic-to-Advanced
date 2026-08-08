@@ -277,15 +277,31 @@ jobs:
           windeployqt --release --no-translations "$DEST/digitalclock-gui.exe"
           ls "$DEST"
 
+      # Start-Process with an explicit wait, not "& the.exe". The GUI is
+      # linked for the Windows subsystem (CMake's WIN32, which is what
+      # stops a console window appearing behind it), so PowerShell
+      # launches it detached and returns immediately: $LASTEXITCODE is
+      # never set, and the check reported a failure with a blank exit
+      # code whether or not the application worked.
       - name: Verify the deployed app starts
         shell: pwsh
         run: |
           $env:QT_QPA_PLATFORM = "offscreen"
-          & "$env:DEST\digitalclock-gui.exe" --once
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "::error::deployed app exited with $LASTEXITCODE"
+
+          $app = Start-Process -FilePath "$env:DEST\digitalclock-gui.exe" `
+                               -ArgumentList "--once" -PassThru
+
+          if (-not $app.WaitForExit(60000)) {
+            Write-Host "::error::deployed app did not exit within 60 seconds"
+            $app.Kill()
             exit 1
           }
+
+          if ($app.ExitCode -ne 0) {
+            Write-Host "::error::deployed app exited with $($app.ExitCode)"
+            exit 1
+          }
+
           Write-Host "Deployed app started, drew a frame and exited cleanly."
 
       - name: Create zip
