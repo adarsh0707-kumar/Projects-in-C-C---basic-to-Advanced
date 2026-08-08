@@ -16,7 +16,10 @@
  * then the main loop.
  ******************************************************************************/
 
+#include <cstddef>
+#include <cstdint>
 #include <string>
+#include <vector>
 
 #include "AlarmManager.hpp"
 #include "Clock.hpp"
@@ -206,6 +209,53 @@ public:
     bool dismissAlarm();
 
     /**
+     * @brief Switches to the next theme, without restarting.
+     *
+     * Bound to the T key. The presentation layer reads its colours through
+     * the ThemeManager on every frame, so the change is visible immediately.
+     *
+     * @return std::string Name of the theme now active.
+     */
+    std::string cycleTheme();
+
+    /**
+     * @brief Switches between the 12-hour and 24-hour clock.
+     *
+     * Bound to the F key. Affects the display only; the configured
+     * @c TimeFormat is unchanged, so the setting returns at the next start.
+     *
+     * @return bool true if the clock now reads in 12-hour form.
+     */
+    bool toggleTimeFormat();
+
+    /**
+     * @brief Re-reads the configuration file and applies what changed.
+     *
+     * Bound to the C key, so a setting can be edited and seen without
+     * restarting. A running stopwatch or countdown is left alone: see
+     * configureTimer().
+     *
+     * @return true if the file was read, false if it could not be.
+     */
+    bool reloadConfiguration();
+
+    /**
+     * @brief Lists the configuration keys the application understands.
+     *
+     * The list a loaded file is validated against. Anything outside it is
+     * reported rather than silently ignored.
+     *
+     * @return std::vector<std::string> Recognised key names.
+     */
+    static std::vector<std::string> recognisedKeys();
+
+    /**
+     * @brief Returns the number of unrecognised keys in the loaded file.
+     * @return std::size_t Count, zero when the file is clean.
+     */
+    std::size_t unknownKeyCount() const;
+
+    /**
      * @brief Returns the default configuration file path.
      * @return std::string @c Config/config.ini.
      */
@@ -272,8 +322,24 @@ private:
 
     /**
      * @brief Applies the timer settings from the configuration.
+     *
+     * Leaves a running countdown alone: setDuration() resets, so applying a
+     * reloaded duration mid-run would move the finish line under the user.
      */
     void configureTimer();
+
+    /**
+     * @brief Warns about configuration keys the application does not use.
+     */
+    void validateConfiguration();
+
+    /**
+     * @brief Shows a status message that clears itself after a few seconds.
+     *
+     * @param text  Message to show.
+     * @param nowMs Current monotonic reading.
+     */
+    void setTransientMessage(const std::string &text, std::int64_t nowMs);
 
     /**
      * @brief Loads the additional time zones from the configuration.
@@ -320,6 +386,10 @@ private:
     int interval;     ///< Refresh interval in milliseconds.
     bool alarmsEnabled; ///< Whether alarm checking is active.
     bool alertRaised;   ///< Whether this frame raised the alert.
+
+    std::string configPath;      ///< File given to initialize(), for reload.
+    std::size_t unknownKeys;     ///< Unrecognised keys in the loaded file.
+    std::int64_t messageUntilMs; ///< When the status message expires, or 0.
     Mode currentMode;   ///< What the main readout is showing.
     bool running;     ///< Whether the refresh loop should continue.
     bool initialized; ///< Whether initialize() completed.

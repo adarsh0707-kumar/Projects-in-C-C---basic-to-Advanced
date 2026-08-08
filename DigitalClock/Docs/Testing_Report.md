@@ -1874,6 +1874,35 @@ the code the way a user would.
 | TC-071 | Verify an alarm fires in the loop and can be snoozed | Panel raised with the alarm's label and snooze hint; S stopped the ringing and left the alarm armed for its snooze time | **Pass** |
 | TC-072 | Verify a ringing alarm can be dismissed in the loop | D cleared the alert; a repeating alarm stayed enabled for the next day | **Pass** |
 
+## Themes and configuration (TC-073 - TC-081)
+
+Added with v1.4.0. The first four assert the theme and configuration
+primitives directly; the last four drive the new keys through the running
+loop, on the same pseudo-terminal harness.
+
+| Test Case ID | Objective | Actual Result | Status |
+|--------------|-----------|---------------|--------|
+| TC-073 | Theme files carry text styles alongside colours | Bold applied to the clock; the escape run carried both style and colour; an unstyled element emitted colour alone, unchanged | **Pass** |
+| TC-074 | Theme values accept styles in any order and count nonsense | "Bold Cyan" equalled "Cyan Bold"; commas accepted; a style with no colour kept the colour in place; "Normal" cleared; one unrecognised token counted, its neighbour still applied | **Pass** |
+| TC-075 | Style names parse case-insensitively and reject unknowns | Styles parsed in any case; a colour name refused as a style and the reverse; a refused parse left the caller's value untouched | **Pass** |
+| TC-076 | Themes can be cycled at runtime | Every shipped theme visited exactly once and the cycle returned to its start; a theme outside the list started the cycle rather than sticking | **Pass** |
+| TC-077 | Unrecognised configuration keys are reported, not ignored | Two typos reported in file order with the user's own spelling; case-insensitive matching; the shipped `config.ini` reported clean | **Pass** |
+| TC-078 | T changes the theme in the running loop | Dark advanced to Light and the status bar followed the theme in use, not the one configured at startup | **Pass** |
+| TC-079 | C reloads the configuration in the running loop | The file was edited underneath the running application; interval, theme and clock format all changed without a restart, and a key that is not a key was reported | **Pass** |
+| TC-080 | A reload leaves a running countdown alone | A countdown survived a reload that changed its duration from one minute to ten; the run continued against the duration it started with | **Pass** |
+| TC-081 | F switches the clock format in the running loop | 24-hour advanced to 12-hour and the meridiem appeared on the clock line | **Pass** |
+
+TC-080 is the one worth explaining. `CountdownTimer::setDuration()` resets, so
+a reload that applied a new duration to a run in progress would silently move
+the finish line and restart the count. The guard is in `configureTimer()`, and
+this is what holds it in place.
+
+TC-077 also asserts that the shipped `Config/config.ini` reports no
+unrecognised keys, so the application cannot ship warning about its own
+defaults.
+
+---
+
 TC-069 is the one that earned its keep. It failed on first run, and the defect
 was not in the countdown or the notifier but in where the panel was drawn from
 -- see DEF-009 in section 8.7. No test that called the components directly
@@ -1908,7 +1937,8 @@ the CI smoke step, which runs the application with `--once` on a real console.
 | World Clock (v1.3.0) | 8 | 8 | 8 | 0 |
 | Console (pseudo-terminal) | 5 | 5 | 5 | 0 |
 | Refresh loop (pseudo-terminal) | 7 | 7 | 7 | 0 |
-| **Total** | **72** | **72** | **72** | **0** |
+| Themes & Configuration (v1.4.0) | 9 | 9 | 9 | 0 |
+| **Total** | **81** | **81** | **81** | **0** |
 
 Executed 2026-08-08. Two additional boundary cases, TC-005A and TC-006A, were
 added during implementation to cover the midnight and noon conversions that
@@ -1916,8 +1946,9 @@ the FR-004 acceptance criteria require; both pass. TC-026 to TC-041 arrived
 with the v1.1.0 alarm module, TC-042 to TC-052 with the v1.2.0 stopwatch
 and timer, and TC-053 to TC-060 with the v1.3.0 world clock. TC-061 to TC-065
 and TC-066 to TC-072 were added to close the `Console` and `Application`
-coverage gaps respectively. The wider automated suite contains 115 tests in
-total, the remainder carrying `UT-` identifiers.
+coverage gaps respectively, and TC-073 to TC-081 with the v1.4.0 theme and
+configuration work. The wider automated suite contains 125 tests in total,
+the remainder carrying `UT-` identifiers.
 
 ---
 
@@ -1989,7 +2020,7 @@ boundary.
 
 | Test Category | Expected Result | Actual Result | Status |
 |---------------|-----------------|---------------|--------|
-| Unit Testing | All modules operate correctly | 115 of 115 tests passed | **Pass** |
+| Unit Testing | All modules operate correctly | 125 of 125 tests passed | **Pass** |
 | Integration Testing | Modules communicate without errors | All 11 integration paths passed | **Pass** |
 | System Testing | Complete application functions correctly | Application ran and rendered correctly | **Pass** |
 | Performance Testing | Meets target performance requirements | All targets met with margin (see 8.5) | **Pass** |
@@ -2105,7 +2136,7 @@ reproduces it. The fix moves the panel into its own `updateAlert()` step,
 which also removed a one-frame lag: `updateTimer()` runs after
 `updateAlarms()`, so a timer alert used to wait for the following frame.
 
-No defects remain open; the suite has passed at 115 of 115 since TC-072 was
+No defects remain open; the suite has passed at 125 of 125 since TC-081 was
 added.
 
 ---
@@ -2152,18 +2183,18 @@ Every component has direct automated coverage.
 | Date | 5 | ✔ |
 | TimeFormatter | 5 | ✔ |
 | Display / Screen / StatusBar | 7 | ✔ |
-| ConfigurationManager | 7 | ✔ |
-| ThemeManager / Theme | 6 | ✔ |
+| ConfigurationManager | 8 | ✔ |
+| ThemeManager / Theme | 11 | ✔ |
 | Logger | 6 | ✔ |
 | ResourceManager / Banner | 6 | ✔ |
 | Utility | 8 | ✔ |
 | Console (via pseudo-terminal) | 6 | ✔ |
 | Application (startup & shutdown) | 6 | ✔ |
-| Application (refresh loop, via pseudo-terminal) | 7 | ✔ |
+| Application (refresh loop, via pseudo-terminal) | 11 | ✔ |
 | Alarm / AlarmManager / Notifier | 18 | ✔ |
 | Stopwatch / CountdownTimer | 13 | ✔ |
 | TimeZone / WorldClock | 10 | ✔ |
-| **Total** | **115** | |
+| **Total** | **125** | |
 | Error handling | across all files | ✔ |
 
 The two pseudo-terminal groups are POSIX-only. On Windows each is replaced by
@@ -2173,8 +2204,8 @@ step, which runs the application with `--once` on a real console.
 ## Measured line coverage
 
 Line coverage is measured with `gcov` and reported by `make coverage`. The
-figures below are from the run on 2026-08-08, and a CI job reproduces them on
-every change to `DigitalClock/`.
+figures below are from the run on 2026-08-08 at v1.4.0, and a CI job
+reproduces them on every change to `DigitalClock/`.
 
 | Coverage | Lines | File |
 |---------:|------:|------|
@@ -2183,24 +2214,24 @@ every change to `DigitalClock/`.
 | 87.36% | 277 | `Alarm.cpp` |
 | 89.68% | 155 | `AlarmManager.cpp` |
 | 89.85% | 197 | `TimeZone.cpp` |
-| 90.83% | 436 | `Application.cpp` |
-| 92.45% | 106 | `ThemeManager.cpp` |
+| 90.60% | 521 | `Application.cpp` |
 | 93.33% | 60 | `ResourceManager.cpp` |
 | 93.59% | 78 | `Notifier.cpp` |
+| 94.64% | 168 | `ThemeManager.cpp` |
 | 94.74% | 95 | `Logger.cpp` |
 | 95.10% | 102 | `Console.cpp` |
+| 95.35% | 129 | `Theme.cpp` |
 | 95.74% | 94 | `Date.cpp` |
-| 96.26% | 107 | `ConfigurationManager.cpp` |
 | 96.49% | 57 | `WorldClock.cpp` |
 | 96.55% | 58 | `Clock.cpp` |
+| 96.67% | 120 | `ConfigurationManager.cpp` |
 | 97.64% | 127 | `CountdownTimer.cpp` |
-| 98.02% | 101 | `Theme.cpp` |
 | 98.46% | 65 | `TimeFormatter.cpp` |
 | 98.47% | 131 | `Screen.cpp` |
 | 98.59% | 71 | `Stopwatch.cpp` |
 | 100.00% | 45 | `Banner.cpp` |
 | 100.00% | 68 | `Utility.cpp` |
-| **92.81%** | **2559** | **TOTAL** (2375 covered) |
+| **92.79%** | **2747** | **TOTAL** (2549 covered) |
 
 CI enforces a floor of 90%. The threshold guards against backsliding rather
 than demanding a number: it sits just below the current total, so a change
@@ -2216,9 +2247,10 @@ now closed:
 |------|-------:|------:|--------|
 | `Console.cpp` | 61.76% | **95.10%** | Direct tests through a pseudo-terminal (TC-061 - TC-065), closing KI-009 |
 | `Theme.cpp` | 50.50% | **98.02%** | Exhaustive colour and style table test (UT-062) |
-| `Application.cpp` | 55.71% | **90.83%** | The refresh loop driven through a pseudo-terminal (TC-066 - TC-072) |
+| `Application.cpp` | 55.71% | **90.60%** | The refresh loop driven through a pseudo-terminal (TC-066 - TC-072) |
 
-The total moved from 83.03% to 86.25% to 92.81%.
+The total moved from 83.03% to 86.25% to 92.81%, and stands at 92.79% after
+the v1.4.0 features added a further 188 lines.
 
 `Application.cpp` was the largest absolute gap, at roughly 190 uncovered
 lines: the refresh loop and key handling, reachable only by driving the loop.
@@ -2324,7 +2356,7 @@ execution statistics, per-requirement outcomes, measured performance figures,
 the compatibility matrix, the defects found and closed, coverage, and the
 acceptance verdict.
 
-The headline result is 115 of 115 automated tests passing, with all documented
+The headline result is 125 of 125 automated tests passing, with all documented
 test cases executed and passed, and no open defects. Continuous integration
 verifies Linux, Windows and macOS on every change, so the compatibility matrix
 reflects executed runs rather than intent. The remaining gap is User
@@ -2707,11 +2739,11 @@ This completes the **06_Testing_Report.md** document.
 | Document | **06_Testing_Report.md** |
 | Project | **Digital Clock System** |
 | Language | **C++17** |
-| Application Version | **1.3.0** |
-| Document Version | **1.6** |
+| Application Version | **1.4.0** |
+| Document Version | **1.7** |
 | Status | **Executed** |
 | Test Execution Date | **2026-08-08** |
-| Result | **115 of 115 automated tests passed; TC-001 – TC-072 all passed** |
+| Result | **125 of 125 automated tests passed; TC-001 – TC-081 all passed** |
 | Open Defects | **None** |
 | Known Gaps | No User Acceptance Testing has been performed (KI-007) |
 | Environment | Garuda Linux (kernel 7.1.5-zen1-2-zen, x86_64), GCC 16.1.1, GNU Make 4.4.1, CMake 4.4.2 |

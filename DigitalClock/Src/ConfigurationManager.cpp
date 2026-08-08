@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <unordered_set>
 
 #include "Utility.hpp"
 
@@ -211,4 +212,30 @@ std::size_t ConfigurationManager::size() const
 const std::string &ConfigurationManager::filePath() const
 {
     return loadedPath;
+}
+
+std::vector<std::string> ConfigurationManager::unknownKeys(
+    const std::vector<std::string> &recognised) const
+{
+    std::unordered_set<std::string> known;
+
+    for (const std::string &key : recognised)
+        known.insert(normalize(key));
+
+    std::vector<std::string> unknown;
+
+    // insertionOrder preserves file order, so the warnings read top to bottom.
+    for (const std::string &key : insertionOrder)
+    {
+        if (known.find(key) != known.end())
+            continue;
+
+        const auto original = originalKeys.find(key);
+
+        // Report the spelling the user typed, not the normalised form.
+        unknown.push_back(
+            (original != originalKeys.end()) ? original->second : key);
+    }
+
+    return unknown;
 }

@@ -23,8 +23,9 @@ No third-party dependencies — the standard library only.
  Theme        : Dark
  Refresh Rate : 1 Second
  Status       : Running
+ Mode         : Clock
 ================================================================================
- Press Q or Ctrl+C to Exit
+ [M] Mode  [T] Theme  [F] 12/24  [C] Reload   Press Q or Ctrl+C to Exit
 ```
 
 ---
@@ -42,8 +43,8 @@ No installation and no dependencies — extract and run.
 | Windows (x64) | `digitalclock-*-windows-x64.zip` |
 
 ```bash
-tar -xzf digitalclock-1.2.0-linux-x86_64.tar.gz
-cd digitalclock-1.2.0-linux-x86_64
+tar -xzf digitalclock-1.4.0-linux-x86_64.tar.gz
+cd digitalclock-1.4.0-linux-x86_64
 ./DigitalClock
 ```
 
@@ -98,7 +99,9 @@ Or via the helper scripts:
 
 Press **Q** or **Ctrl+C** to exit. Both paths shut down gracefully: the
 terminal state is restored and the shutdown is recorded in the log. While an
-alarm is ringing, **S** snoozes it and **D** dismisses it.
+alarm is ringing, **S** snoozes it and **D** dismisses it. **T** changes
+theme, **F** switches between the 12- and 24-hour clock, and **C** re-reads
+the configuration file — all without restarting.
 
 Run from the project root so that `Resources/` and `Config/` resolve. The
 resource loader also searches the parent and grandparent directories, so
@@ -111,6 +114,15 @@ launching from `Build/` works too.
 Settings live in [`Config/config.ini`](Config/config.ini). Keys are matched
 case-insensitively. Any value that is missing or invalid falls back to the
 default rather than stopping the application.
+
+A key that is *not* in the table below is reported — in the log, and as an
+`unrecognised key(s)` row in the status bar. A misspelt key has no effect, and
+without the warning that is indistinguishable from a setting deliberately left
+out: `Them=Light` looks like working configuration right up until the theme
+does not change. It is shown on screen as well as logged because `Logging` can
+be switched off in the very file the typo is in.
+
+Press **C** while the clock is running to re-read the file without restarting.
 
 | Key               | Values                                           | Default                |
 | ----------------- | ------------------------------------------------ | ---------------------- |
@@ -205,10 +217,23 @@ clock, and alarms and the countdown keep working whatever is displayed.
 | `Space` | — | Start / stop | Start / pause | — |
 | `L` | — | Lap | — | — |
 | `R` | — | Reset | Reset | — |
+| `T` | Next theme | Next theme | Next theme | Next theme |
+| `F` | 12 / 24-hour | 12 / 24-hour | 12 / 24-hour | 12 / 24-hour |
+| `C` | Reload config | Reload config | Reload config | Reload config |
 | `Q` | Quit | Quit | Quit | Quit |
 
 While an alarm is ringing, **S** snoozes and **D** dismisses, in any mode.
 **D** also acknowledges a finished countdown.
+
+**T** cycles through the bundled themes without restarting. **F** switches the
+clock between 12- and 24-hour form for the session, leaving `TimeFormat`
+alone. **C** re-reads the configuration file, so a setting can be edited in
+another window and applied without stopping the clock — a running stopwatch or
+countdown is left alone by the reload.
+
+The footer lists these keys where there is room for them; the stopwatch and
+timer footers are already close to eighty columns, so they omit `[C] Reload`.
+All of them work in every mode regardless.
 
 The stopwatch reads `MM:SS.cc`, widening to `H:MM:SS.cc` past an hour, and
 keeps up to 99 laps. It redraws faster than `RefreshInterval` while running, so
@@ -269,23 +294,39 @@ Leave `TimeZones` empty and the world clock is skipped in the mode cycle.
 ### Themes
 
 Theme files live in [`Resources/themes/`](Resources/themes/) and assign a
-colour to each screen element:
+colour to each screen element, optionally followed by text styles:
 
 ```ini
-HEADER=Cyan
-TIME=BrightGreen
+HEADER=Cyan Bold
+TIME=BrightGreen Bold
 DATE=Yellow
 STATUS=White
-FOOTER=BrightBlack
+FOOTER=BrightBlack Dim
 ACCENT=Blue
-ALERT=BrightYellow
-ERROR=BrightRed
+ALERT=BrightYellow Bold
+ERROR=BrightRed Bold
 ```
+
+Styles are `Bold`, `Dim`, `Italic`, `Underline`, `Reverse` and `Normal`. Order
+does not matter and commas are accepted, so `Bold Cyan` and `Cyan, Bold` mean
+the same thing. `Normal` clears any styles named before it. Not every terminal
+renders `Italic`.
+
+A style with no colour beside it keeps the colour already in place, so a theme
+can add emphasis without restating what it is emphasising. A token that names
+neither a colour nor a style is counted and reported rather than silently
+dropped — otherwise a misspelt colour would be indistinguishable from an
+element left unstyled.
 
 Add a theme by dropping a new `.theme` file into that directory and naming it
 in `Theme=`. An unknown theme falls back to the built-in default and logs a
 warning. Colour output is suppressed automatically when standard output is not
-a terminal, or when `NO_COLOR` is set.
+a terminal, or when `NO_COLOR` is set — in which case styles are suppressed
+with it.
+
+Press **T** to cycle the bundled themes at runtime. `HighContrast` is bold
+throughout and dims nothing, since dimming works against the legibility it
+exists for.
 
 ---
 
@@ -388,9 +429,9 @@ make coverage                  # per-file line coverage
 ```
 
 Coverage is measured with `gcov`, which ships with GCC, so there is nothing
-extra to install. The total is **92.81%**; CI enforces a 90% floor.
+extra to install. The total is **92.79%**; CI enforces a 90% floor.
 
-115 tests, covering TC-001 through TC-072 from
+125 tests, covering TC-001 through TC-081 from
 [`Docs/Testing_Report.md`](Docs/Testing_Report.md) plus supporting unit tests
 (`UT-*`) for the parsing and layout code. The harness is a small header in
 `Tests/TestFramework.hpp` — adding a third-party framework would have been the

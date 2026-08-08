@@ -30,7 +30,9 @@
 
 #include <chrono>
 #include <csignal>
+#include <cstddef>
 #include <cstdint>
+#include <fstream>
 #include <string>
 #include <thread>
 
@@ -556,6 +558,247 @@ TEST_CASE(TC_072, "Verify a ringing alarm can be dismissed in the loop")
     // it still rings tomorrow.
     CHECK_FALSE(application.alarms().at(0).isSnoozed());
     CHECK_TRUE(application.alarms().at(0).isEnabled());
+}
+
+TEST_CASE(TC_078, "Verify T changes the theme in the running loop")
+{
+    PseudoTerminal terminal;
+
+    if (!terminal.isReady())
+    {
+        FAIL_TEST("could not open a pseudo-terminal");
+        return;
+    }
+
+    const std::string path = TestFramework::writeTempFile(
+        "loop-theme.ini",
+        "RefreshInterval=50\n"
+        "Logging=Disabled\n"
+        "Alarms=false\n"
+        "Theme=Dark\n");
+
+    Application application;
+
+    CHECK_TRUE(application.initialize(path));
+
+    terminal.startCapture();
+
+    Typist typist(
+        [&terminal]()
+        {
+            pause(120);
+
+            terminal.sendKeys("t");
+            pause(150);
+
+            quit(terminal);
+        });
+
+    application.run();
+
+    typist.join();
+
+    const std::string drawn = terminal.stopCapture();
+
+    // Dark is followed by Light in the shipped order.
+    CHECK_CONTAINS(drawn, "Light");
+    CHECK_CONTAINS(drawn, "Theme: Light");
+
+    // The status bar reports the theme that is actually in use, not the one
+    // the configuration named at startup.
+    CHECK_CONTAINS(drawn, "Theme");
+}
+
+TEST_CASE(TC_081, "Verify F switches the clock format in the running loop")
+{
+    PseudoTerminal terminal;
+
+    if (!terminal.isReady())
+    {
+        FAIL_TEST("could not open a pseudo-terminal");
+        return;
+    }
+
+    const std::string path = TestFramework::writeTempFile(
+        "loop-format.ini",
+        "RefreshInterval=50\n"
+        "Logging=Disabled\n"
+        "Alarms=false\n"
+        "TimeFormat=24\n");
+
+    Application application;
+
+    CHECK_TRUE(application.initialize(path));
+
+    terminal.startCapture();
+
+    Typist typist(
+        [&terminal]()
+        {
+            pause(150);
+
+            terminal.sendKeys("f");   // 24-hour -> 12-hour
+            pause(200);
+
+            quit(terminal);
+        });
+
+    application.run();
+
+    typist.join();
+
+    const std::string drawn = terminal.stopCapture();
+
+    // The meridiem can only appear once the clock is reading in 12-hour form.
+    const bool hasMeridiem =
+        drawn.find(" AM") != std::string::npos ||
+        drawn.find(" PM") != std::string::npos;
+
+    CHECK_TRUE(hasMeridiem);
+    CHECK_CONTAINS(drawn, "12-hour clock");
+}
+
+TEST_CASE(TC_079, "Verify C reloads the configuration in the running loop")
+{
+    PseudoTerminal terminal;
+
+    if (!terminal.isReady())
+    {
+        FAIL_TEST("could not open a pseudo-terminal");
+        return;
+    }
+
+    const std::string path = TestFramework::writeTempFile(
+        "loop-reload.ini",
+        "RefreshInterval=50\n"
+        "Logging=Disabled\n"
+        "Alarms=false\n"
+        "TimeFormat=24\n"
+        "Theme=Dark\n");
+
+    Application application;
+
+    CHECK_TRUE(application.initialize(path));
+    CHECK_EQ(application.refreshInterval(), 50);
+
+    terminal.startCapture();
+
+    Typist typist(
+        [&terminal, &path]()
+        {
+            pause(150);
+
+            // Edit the file underneath the running application, exactly as a
+            // user would in another window.
+            {
+                std::ofstream file(path, std::ios::trunc);
+
+                file << "RefreshInterval=80\n"
+                     << "Logging=Disabled\n"
+                     << "Alarms=false\n"
+                     << "TimeFormat=12\n"
+                     << "Theme=Blue\n"
+                     << "Wallpaper=None\n";   // not a key: must be reported
+            }
+
+            terminal.sendKeys("c");
+            pause(250);
+
+            quit(terminal);
+        });
+
+    application.run();
+
+    typist.join();
+
+    const std::string drawn = terminal.stopCapture();
+
+    // The reload took effect without a restart.
+    CHECK_EQ(application.refreshInterval(), 80);
+    CHECK_CONTAINS(drawn, "Configuration reloaded");
+    CHECK_CONTAINS(drawn, "Blue");
+
+    // The 12-hour format arrived with it, so formatting reloaded too.
+    const bool hasMeridiem =
+        drawn.find(" AM") != std::string::npos ||
+        drawn.find(" PM") != std::string::npos;
+
+    CHECK_TRUE(hasMeridiem);
+
+    // And the key that is not a key was reported rather than ignored.
+    CHECK_EQ(application.unknownKeyCount(), static_cast<std::size_t>(1));
+    CHECK_CONTAINS(drawn, "unrecognised key");
+}
+
+TEST_CASE(TC_080, "Verify a reload leaves a running countdown alone")
+{
+    PseudoTerminal terminal;
+
+    if (!terminal.isReady())
+    {
+        FAIL_TEST("could not open a pseudo-terminal");
+        return;
+    }
+
+    const std::string path = TestFramework::writeTempFile(
+        "loop-reload-timer.ini",
+        "RefreshInterval=50\n"
+        "Logging=Disabled\n"
+        "Alarms=false\n"
+        "TimerDuration=01:00\n");
+
+    Application application;
+
+    CHECK_TRUE(application.initialize(path));
+    CHECK_EQ(application.timer().duration(),
+             static_cast<std::int64_t>(60000));
+
+    terminal.startCapture();
+
+    Typist typist(
+        [&terminal, &path]()
+        {
+            pause(120);
+
+            terminal.sendKeys("m");   // Clock -> Stopwatch
+            pause(100);
+            terminal.sendKeys("m");   // Stopwatch -> Timer
+            pause(100);
+
+            terminal.sendKeys(" ");   // start counting down
+            pause(200);
+
+            {
+                std::ofstream file(path, std::ios::trunc);
+
+                file << "RefreshInterval=50\n"
+                     << "Logging=Disabled\n"
+                     << "Alarms=false\n"
+                     << "TimerDuration=10:00\n";
+            }
+
+            terminal.sendKeys("c");   // reload mid-run
+            pause(200);
+
+            quit(terminal);
+        });
+
+    application.run();
+
+    typist.join();
+
+    terminal.stopCapture();
+
+    CountdownTimer &countdown = application.timer();
+
+    /*
+    setDuration() resets, so applying the reloaded ten minutes to a run in
+    progress would have moved the finish line under the user and restarted
+    the count. The run must survive the reload untouched.
+    */
+    CHECK_TRUE(countdown.isRunning());
+    CHECK_EQ(countdown.duration(), static_cast<std::int64_t>(60000));
+    CHECK_TRUE(countdown.remaining(Application::monotonicNow()) < 60000);
 }
 
 #else // _WIN32

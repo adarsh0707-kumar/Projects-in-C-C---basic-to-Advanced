@@ -1,11 +1,11 @@
 # Green theme
 # A single-hue green colour scheme.
 
-HEADER=BrightGreen
-TIME=Green
+HEADER=BrightGreen Bold
+TIME=Green Bold
 DATE=BrightGreen
 STATUS=White
-FOOTER=BrightBlack
+FOOTER=BrightBlack Dim
 ACCENT=Green
-ERROR=BrightRed
-ALERT=BrightYellow
+ERROR=BrightRed Bold
+ALERT=BrightYellow Bold

@@ -157,6 +157,24 @@ public:
      */
     const std::string &filePath() const;
 
+    /**
+     * @brief Lists loaded keys that are not in @p recognised.
+     *
+     * An unrecognised key is almost always a typo, and without this it is
+     * indistinguishable from a setting deliberately left out: the value is
+     * read by nobody and the default applies silently. @c Them=Light looks
+     * exactly like a working configuration until the theme does not change.
+     *
+     * Comparison is case-insensitive, matching lookups. Keys are returned in
+     * the order they appeared in the file, spelled as the file spelled them,
+     * so a warning can quote what the user actually typed.
+     *
+     * @param recognised Keys the application knows how to use.
+     * @return std::vector<std::string> Unrecognised keys, in file order.
+     */
+    std::vector<std::string> unknownKeys(
+        const std::vector<std::string> &recognised) const;
+
 private:
     /**
      * @brief Normalises a key for case-insensitive lookup.

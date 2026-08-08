@@ -1,11 +1,15 @@
 # High contrast theme
 # Maximum legibility for accessibility (NFR-020).
+#
+# Every element is bold: this theme exists for readability, so weight is
+# applied throughout rather than reserved for emphasis. Nothing here is
+# dimmed, which is the attribute that would work against it.
 
-HEADER=BrightWhite
-TIME=BrightWhite
-DATE=BrightWhite
-STATUS=BrightWhite
-FOOTER=BrightWhite
-ACCENT=BrightYellow
-ERROR=BrightRed
-ALERT=BrightYellow
+HEADER=BrightWhite Bold
+TIME=BrightWhite Bold
+DATE=BrightWhite Bold
+STATUS=BrightWhite Bold
+FOOTER=BrightWhite Bold
+ACCENT=BrightYellow Bold
+ERROR=BrightRed Bold
+ALERT=BrightYellow Bold Underline

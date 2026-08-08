@@ -25,15 +25,19 @@
  * @class ThemeManager
  * @brief Loads theme definitions and maps screen elements to colours.
  *
- * A theme file is a flat key/value list naming one colour per element:
+ * A theme file is a flat key/value list naming one colour per element, with
+ * optional text styles after it:
  *
  * @code{.ini}
- * HEADER=Cyan
+ * HEADER=Cyan Bold
  * TIME=Green
- * DATE=Yellow
+ * DATE=Yellow Italic
  * STATUS=White
- * FOOTER=White
+ * FOOTER=White Dim
  * @endcode
+ *
+ * Order does not matter, so @c "Bold Cyan" is the same as @c "Cyan Bold", and
+ * styles may be separated by spaces or commas.
  */
 class ThemeManager
 {
@@ -112,6 +116,20 @@ public:
     Theme::Color color(Element element) const;
 
     /**
+     * @brief Returns the text styles configured for @p element.
+     * @param element Element to query.
+     * @return std::vector<Theme::Style> Styles, empty when none were named.
+     */
+    std::vector<Theme::Style> styles(Element element) const;
+
+    /**
+     * @brief Describes an element's appearance, for display and diagnostics.
+     * @param element Element to describe.
+     * @return std::string Text such as "BrightGreen Bold".
+     */
+    std::string describe(Element element) const;
+
+    /**
      * @brief Enables or disables all colour output.
      *
      * The Console disables colour when standard output is not a terminal.
@@ -138,10 +156,32 @@ public:
     void applyDefaultTheme();
 
     /**
+     * @brief Counts tokens in the loaded theme that named no colour or style.
+     *
+     * A misspelt colour would otherwise be indistinguishable from a theme
+     * that simply did not mention that element.
+     *
+     * @return std::size_t Number of unrecognised tokens.
+     */
+    std::size_t unknownTokenCount() const;
+
+    /**
      * @brief Lists the themes shipped with the application.
      * @return std::vector<std::string> Theme names.
      */
     static std::vector<std::string> availableThemes();
+
+    /**
+     * @brief Loads the theme after the active one, wrapping around.
+     *
+     * Lets the user cycle themes at runtime rather than editing the
+     * configuration and restarting. A theme that is not in the shipped list --
+     * the built-in default, or a user's own file -- starts the cycle from the
+     * beginning.
+     *
+     * @return std::string Name of the theme now active.
+     */
+    std::string cycleTheme();
 
     /**
      * @brief Builds the resource path for a theme name.
@@ -160,10 +200,32 @@ private:
      */
     static bool elementFromKey(const std::string &key, Element &element);
 
+    /**
+     * @brief Parses a theme value into a colour and any styles.
+     *
+     * Tokens are separated by spaces or commas and may appear in any order,
+     * so "Bold Cyan" and "Cyan, Bold" are equivalent. Unrecognised tokens are
+     * counted rather than silently dropped.
+     *
+     * @param value    Value from the theme file, such as "BrightGreen Bold".
+     * @param color    Receives the colour; left alone when none was named.
+     * @param elementStyles Receives the styles, cleared first.
+     * @return std::size_t Number of tokens that named neither.
+     */
+    static std::size_t parseAppearance(
+        const std::string &value,
+        Theme::Color &color,
+        std::vector<Theme::Style> &elementStyles);
+
     std::map<Element, Theme::Color> colors; ///< Element to colour mapping.
+
+    /// Element to text-style mapping. Absent or empty means unstyled.
+    std::map<Element, std::vector<Theme::Style>> elementStyles;
+
     std::string themeName;                  ///< Name of the active theme.
     bool colorEnabled;                      ///< Whether colour is emitted.
     bool applied;                           ///< Whether applyTheme() ran.
+    std::size_t unknownTokens;              ///< Unrecognised tokens in the file.
     ResourceManager resources;              ///< Locates theme files.
 };
 

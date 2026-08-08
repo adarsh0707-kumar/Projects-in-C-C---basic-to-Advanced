@@ -30,6 +30,9 @@ namespace
     /** Granularity of the sleep loop, so quit keys stay responsive. */
     const int POLL_SLICE_MS = 40;
 
+    /** How long a status message stays on screen before clearing itself. */
+    const std::int64_t MESSAGE_DURATION_MS = 3000;
+
     /**
      * @brief Records a termination request.
      * @param signalNumber Signal that was raised.
@@ -65,6 +68,8 @@ Application::Application()
     : interval(DEFAULT_INTERVAL),
       alarmsEnabled(true),
       alertRaised(false),
+      unknownKeys(0),
+      messageUntilMs(0),
       currentMode(Mode::Clock),
       running(false),
       initialized(false)
@@ -94,9 +99,12 @@ bool Application::signalReceived()
     return terminationRequested.load();
 }
 
-bool Application::initialize(const std::string &configPath)
+bool Application::initialize(const std::string &path)
 {
     installSignalHandlers();
+
+    // Kept so reloadConfiguration() knows which file to re-read.
+    configPath = path;
 
     /*
     Stage 1 - Logger.
@@ -131,6 +139,8 @@ bool Application::initialize(const std::string &configPath)
 
     if (!logOpened && logger.isOpen())
         logger.warning("Default log file was unavailable at startup.");
+
+    validateConfiguration();
 
     interval = config.getInt(
         "RefreshInterval",
@@ -204,6 +214,143 @@ bool Application::initialize(const std::string &configPath)
     return true;
 }
 
+std::vector<std::string> Application::recognisedKeys()
+{
+    return {
+        "TimeFormat",
+        "DateFormat",
+        "Theme",
+        "RefreshInterval",
+        "Banner",
+        "TimeZones",
+        "Alarms",
+        "AlarmFile",
+        "SnoozeMinutes",
+        "AlarmBell",
+        "TimerDuration",
+        "Logging",
+        "LogFile",
+        "LogLevel",
+        "ConsoleLog"};
+}
+
+void Application::validateConfiguration()
+{
+    const std::vector<std::string> unrecognised =
+        config.unknownKeys(recognisedKeys());
+
+    unknownKeys = unrecognised.size();
+
+    /*
+    Worth reporting rather than ignoring. An unrecognised key is almost always
+    a typo, and its effect is that the default silently applies: "Them=Light"
+    looks like a working configuration right up until the theme does not
+    change, with nothing anywhere to say why.
+    */
+    for (const std::string &key : unrecognised)
+    {
+        logger.warning(
+            "Configuration key '" + key +
+            "' is not recognised and has no effect.");
+    }
+}
+
+std::size_t Application::unknownKeyCount() const
+{
+    return unknownKeys;
+}
+
+void Application::setTransientMessage(const std::string &text,
+                                      std::int64_t nowMs)
+{
+    display.setMessage(text);
+
+    messageUntilMs = nowMs + MESSAGE_DURATION_MS;
+}
+
+std::string Application::cycleTheme()
+{
+    const std::string name = theme.cycleTheme();
+
+    display.setStatusField("Theme", name);
+    setTransientMessage("Theme: " + name, monotonicNow());
+
+    logger.info("Theme changed to " + name + ".");
+
+    return name;
+}
+
+bool Application::toggleTimeFormat()
+{
+    const bool wasTwelve =
+        formatter.timeFormat() == TimeFormatter::TimeFormat::Hour12;
+
+    formatter.setTimeFormat(
+        wasTwelve ? TimeFormatter::TimeFormat::Hour24
+                  : TimeFormatter::TimeFormat::Hour12);
+
+    const bool nowTwelve = !wasTwelve;
+
+    setTransientMessage(
+        nowTwelve ? "12-hour clock" : "24-hour clock", monotonicNow());
+
+    logger.debug(
+        std::string("Clock format switched to ") +
+        (nowTwelve ? "12-hour." : "24-hour."));
+
+    return nowTwelve;
+}
+
+bool Application::reloadConfiguration()
+{
+    if (!initialized)
+        return false;
+
+    const std::string resolved = resources.exists(configPath)
+                                     ? resources.resolve(configPath)
+                                     : configPath;
+
+    if (!config.load(resolved))
+    {
+        logger.warning(
+            "Configuration '" + configPath + "' could not be re-read.");
+
+        setTransientMessage("Reload failed: " + configPath, monotonicNow());
+
+        return false;
+    }
+
+    configureLogging();
+    validateConfiguration();
+
+    interval = config.getInt(
+        "RefreshInterval",
+        DEFAULT_INTERVAL,
+        MINIMUM_INTERVAL,
+        MAXIMUM_INTERVAL);
+
+    configureFormats();
+    configureTheme();
+    configureAlarms();
+    configureTimer();
+    configureZones();
+
+    /*
+    World mode has nothing to show if the zones were removed, and the mode
+    cycle would no longer offer a way out of it.
+    */
+    if (currentMode == Mode::World && zones.count() == 0)
+        setMode(Mode::Clock);
+
+    configureStatusBar();
+
+    setTransientMessage("Configuration reloaded", monotonicNow());
+
+    logger.info("Configuration reloaded from " + resolved + ".");
+
+    return true;
+}
+
 void Application::configureLogging()
 {
     const bool loggingEnabled = config.getBool("Logging", true);
@@ -272,6 +419,17 @@ void Application::configureStatusBar()
     if (alarmsEnabled && alarmManager.count() > 0)
         display.setStatusField("Next Alarm", "-");
 
+    /*
+    Shown on screen as well as logged, because logging can be switched off in
+    the very file the typo is in -- which is exactly when the warning matters.
+    */
+    if (unknownKeys > 0)
+    {
+        display.setStatusField(
+            "Config",
+            std::to_string(unknownKeys) + " unrecognised key(s)");
+    }
+
     display.screen().setFooterHint(footerHint());
 }
 
@@ -322,6 +480,18 @@ void Application::configureAlarms()
 
 void Application::configureTimer()
 {
+    /*
+    setDuration() resets the countdown, so applying a reloaded duration to a
+    run in progress would move the finish line under the user. The new value
+    takes effect at the next reset.
+    */
+    if (countdown.isRunning())
+    {
+        logger.info(
+            "Timer duration not applied: a countdown is running.");
+        return;
+    }
+
     const std::string configured = config.getValue("TimerDuration", "05:00");
 
     std::int64_t milliseconds = 0;
@@ -571,22 +741,26 @@ WorldClock &Application::world()
 
 std::string Application::footerHint() const
 {
+    /*
+    T and C work in every mode, but the stopwatch and timer footers are
+    already close to eighty columns, so only the modes with room list them.
+    */
     switch (currentMode)
     {
     case Mode::Stopwatch:
-        return "[Space] Start/Stop  [L] Lap  [R] Reset  [M] Mode  [Q] Quit";
+        return "[Space] Start/Stop  [L] Lap  [R] Reset  [M] Mode  [T] Theme  "
+               "[Q] Quit";
 
     case Mode::Timer:
-        return "[Space] Start/Pause  [R] Reset  [M] Mode  [Q] Quit";
+        return "[Space] Start/Pause  [R] Reset  [M] Mode  [T] Theme  [Q] Quit";
 
     case Mode::World:
-        return "[M] Mode  Press Q or Ctrl+C to Exit";
-
     case Mode::Clock:
         break;
     }
 
-    return "[M] Mode  Press Q or Ctrl+C to Exit";
+    return "[M] Mode  [T] Theme  [F] 12/24  [C] Reload   "
+           "Press Q or Ctrl+C to Exit";
 }
 
 AlarmManager &Application::alarms()
@@ -605,6 +779,14 @@ void Application::renderFrame()
 
     clock.update();
     date.update();
+
+    // A status message announces something that just happened, so it clears
+    // itself rather than sitting on screen for the rest of the session.
+    if (messageUntilMs > 0 && nowMs >= messageUntilMs)
+    {
+        display.setMessage("");
+        messageUntilMs = 0;
+    }
 
     // Alarms and the countdown run regardless of which mode is on screen, so
     // neither is missed while the user is looking at something else.
@@ -717,6 +899,26 @@ bool Application::handleKey(int key)
     if (key == 'm' || key == 'M')
     {
         logger.debug("Mode changed to " + modeName(cycleMode()) + ".");
+        return true;
+    }
+
+    // Theme and reload apply in every mode, so they are handled before the
+    // mode-specific keys rather than repeated in each branch.
+    if (key == 't' || key == 'T')
+    {
+        cycleTheme();
+        return true;
+    }
+
+    if (key == 'c' || key == 'C')
+    {
+        reloadConfiguration();
+        return true;
+    }
+
+    if (key == 'f' || key == 'F')
+    {
+        toggleTimeFormat();
         return true;
     }
 

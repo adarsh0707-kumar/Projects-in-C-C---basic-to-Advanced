@@ -1,11 +1,15 @@
 # Dark theme
 # Light text on a dark terminal background.
+#
+# Values are a colour, optionally followed by text styles:
+#   TIME=BrightGreen Bold
+# Order does not matter and commas are accepted.
 
-HEADER=Cyan
-TIME=BrightGreen
+HEADER=Cyan Bold
+TIME=BrightGreen Bold
 DATE=Yellow
 STATUS=White
-FOOTER=BrightBlack
+FOOTER=BrightBlack Dim
 ACCENT=Blue
-ERROR=BrightRed
-ALERT=BrightYellow
+ERROR=BrightRed Bold
+ALERT=BrightYellow Bold

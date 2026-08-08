@@ -11,6 +11,11 @@
 
 #include "TestFramework.hpp"
 
+#include <cstddef>
+#include <string>
+#include <vector>
+
+#include "Application.hpp"
 #include "ConfigurationManager.hpp"
 
 TEST_CASE(TC_009, "Verify configuration loading")
@@ -185,4 +190,67 @@ TEST_CASE(UT_041, "ConfigurationManager writes settings back to disk")
     // save() without a prior load has no destination and must report failure.
     ConfigurationManager unsaved;
     CHECK_FALSE(unsaved.save());
+}
+
+TEST_CASE(TC_077, "Unrecognised configuration keys are reported, not ignored")
+{
+    const std::string path = TestFramework::writeTempFile(
+        "unknown-keys.ini",
+        "Theme=Dark\n"
+        "Them=Light\n"          // the typo this exists to catch
+        "RefreshInterval=1000\n"
+        "Colour=Blue\n"         // plausible, and not a key
+        "Logging=Disabled\n");
+
+    ConfigurationManager config;
+
+    CHECK_TRUE(config.load(path));
+
+    const std::vector<std::string> unknown =
+        config.unknownKeys(Application::recognisedKeys());
+
+    CHECK_EQ(unknown.size(), static_cast<std::size_t>(2));
+
+    // Reported in file order, spelled as the file spelled them, so a warning
+    // can quote back what the user actually typed.
+    CHECK_TRUE(unknown.size() > 1 && unknown[0] == "Them");
+    CHECK_TRUE(unknown.size() > 1 && unknown[1] == "Colour");
+
+    // The real keys beside them are untouched.
+    CHECK_EQ(config.getValue("Theme"), std::string("Dark"));
+    CHECK_EQ(config.getInt("RefreshInterval"), 1000);
+
+    // A file with nothing unexpected in it reports nothing.
+    const std::string clean = TestFramework::writeTempFile(
+        "known-keys.ini",
+        "Theme=Blue\n"
+        "TimeFormat=12\n"
+        "Logging=Disabled\n");
+
+    ConfigurationManager tidy;
+
+    CHECK_TRUE(tidy.load(clean));
+    CHECK_EQ(tidy.unknownKeys(Application::recognisedKeys()).size(),
+             static_cast<std::size_t>(0));
+
+    // Matching is case-insensitive, as lookups are: a key spelled in a
+    // different case is the same key, not an unknown one.
+    const std::string shouty = TestFramework::writeTempFile(
+        "shouty-keys.ini",
+        "THEME=Blue\n"
+        "timeformat=24\n");
+
+    ConfigurationManager mixed;
+
+    CHECK_TRUE(mixed.load(shouty));
+    CHECK_EQ(mixed.unknownKeys(Application::recognisedKeys()).size(),
+             static_cast<std::size_t>(0));
+
+    // Every key the shipped configuration uses must be recognised, or the
+    // application would warn about its own defaults.
+    ConfigurationManager shipped;
+
+    CHECK_TRUE(shipped.load("Config/config.ini"));
+    CHECK_EQ(shipped.unknownKeys(Application::recognisedKeys()).size(),
+             static_cast<std::size_t>(0));
 }

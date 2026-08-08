@@ -11,7 +11,8 @@ namespace
 
 ThemeManager::ThemeManager()
     : colorEnabled(true),
-      applied(false)
+      applied(false),
+      unknownTokens(0)
 {
     applyDefaultTheme();
 }
@@ -27,7 +28,65 @@ void ThemeManager::applyDefaultTheme()
     colors[Element::Alert]  = Theme::Color::BrightYellow;
     colors[Element::Error]  = Theme::Color::Red;
 
+    // The default theme is plain: styles are something a theme opts into.
+    elementStyles.clear();
+
     themeName = DEFAULT_THEME_NAME;
+}
+
+std::size_t ThemeManager::parseAppearance(
+    const std::string &value,
+    Theme::Color &color,
+    std::vector<Theme::Style> &parsedStyles)
+{
+    parsedStyles.clear();
+
+    std::size_t unrecognised = 0;
+
+    // Commas are accepted so "Cyan, Bold" reads naturally in a theme file.
+    std::string token;
+    std::string remaining = Utility::trim(value) + " ";
+
+    for (const char character : remaining)
+    {
+        if (character != ' ' && character != '\t' && character != ',')
+        {
+            token += character;
+            continue;
+        }
+
+        if (token.empty())
+            continue;
+
+        /*
+        Styles are tested first. No name is both a colour and a style, so the
+        order does not change the result; testing styles first just keeps the
+        colour fallback from swallowing a style name.
+        */
+        Theme::Style style = Theme::Style::Normal;
+        Theme::Color named = Theme::Color::Default;
+
+        if (Theme::parseStyle(token, style))
+        {
+            // "Normal" clears rather than accumulating, so a theme can say so.
+            if (style == Theme::Style::Normal)
+                parsedStyles.clear();
+            else
+                parsedStyles.push_back(style);
+        }
+        else if (Theme::parseColor(token, named))
+        {
+            color = named;
+        }
+        else
+        {
+            ++unrecognised;
+        }
+
+        token.clear();
+    }
+
+    return unrecognised;
 }
 
 std::string ThemeManager::themePath(const std::string &themeName)
@@ -126,6 +185,8 @@ bool ThemeManager::loadTheme(const std::string &requestedName)
 
     bool matchedAny = false;
 
+    unknownTokens = 0;
+
     static const std::pair<const char *, Element> KEYS[] = {
         {"HEADER", Element::Header},
         {"TIME", Element::Time},
@@ -146,11 +207,19 @@ bool ThemeManager::loadTheme(const std::string &requestedName)
         if (!elementFromKey(entry.first, element))
             continue;
 
-        const Theme::Color parsed = Theme::colorFromName(
-            definition.getValue(entry.first),
-            colors[element]);
+        Theme::Color parsed = colors[element];
+        std::vector<Theme::Style> parsedStyles;
+
+        unknownTokens += parseAppearance(
+            definition.getValue(entry.first), parsed, parsedStyles);
 
         colors[element] = parsed;
+
+        if (parsedStyles.empty())
+            elementStyles.erase(element);
+        else
+            elementStyles[element] = parsedStyles;
+
         matchedAny = true;
     }
 
@@ -189,12 +258,47 @@ Theme::Color ThemeManager::color(Element element) const
     return entry->second;
 }
 
+std::vector<Theme::Style> ThemeManager::styles(Element element) const
+{
+    const auto entry = elementStyles.find(element);
+
+    if (entry == elementStyles.end())
+        return {};
+
+    return entry->second;
+}
+
+std::string ThemeManager::describe(Element element) const
+{
+    std::string text = Theme::colorName(color(element));
+
+    for (const Theme::Style style : styles(element))
+        text += " " + Theme::styleName(style);
+
+    return text;
+}
+
+std::size_t ThemeManager::unknownTokenCount() const
+{
+    return unknownTokens;
+}
+
 std::string ThemeManager::colorFor(Element element) const
 {
     if (!colorEnabled)
         return "";
 
-    return Theme::foreground(color(element));
+    /*
+    Styles precede the colour. Both are plain SGR sequences and either order
+    renders the same, but writing the attribute first matches how the reset
+    at the end of the run reads: attributes on, text, everything off.
+    */
+    std::string sequence;
+
+    for (const Theme::Style style : styles(element))
+        sequence += Theme::style(style);
+
+    return sequence + Theme::foreground(color(element));
 }
 
 std::string ThemeManager::reset() const
@@ -223,4 +327,34 @@ bool ThemeManager::isApplied() const
 std::vector<std::string> ThemeManager::availableThemes()
 {
     return {"Dark", "Light", "Blue", "Green", "HighContrast"};
+}
+
+std::string ThemeManager::cycleTheme()
+{
+    const std::vector<std::string> names = availableThemes();
+
+    if (names.empty())
+        return currentTheme();
+
+    const std::string active = Utility::toLower(themeName);
+
+    std::size_t next = 0;
+
+    for (std::size_t index = 0; index < names.size(); ++index)
+    {
+        if (Utility::toLower(names[index]) != active)
+            continue;
+
+        next = (index + 1) % names.size();
+        break;
+    }
+
+    /*
+    A theme outside the shipped list -- the built-in default, or a file the
+    user added -- leaves next at 0, so the cycle starts from the beginning
+    rather than refusing to move.
+    */
+    loadTheme(names[next]);
+
+    return currentTheme();
 }

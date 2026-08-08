@@ -1971,13 +1971,46 @@ The following table lists the default keyboard controls supported by the Digital
 | Key | Function |
 |-----|----------|
 | **Q** | Exit the application |
-| **R** | Refresh the display |
-| **T** | Toggle between 12-hour and 24-hour formats *(if supported)* |
-| **C** | Reload configuration *(if supported)* |
-| **H** | Display help information *(if supported)* |
-| **L** | View recent log information *(if supported)* |
+| **M** | Switch mode: clock, stopwatch, timer, world clock |
+| **Space** | Start or stop the stopwatch; start or pause the countdown |
+| **L** | Record a lap *(stopwatch)* |
+| **R** | Reset *(stopwatch and countdown)* |
+| **T** | Change to the next theme |
+| **F** | Switch between the 12-hour and 24-hour clock |
+| **C** | Re-read the configuration file |
+| **S** | Snooze a ringing alarm |
+| **D** | Dismiss a ringing alarm, or acknowledge a finished countdown |
+| **Ctrl+C** | Exit the application |
 
-> **Note:** Some keyboard shortcuts may depend on the current version or enabled features of the application.
+Every key works in every mode. `Space`, `L` and `R` act on whichever of the
+stopwatch or countdown is on screen and do nothing in the other modes.
+
+The footer shows the keys that apply, and lists them where the width allows:
+the stopwatch and timer footers are already close to eighty columns, so they
+omit `[C] Reload` rather than wrap.
+
+Two of these are worth expanding on.
+
+**T** cycles the bundled themes -- Dark, Light, Blue, Green, HighContrast --
+and takes effect on the next redraw. It does not write to the configuration
+file, so the theme named by `Theme` returns at the next start.
+
+**F** switches the clock between 12-hour and 24-hour form for the session
+only, likewise leaving `TimeFormat` alone.
+
+**C** re-reads the configuration file, applying the formats, theme, refresh
+interval, alarms and time zones it finds. This allows a setting to be changed
+in another window and seen without stopping the clock. A running stopwatch or
+countdown is deliberately left undisturbed: changing a countdown's duration
+resets it, so a reload during a run would move the finish line. The new
+duration applies at the next reset.
+
+An earlier version of this manual listed **H** for help and **L** for the log
+as possible additions. Neither was implemented; `--help` prints the usage
+summary before the clock starts, and the log is a file.
+
+> **Note:** Prior to version 1.4.0 only **Q**, **M**, **Space**, **L**, **R**,
+> **S** and **D** were available. **T**, **F** and **C** were added in 1.4.0.
 
 ---
 

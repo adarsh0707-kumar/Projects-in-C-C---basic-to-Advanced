@@ -2,6 +2,64 @@
 
 #include "Utility.hpp"
 
+namespace
+{
+    /**
+     * @brief Looks up an already upper-cased, trimmed colour name.
+     *
+     * One table backs both colorFromName() and parseColor(), so a name they
+     * disagree about cannot exist.
+     *
+     * @param value Upper-cased, trimmed name.
+     * @param color Receives the colour, untouched when not recognised.
+     * @return true if @p value names a colour.
+     */
+    bool lookupColor(const std::string &value, Theme::Color &color)
+    {
+        using Color = Theme::Color;
+
+        if (value.empty())
+            return false;
+
+        if (value == "DEFAULT")       { color = Color::Default;       return true; }
+        if (value == "BLACK")         { color = Color::Black;         return true; }
+        if (value == "RED")           { color = Color::Red;           return true; }
+        if (value == "GREEN")         { color = Color::Green;         return true; }
+        if (value == "YELLOW")        { color = Color::Yellow;        return true; }
+        if (value == "BLUE")          { color = Color::Blue;          return true; }
+        if (value == "MAGENTA")       { color = Color::Magenta;       return true; }
+        if (value == "CYAN")          { color = Color::Cyan;          return true; }
+        if (value == "WHITE")         { color = Color::White;         return true; }
+
+        if (value == "BRIGHTBLACK")   { color = Color::BrightBlack;   return true; }
+        if (value == "BRIGHTRED")     { color = Color::BrightRed;     return true; }
+        if (value == "BRIGHTGREEN")   { color = Color::BrightGreen;   return true; }
+        if (value == "BRIGHTYELLOW")  { color = Color::BrightYellow;  return true; }
+        if (value == "BRIGHTBLUE")    { color = Color::BrightBlue;    return true; }
+        if (value == "BRIGHTMAGENTA") { color = Color::BrightMagenta; return true; }
+        if (value == "BRIGHTCYAN")    { color = Color::BrightCyan;    return true; }
+        if (value == "BRIGHTWHITE")   { color = Color::BrightWhite;   return true; }
+
+        /*
+        Spellings used by the bundled theme files and by Config/themes.ini.
+        The "dark" variants map onto the standard (non-bright) colours and the
+        grey variants onto bright black, which is how terminals render them.
+        */
+        if (value == "DARKBLUE")      { color = Color::Blue;          return true; }
+        if (value == "DARKRED")       { color = Color::Red;           return true; }
+        if (value == "DARKGREEN")     { color = Color::Green;         return true; }
+
+        if (value == "DARKGRAY" || value == "DARKGREY" ||
+            value == "GRAY" || value == "GREY")
+        {
+            color = Color::BrightBlack;
+            return true;
+        }
+
+        return false;
+    }
+}
+
 namespace Theme
 {
     std::string foreground(Color color)
@@ -76,46 +134,56 @@ namespace Theme
         return "\033[0m";
     }
 
-    Color colorFromName(const std::string &name, Color fallback)
+    bool parseColor(const std::string &name, Color &color)
+    {
+        return lookupColor(Utility::toUpper(Utility::trim(name)), color);
+    }
+
+    bool parseStyle(const std::string &name, Style &style)
     {
         const std::string value = Utility::toUpper(Utility::trim(name));
 
         if (value.empty())
+            return false;
+
+        if (value == "NORMAL" || value == "NONE")
+        {
+            style = Style::Normal;
+            return true;
+        }
+
+        if (value == "BOLD")      { style = Style::Bold;      return true; }
+        if (value == "DIM")       { style = Style::Dim;       return true; }
+        if (value == "ITALIC")    { style = Style::Italic;    return true; }
+        if (value == "UNDERLINE") { style = Style::Underline; return true; }
+        if (value == "REVERSE")   { style = Style::Reverse;   return true; }
+
+        return false;
+    }
+
+    std::string styleName(Style style)
+    {
+        switch (style)
+        {
+        case Style::Normal:    return "Normal";
+        case Style::Bold:      return "Bold";
+        case Style::Dim:       return "Dim";
+        case Style::Italic:    return "Italic";
+        case Style::Underline: return "Underline";
+        case Style::Reverse:   return "Reverse";
+        }
+
+        return "Normal";
+    }
+
+    Color colorFromName(const std::string &name, Color fallback)
+    {
+        Color parsed = fallback;
+
+        if (!lookupColor(Utility::toUpper(Utility::trim(name)), parsed))
             return fallback;
 
-        if (value == "DEFAULT")       return Color::Default;
-        if (value == "BLACK")         return Color::Black;
-        if (value == "RED")           return Color::Red;
-        if (value == "GREEN")         return Color::Green;
-        if (value == "YELLOW")        return Color::Yellow;
-        if (value == "BLUE")          return Color::Blue;
-        if (value == "MAGENTA")       return Color::Magenta;
-        if (value == "CYAN")          return Color::Cyan;
-        if (value == "WHITE")         return Color::White;
-
-        if (value == "BRIGHTBLACK")   return Color::BrightBlack;
-        if (value == "BRIGHTRED")     return Color::BrightRed;
-        if (value == "BRIGHTGREEN")   return Color::BrightGreen;
-        if (value == "BRIGHTYELLOW")  return Color::BrightYellow;
-        if (value == "BRIGHTBLUE")    return Color::BrightBlue;
-        if (value == "BRIGHTMAGENTA") return Color::BrightMagenta;
-        if (value == "BRIGHTCYAN")    return Color::BrightCyan;
-        if (value == "BRIGHTWHITE")   return Color::BrightWhite;
-
-        /*
-        Spellings used by the bundled theme files and by Config/themes.ini.
-        The "dark" variants map onto the standard (non-bright) colours and the
-        grey variants onto bright black, which is how terminals render them.
-        */
-        if (value == "DARKBLUE")   return Color::Blue;
-        if (value == "DARKRED")    return Color::Red;
-        if (value == "DARKGREEN")  return Color::Green;
-        if (value == "DARKGRAY" || value == "DARKGREY")
-            return Color::BrightBlack;
-        if (value == "GRAY" || value == "GREY")
-            return Color::BrightBlack;
-
-        return fallback;
+        return parsed;
     }
 
     std::string colorName(Color color)

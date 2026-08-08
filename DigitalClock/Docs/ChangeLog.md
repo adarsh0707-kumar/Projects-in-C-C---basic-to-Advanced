@@ -248,6 +248,7 @@ This format provides a simple and predictable versioning structure.
 | **1.2.0** | Additional enhancements                                    |
 | **1.2.1** | Bug fixes and minor improvements                           |
 | **1.3.0** | Feature expansion                                          |
+| **1.4.0** | Refinement of existing features                            |
 | **2.0.0** | Major architectural redesign or significant feature update |
 
 Each version communicates the scale and impact of the associated changes.
@@ -501,6 +502,7 @@ The table below summarizes the official project versions.
 | **1.1.0** | Stable        | Alarm module and notification support   |
 | **1.2.0** | Stable        | Stopwatch and countdown timer           |
 | **1.3.0** | Stable        | World clock and time zone support       |
+| **1.4.0** | Stable        | Theme styles and configuration reload   |
 
 These versions represent the major milestones in the development lifecycle.
 
@@ -898,6 +900,95 @@ Stable
 
 Version **1.3.0** delivers the multiple time zone support planned for this
 release in section 6.3.
+
+---
+
+# 3.9d Version 1.4.0 - Themes and Configuration
+
+### Release Status
+
+Stable
+
+### Added
+
+- **Text styles in theme files.** A theme value may now name styles after
+  its colour: `TIME=BrightGreen Bold`, `FOOTER=BrightBlack Dim`. Order does
+  not matter and commas are accepted, so `Bold Cyan` and `Cyan, Bold` are the
+  same. Styles are Bold, Dim, Italic, Underline, Reverse and Normal.
+- **Runtime theme switching.** `T` moves to the next theme without
+  restarting. The presentation layer reads its colours through the
+  ThemeManager every frame, so the change is visible on the next redraw.
+- **Configuration reload.** `C` re-reads the configuration file, applying
+  formats, theme, interval, alarms and zones. A file can be edited in another
+  window and the result seen immediately.
+- **Unrecognised key reporting.** A key the application does not use is now
+  reported, in the log and in the status bar, instead of being ignored.
+- `Theme::parseColor()` and `Theme::parseStyle()`, which answer whether a
+  name was recognised; `ThemeManager::styles()`, `describe()` and
+  `cycleTheme()`; `ConfigurationManager::unknownKeys()`.
+- Status messages that clear themselves after three seconds.
+
+### Changed
+
+- The shipped themes use styles: weight on the banner and clock, dimmed
+  footers. **HighContrast is bold throughout and dims nothing**, since
+  dimming is the one attribute that works against what it is for (NFR-020).
+- Footer hints list the new keys. The stopwatch and timer footers are already
+  near eighty columns, so they list `[T] Theme` but not `[C] Reload`; both
+  keys work in every mode regardless.
+- `Theme::colorFromName()` and `parseColor()` now share one lookup table, so
+  a name they disagree about cannot exist.
+
+### Design Notes
+
+- **An unrecognised key was previously indistinguishable from a setting left
+  out.** `Them=Light` looked like a working configuration right up until the
+  theme did not change, with nothing anywhere to say why. It is reported on
+  screen as well as in the log, because logging can be switched off in the
+  very file the typo is in -- which is exactly when the warning matters.
+- **`parseColor()` exists because `colorFromName()` cannot answer the
+  question.** Its fallback makes "not recognised" indistinguishable from "a
+  name that legitimately resolved to the fallback", and a theme parser has to
+  tell those apart: a token that is not a colour may still be a valid style.
+- **A reload leaves a running countdown alone.** `setDuration()` resets, so
+  applying a reloaded duration mid-run would move the finish line under the
+  user. The new value takes effect at the next reset. TC-080 covers it.
+- **A reload that removes every zone leaves World mode**, which would
+  otherwise show an empty readout the mode cycle could not escape.
+- **Styles are emitted before the colour.** Both are plain SGR sequences and
+  either order renders identically; writing the attribute first matches how
+  the trailing reset reads.
+
+### Fixed
+
+- **DEF-009.** With `Alarms=Disabled`, a countdown that finished raised its
+  alert but never drew it: the panel was rendered inside `updateAlarms()`,
+  which returns early when alarms are off. The timer expired, the bell rang
+  once, and the screen said nothing. Found by TC-069 on its first run.
+
+### Release Verification
+
+| Item | Result |
+|------|--------|
+| Release date | 2026-08-08 |
+| Automated tests | 125 of 125 passed |
+| New test cases | TC-066 - TC-081 |
+| Line coverage | 92.79%, enforced at 90% in CI |
+| Compiler warnings | 0 under `-Wall -Wextra -Wpedantic -Wshadow -Wconversion` |
+| Sanitizers | Clean under Address, UndefinedBehavior and Thread |
+| Platforms | Linux, Windows and macOS via CI |
+| End-to-end check | Styled output confirmed on a real terminal; `Them=Light` reported as an unrecognised key while the theme correctly stayed Dark |
+| Open defects | None |
+
+### Notes
+
+Version **1.4.0** delivers the theme enhancements and improved configuration
+planned for this release in section 6.3.
+
+This release also closed the last coverage gap. TC-066 to TC-072 drive the
+refresh loop through a pseudo-terminal, lifting `Application.cpp` from 55.71%
+to roughly 90% and the project from 86.25% to 92.81% before the new features
+landed. That work found DEF-009.
 
 ---
 
@@ -1452,7 +1543,7 @@ The following roadmap outlines the expected progression of future versions.
 | ~~**1.3.0**~~ | ~~Multiple time zone support~~ - **delivered 2026-08-07** |
 | **1.2.0** | Stopwatch and countdown timer                                       |
 | **1.3.0** | Multiple time zone support                                          |
-| **1.4.0** | Theme enhancements and improved configuration                       |
+| ~~**1.4.0**~~ | ~~Theme enhancements and improved configuration~~ - **delivered 2026-08-08** |
 | **2.0.0** | Graphical User Interface (GUI) and major architectural improvements |
 
 This roadmap is subject to change based on project priorities.
@@ -1760,14 +1851,14 @@ Developers and maintainers are encouraged to update the Change Log as an integra
 | Item | Details |
 | ---- | ------- |
 | Document | **09_ChangeLog.md** |
-| Document Version | **1.6** |
+| Document Version | **1.7** |
 | Project | **Digital Clock System** |
-| Current Version | **1.3.0** |
-| Release Date | **2026-08-07** |
+| Current Version | **1.4.0** |
+| Release Date | **2026-08-08** |
 | Language | **C++17** |
 | Status | **Released** |
 | Verified On | Linux (GCC 16.1.1), Windows (MSVC 19.51) and macOS, via CI |
-| Test Result | 115 of 115 automated tests passed; no open defects |
+| Test Result | 125 of 125 automated tests passed; 92.79% line coverage; no open defects |
 | Known Gaps | No User Acceptance Testing has been performed (KI-007) |
 | Audience | Developers, Maintainers, Test Engineers, Project Managers, End Users |
 

@@ -1,11 +1,11 @@
 # Blue theme
 # A single-hue blue colour scheme.
 
-HEADER=BrightBlue
-TIME=BrightCyan
+HEADER=BrightBlue Bold
+TIME=BrightCyan Bold
 DATE=Blue
 STATUS=White
-FOOTER=BrightBlack
+FOOTER=BrightBlack Dim
 ACCENT=Blue
-ERROR=BrightRed
-ALERT=BrightYellow
+ERROR=BrightRed Bold
+ALERT=BrightYellow Bold

@@ -10,6 +10,9 @@
 
 #include "TestFramework.hpp"
 
+#include <cstddef>
+#include <filesystem>
+#include <fstream>
 #include <vector>
 
 #include "Theme.hpp"
@@ -143,6 +146,229 @@ TEST_CASE(UT_061, "Theme maps colour names to ANSI sequences")
         Theme::Color::White);
 
     CHECK_EQ(Theme::colorName(Theme::Color::Cyan), std::string("Cyan"));
+}
+
+TEST_CASE(TC_073, "Theme files carry text styles alongside colours")
+{
+    ThemeManager theme;
+
+    CHECK_TRUE(theme.loadTheme("Dark"));
+
+    // The bundled dark theme sets weight on the elements that carry meaning.
+    const std::vector<Theme::Style> timeStyles =
+        theme.styles(ThemeManager::Element::Time);
+
+    CHECK_EQ(timeStyles.size(), static_cast<std::size_t>(1));
+    CHECK_TRUE(!timeStyles.empty() && timeStyles[0] == Theme::Style::Bold);
+
+    // The escape run carries the style as well as the colour.
+    const std::string sequence =
+        theme.colorFor(ThemeManager::Element::Time);
+
+    CHECK_CONTAINS(sequence, "\033[1m");   // bold
+    CHECK_CONTAINS(sequence, "\033[92m");  // bright green
+
+    // An element with no style named emits colour alone, unchanged from
+    // before styles existed.
+    CHECK_EQ(theme.styles(ThemeManager::Element::Date).size(),
+             static_cast<std::size_t>(0));
+    CHECK_EQ(theme.colorFor(ThemeManager::Element::Date),
+             std::string("\033[33m"));
+
+    // The description is what a status bar or a diagnostic would show.
+    CHECK_EQ(theme.describe(ThemeManager::Element::Time),
+             std::string("BrightGreen Bold"));
+    CHECK_EQ(theme.describe(ThemeManager::Element::Date),
+             std::string("Yellow"));
+
+    // The default theme is plain, so nothing inherits a style it never named.
+    theme.applyDefaultTheme();
+
+    CHECK_EQ(theme.styles(ThemeManager::Element::Time).size(),
+             static_cast<std::size_t>(0));
+}
+
+TEST_CASE(TC_074, "Theme values accept styles in any order and count nonsense")
+{
+    /*
+    loadTheme() resolves a name under Resources/themes, so exercising the
+    parser end to end means putting a file there. It is removed again below,
+    and its name keeps it out of availableThemes(), so nothing else sees it.
+    */
+    const std::filesystem::path scratch("Resources/themes/unittest.theme");
+
+    {
+        std::ofstream file(scratch, std::ios::trunc);
+
+        file << "HEADER=Bold Cyan\n"              // style before colour
+             << "TIME=BrightGreen, Bold\n"        // comma separated
+             << "DATE=Italic\n"                   // style with no colour
+             << "STATUS=White chartreuse\n"       // one token names neither
+             << "FOOTER=Dim BrightBlack Normal\n" // Normal clears the rest
+             << "ACCENT=Blue\n";
+    }
+
+    ThemeManager theme;
+
+    const bool loaded = theme.loadTheme("unittest");
+
+    if (!loaded)
+    {
+        std::filesystem::remove(scratch);
+        FAIL_TEST("the scratch theme file could not be loaded");
+        return;
+    }
+
+    // Order does not matter: "Bold Cyan" is the same as "Cyan Bold".
+    CHECK_TRUE(theme.color(ThemeManager::Element::Header) ==
+               Theme::Color::Cyan);
+    CHECK_EQ(theme.describe(ThemeManager::Element::Header),
+             std::string("Cyan Bold"));
+
+    // Commas separate as well as spaces.
+    CHECK_EQ(theme.describe(ThemeManager::Element::Time),
+             std::string("BrightGreen Bold"));
+
+    // A style with no colour keeps the colour already in place, so a theme
+    // can add emphasis without restating what it is emphasising.
+    CHECK_TRUE(theme.color(ThemeManager::Element::Date) ==
+               Theme::Color::Yellow);
+    CHECK_EQ(theme.describe(ThemeManager::Element::Date),
+             std::string("Yellow Italic"));
+
+    // "Normal" clears what came before it rather than accumulating.
+    CHECK_EQ(theme.describe(ThemeManager::Element::Footer),
+             std::string("BrightBlack"));
+
+    // The token naming neither is counted, not silently dropped: a misspelt
+    // colour would otherwise look exactly like an element left unstyled.
+    CHECK_EQ(theme.unknownTokenCount(), static_cast<std::size_t>(1));
+
+    // The colour beside it still applied, so one bad token spoils one token.
+    CHECK_TRUE(theme.color(ThemeManager::Element::Status) ==
+               Theme::Color::White);
+
+    std::filesystem::remove(scratch);
+}
+
+TEST_CASE(UT_063, "The high contrast theme is bold throughout and never dim")
+{
+    ThemeManager theme;
+
+    CHECK_TRUE(theme.loadTheme("HighContrast"));
+
+    static const ThemeManager::Element ELEMENTS[] = {
+        ThemeManager::Element::Header,
+        ThemeManager::Element::Time,
+        ThemeManager::Element::Date,
+        ThemeManager::Element::Status,
+        ThemeManager::Element::Footer,
+        ThemeManager::Element::Accent,
+        ThemeManager::Element::Alert,
+        ThemeManager::Element::Error};
+
+    for (const ThemeManager::Element element : ELEMENTS)
+    {
+        const std::vector<Theme::Style> applied = theme.styles(element);
+
+        if (applied.empty())
+        {
+            FAIL_TEST("high contrast element has no style applied");
+            continue;
+        }
+
+        CHECK_TRUE(applied[0] == Theme::Style::Bold);
+
+        // Dim is the one attribute that would work against a theme whose
+        // whole purpose is legibility (NFR-020).
+        for (const Theme::Style style : applied)
+            CHECK_TRUE(style != Theme::Style::Dim);
+    }
+
+    CHECK_EQ(theme.unknownTokenCount(), static_cast<std::size_t>(0));
+}
+
+TEST_CASE(TC_075, "Style names parse case-insensitively and reject unknowns")
+{
+    Theme::Style style = Theme::Style::Normal;
+
+    CHECK_TRUE(Theme::parseStyle("Bold", style));
+    CHECK_TRUE(style == Theme::Style::Bold);
+
+    CHECK_TRUE(Theme::parseStyle("  underline  ", style));
+    CHECK_TRUE(style == Theme::Style::Underline);
+
+    CHECK_TRUE(Theme::parseStyle("REVERSE", style));
+    CHECK_TRUE(style == Theme::Style::Reverse);
+
+    // "None" is accepted as a spelling of Normal, so a theme can say so.
+    CHECK_TRUE(Theme::parseStyle("None", style));
+    CHECK_TRUE(style == Theme::Style::Normal);
+
+    // A name that is not a style must be refused rather than defaulted, or a
+    // misspelt colour would silently become a style.
+    CHECK_FALSE(Theme::parseStyle("Cyan", style));
+    CHECK_FALSE(Theme::parseStyle("", style));
+    CHECK_FALSE(Theme::parseStyle("chartreuse", style));
+
+    // parseColor answers the same question for colours, which colorFromName
+    // cannot: its fallback makes "unrecognised" indistinguishable from a
+    // name that legitimately resolved to the fallback.
+    Theme::Color color = Theme::Color::Red;
+
+    CHECK_TRUE(Theme::parseColor("Cyan", color));
+    CHECK_TRUE(color == Theme::Color::Cyan);
+
+    CHECK_TRUE(Theme::parseColor("Default", color));
+    CHECK_TRUE(color == Theme::Color::Default);
+
+    CHECK_FALSE(Theme::parseColor("Bold", color));
+    CHECK_FALSE(Theme::parseColor("chartreuse", color));
+
+    // A refused parse leaves the caller's value alone.
+    CHECK_TRUE(color == Theme::Color::Default);
+
+    CHECK_EQ(Theme::styleName(Theme::Style::Underline),
+             std::string("Underline"));
+}
+
+TEST_CASE(TC_076, "Themes can be cycled at runtime")
+{
+    ThemeManager theme;
+
+    CHECK_TRUE(theme.loadTheme("Dark"));
+
+    const std::vector<std::string> names = ThemeManager::availableThemes();
+
+    // Cycling visits every shipped theme and returns to the start.
+    std::vector<std::string> visited;
+
+    for (std::size_t step = 0; step < names.size(); ++step)
+        visited.push_back(theme.cycleTheme());
+
+    CHECK_EQ(visited.size(), names.size());
+    CHECK_EQ(theme.currentTheme(), std::string("Dark"));
+
+    // Every shipped theme was reached, none twice.
+    for (const std::string &name : names)
+    {
+        int seen = 0;
+
+        for (const std::string &entry : visited)
+        {
+            if (entry == name)
+                ++seen;
+        }
+
+        if (seen != 1)
+            FAIL_TEST("theme '" + name + "' was not visited exactly once");
+    }
+
+    // A theme outside the shipped list starts the cycle rather than sticking.
+    theme.applyDefaultTheme();
+
+    CHECK_EQ(theme.currentTheme(), std::string("Default"));
+    CHECK_EQ(theme.cycleTheme(), names.front());
 }
 
 TEST_CASE(UT_062, "Every theme colour and style maps to a distinct sequence")

@@ -107,6 +107,37 @@ namespace Theme
      * @return std::string Canonical name, such as "Cyan".
      */
     std::string colorName(Color color);
+
+    /**
+     * @brief Parses a colour name, reporting whether it was recognised.
+     *
+     * colorFromName() cannot distinguish "the name was not recognised" from
+     * "the name resolved to the fallback", which a theme file parser needs to
+     * know: a token that is not a colour may still be a valid style.
+     *
+     * @param name  Colour name.
+     * @param color Receives the parsed colour, untouched on failure.
+     * @return true if @p name names a colour.
+     */
+    bool parseColor(const std::string &name, Color &color);
+
+    /**
+     * @brief Parses a style name.
+     *
+     * Matching is case-insensitive. "Normal" and "None" both clear styling.
+     *
+     * @param name  Style name, such as "Bold".
+     * @param style Receives the parsed style, untouched on failure.
+     * @return true if @p name names a style.
+     */
+    bool parseStyle(const std::string &name, Style &style);
+
+    /**
+     * @brief Converts a Style back to its canonical name.
+     * @param style Style to name.
+     * @return std::string Canonical name, such as "Bold".
+     */
+    std::string styleName(Style style);
 }
 
 #endif // THEME_HPP

@@ -194,7 +194,7 @@ TEST_CASE(UT_092, "Application reports its identity")
     CHECK_EQ(Application::EXIT_OK, 0);
     CHECK_EQ(Application::EXIT_STARTUP_FAILED, 1);
 
-    CHECK_EQ(Version::VERSION, std::string("1.3.0"));
+    CHECK_EQ(Version::VERSION, std::string("1.4.0"));
     CHECK_FALSE(Version::NAME.empty());
     CHECK_FALSE(Version::AUTHOR.empty());
 }
