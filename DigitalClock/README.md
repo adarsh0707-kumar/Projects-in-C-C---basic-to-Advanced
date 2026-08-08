@@ -447,7 +447,17 @@ Tests must run from the project root so they can find `Config/` and
 Full specification and design documents are in [`Docs/`](Docs/):
 Software Requirements Specification, Software Design Document, Architecture,
 API Documentation, Developer Guide, Installation Guide, User Manual, Testing
-Report and Change Log.
+Report, UAT Plan and Change Log.
+
+Two are worth pointing at directly:
+
+- [`Docs/Testing_Report.md`](Docs/Testing_Report.md) records what has been
+  verified and what has not, including the defects found and the coverage
+  measured. Claims in it are dated and tied to executed runs.
+- [`Docs/UAT_Plan.md`](Docs/UAT_Plan.md) is the one piece of testing the
+  project has *not* done: 60 scenarios for a person at a terminal, written
+  and ready but never run. It stays that way in the documentation until
+  somebody signs for it.
 
 ---
 

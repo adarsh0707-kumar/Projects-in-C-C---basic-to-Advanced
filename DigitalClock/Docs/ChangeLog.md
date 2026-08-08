@@ -1007,6 +1007,7 @@ The following documentation was completed prior to the first stable release.
 | Installation Guide                  | ✔ Completed |
 | Developer Guide                     | ✔ Completed |
 | Change Log                          | ✔ Completed |
+| UAT Plan                            | ✔ Ready, not executed |
 
 This comprehensive documentation supports both users and developers.
 
@@ -1204,6 +1205,7 @@ The following documentation has been completed and reviewed.
 | Installation Guide                  | ✔ Completed |
 | Developer Guide                     | ✔ Completed |
 | Change Log                          | ✔ Completed |
+| UAT Plan                            | ✔ Ready, not executed |
 
 Complete documentation supports future development, testing, deployment, and maintenance.
 
@@ -1335,7 +1337,7 @@ Verification gaps carried by this release:
 | Issue ID | Description | Severity | Status |
 | -------- | ----------- | -------- | ------ |
 | ~~KI-000~~ | ~~Windows support is implemented but has never been compiled or executed~~ | Medium | **Closed 2026-08-07** — verified by CI under MSVC 19.51; 78 tests passed and the application rendered a frame |
-| KI-007   | No User Acceptance Testing was performed | Low | Open |
+| KI-007   | No User Acceptance Testing was performed | Low | **Open** — plan ready. `Docs/UAT_Plan.md` (2026-08-08) defines 60 scenarios covering FR-001 to FR-010; it closes only when a tester signs section 9 |
 | ~~KI-008~~ | ~~Line coverage is not measured~~ | Low | **Closed 2026-08-07** — measured at 83.03% via `make coverage`, enforced at 85% in CI, now 86.25% |
 | ~~KI-009~~ | ~~`Console` has no direct automated tests~~ | Low | **Closed 2026-08-08** - TC-061 to TC-065 drive it through a pseudo-terminal; coverage 61.76% to 95.10% |
 

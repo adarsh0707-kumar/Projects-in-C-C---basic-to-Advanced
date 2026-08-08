@@ -2362,6 +2362,21 @@ verifies Linux, Windows and macOS on every change, so the compatibility matrix
 reflects executed runs rather than intent. The remaining gap is User
 Acceptance Testing, which has not been performed.
 
+A plan for it now exists at [`UAT_Plan.md`](UAT_Plan.md): 60 scenarios across
+FR-001 to FR-010 and every shipped feature, written to be run in one session
+by someone who did not build the software. It does not close KI-007. A plan is
+a set of questions, and the issue stays open until a person answers them and
+signs for the result.
+
+The distinction is worth keeping sharp, because the automated suite cannot
+narrow it. Those 125 tests were written by the same person who wrote the code,
+from the same understanding of what it should do, and they all pass. They
+establish that the code does what its author intended. Whether that is what a
+user wants is a different question, and two of this project's defects were
+found by asking it: DEF-007 and DEF-009 were both correct-in-isolation
+components behaving wrongly together, invisible to every test until the whole
+system ran.
+
 ---
 
 # Chapter 9 – Validation
@@ -2745,7 +2760,7 @@ This completes the **06_Testing_Report.md** document.
 | Test Execution Date | **2026-08-08** |
 | Result | **125 of 125 automated tests passed; TC-001 – TC-081 all passed** |
 | Open Defects | **None** |
-| Known Gaps | No User Acceptance Testing has been performed (KI-007) |
+| Known Gaps | No User Acceptance Testing has been performed (KI-007); a plan is ready in `Docs/UAT_Plan.md` |
 | Environment | Garuda Linux (kernel 7.1.5-zen1-2-zen, x86_64), GCC 16.1.1, GNU Make 4.4.1, CMake 4.4.2 |
 | Reproduce With | `make test` or `ctest --test-dir build --output-on-failure` |
 | Target Audience | Developers, Test Engineers, Reviewers, Project Maintainers |
