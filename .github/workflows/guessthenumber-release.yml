@@ -1,0 +1,188 @@
+# Builds downloadable Guess The Number archives for Linux, macOS and
+# Windows and attaches them to a GitHub Release.
+#
+# PLACEMENT: repository root, like every other workflow here. GitHub
+# Actions only reads <repo-root>/.github/workflows/, so steps set
+# working-directory: GuessTheNumber.
+#
+# TAGGING: tags are namespaced because this repo hosts several projects.
+# Push `guessthenumber-v1.0.0` to build, or run it from the Actions tab
+# to exercise the pipeline without creating a tag.
+#
+# The release is created as a DRAFT. Nothing is publicly visible until
+# someone opens it and clicks Publish, so a broken pipeline cannot ship a
+# broken download.
+
+name: GuessTheNumber Release
+
+on:
+  push:
+    tags:
+      - 'guessthenumber-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version label for a manual test build (no tag created)'
+        required: false
+        default: '0.0.0-test'
+
+defaults:
+  run:
+    working-directory: GuessTheNumber
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: linux-x86_64
+            archive: tar.gz
+          - os: macos-latest
+            label: macos-arm64
+            archive: tar.gz
+          - os: windows-latest
+            label: windows-x64
+            archive: zip
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      # A release must never ship something that failed its own tests.
+      - name: Run test suite
+        run: ctest --test-dir build --build-config Release -V
+
+      - name: Stage install tree
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#guessthenumber-v}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+          STAGE="guessthenumber-$VERSION-${{ matrix.label }}"
+          echo "STAGE=$STAGE" >> "$GITHUB_ENV"
+
+          cmake --install build --config Release --prefix "stage/$STAGE"
+          cp README.md "stage/$STAGE/"
+          ls -R "stage/$STAGE"
+
+      - name: Create archive
+        shell: bash
+        run: |
+          cd stage
+          if [ "${{ matrix.archive }}" = "zip" ]; then
+            7z a -tzip "../$STAGE.zip" "$STAGE"
+          else
+            tar -czf "../$STAGE.tar.gz" "$STAGE"
+          fi
+
+      # Unpack somewhere unrelated and play a real game through a pipe.
+      # This is the claim a release actually makes -- that someone who
+      # downloads and extracts it can run the thing.
+      #
+      # Every number from 1 to 100, because the secret is seeded from the
+      # clock: the only input guaranteed to win is one containing every
+      # possible answer. The leading 'x' also proves the shipped binary
+      # carries the input fix rather than the version that span forever.
+      - name: Verify the archive a user would download
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/unpack"
+          cd "$RUNNER_TEMP/unpack"
+
+          if [ "${{ matrix.archive }}" = "zip" ]; then
+            7z x "$GITHUB_WORKSPACE/GuessTheNumber/$STAGE.zip" > /dev/null
+          else
+            tar -xzf "$GITHUB_WORKSPACE/GuessTheNumber/$STAGE.tar.gz"
+          fi
+
+          BIN=$(find . -type f \( -name guessthenumber -o -name guessthenumber.exe \) | head -1)
+          chmod +x "$BIN" || true
+          echo "Running extracted binary: $BIN"
+
+          OUT=$({ echo x; seq 1 100; } | timeout 60 "$BIN")
+          echo "$OUT"
+
+          echo "$OUT" | grep -q "not a whole number" \
+            || { echo "::error::extracted binary did not reject a letter -- the input fix is missing"; exit 1; }
+
+          echo "$OUT" | grep -q "Congratulations" \
+            || { echo "::error::extracted binary never recognised a correct guess"; exit 1; }
+
+          echo "$OUT" | grep -q "Thank you for playing" \
+            || { echo "::error::extracted binary did not finish cleanly"; exit 1; }
+
+      - name: Upload archive
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ env.STAGE }}
+          path: GuessTheNumber/${{ env.STAGE }}.${{ matrix.archive }}
+          if-no-files-found: error
+
+  release:
+    name: Draft GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    # A manual run builds and verifies the archives but has no tag to
+    # attach them to, so it stops after the build job.
+    if: startsWith(github.ref, 'refs/tags/guessthenumber-v')
+
+    steps:
+      # Tags here are namespaced, so github.ref_name is the whole tag.
+      # Using it directly would title the release "Guess The Number
+      # guessthenumber-v1.0.0".
+      - name: Derive the version from the tag
+        id: version
+        run: echo "value=${GITHUB_REF_NAME#guessthenumber-}" >> "$GITHUB_OUTPUT"
+        working-directory: ${{ github.workspace }}
+
+      - name: Download all archives
+        uses: actions/download-artifact@v7
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List what will be attached
+        run: ls -lR artifacts
+        working-directory: ${{ github.workspace }}
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v3
+        with:
+          draft: true
+          name: Guess The Number ${{ steps.version.outputs.value }}
+          files: artifacts/*
+          body: |
+            A small terminal game: guess a number between 1 and 100.
+
+            **No installation and no dependencies** — download the archive
+            for your system, extract it, and run the `guessthenumber`
+            binary inside.
+
+            | Platform | Download |
+            |---|---|
+            | Linux (x86_64) | `guessthenumber-*-linux-x86_64.tar.gz` |
+            | macOS (Apple Silicon) | `guessthenumber-*-macos-arm64.tar.gz` |
+            | Windows (x64) | `guessthenumber-*-windows-x64.zip` |
+
+            Every archive was built from this tag, passed the test suite
+            on its own platform, and was then extracted elsewhere and
+            played through to a win — including a deliberately invalid
+            guess, because an earlier version of this game printed
+            "too low" forever the moment anyone typed a letter.
