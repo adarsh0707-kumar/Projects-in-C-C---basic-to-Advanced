@@ -129,6 +129,24 @@ e
 MS  MR  MC  M+  M-
 ```
 
+Constants and variables carry full `double` precision through an
+expression. Up to v1.1.0 they did not: each was rendered into the internal
+postfix form with `%g`, six significant figures, and parsed back. `pi`
+became `3.14159`, so `sin(pi)` returned `2.65e-06` instead of `1.22e-16`,
+and `x = 1/3` followed by `x*3` gave `0.999999`. `ans` is a variable too,
+so every chained calculation lost precision at each step.
+
+The test suite did not catch it because it asserted that `getVariable("pi")`
+returned the right number -- which it always did -- and never evaluated the
+expression `pi`. Line coverage is what pointed at it, by reporting
+`constants.c` as entirely unexecuted while the calculator plainly
+understood `pi`.
+
+An expression longer than the input buffer is now refused with a message.
+Previously `fgets` cut it at 254 characters and left the remainder in the
+input stream, where the menu read it as your next choice: a long sum
+returned a smaller, wrong total and said nothing about it.
+
 ## History
 
 Every calculation is logged; view, clear, or recall with `!!` (last result) or `!5` (entry #5).

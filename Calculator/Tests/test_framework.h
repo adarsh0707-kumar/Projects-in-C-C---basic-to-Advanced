@@ -35,6 +35,18 @@ extern int testsSkipped;
 #define ASSERT_DOUBLE_EQ(actual, expected, msg) \
     ASSERT_TRUE(fabs((actual) - (expected)) < 1e-6, msg)
 
+/*
+ * Like ASSERT_DOUBLE_EQ, but with the tolerance stated rather than assumed.
+ *
+ * The 1e-6 above is right for most arithmetic here, and wrong for anything
+ * about precision: it is the same order of magnitude as the error it would
+ * need to detect. Constants and variables were being quantised to six
+ * significant figures on their way through the postfix string, an error of
+ * roughly 2.6e-06 in pi, and the whole suite passed.
+ */
+#define ASSERT_DOUBLE_NEAR(actual, expected, tolerance, msg) \
+    ASSERT_TRUE(fabs((actual) - (expected)) < (tolerance), msg)
+
 #define ASSERT_STR_EQ(actual, expected, msg) \
     ASSERT_TRUE(strcmp((actual), (expected)) == 0, msg)
 

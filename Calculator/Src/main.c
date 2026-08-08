@@ -15,10 +15,57 @@
 #include "base.h"
 #include "plot.h"
 
+
+/*
+ * Reads one line, and refuses to pretend a long one was short.
+ *
+ * fgets() stops at the buffer's end and leaves the remainder in the stream.
+ * Every prompt here used it directly, so an expression longer than the
+ * buffer was quietly cut and the tail was read as the *next* answer -- at
+ * this menu, as a menu choice. Nothing said so.
+ *
+ * It was reproducible: 65 terms of "ans+ans+..." is 259 characters, the
+ * expression buffer holds 256, and the calculator summed exactly 64 terms
+ * and reported the total as though it were the whole sum.
+ *
+ * Returns 1 on a complete line, 0 at end of input, and -1 when the line was
+ * too long -- in which case the rest of it is drained so the next prompt
+ * starts clean.
+ */
+static int readLine(char buffer[], size_t size)
+{
+    if (fgets(buffer, (int)size, stdin) == NULL)
+        return 0;
+
+    const size_t length = strlen(buffer);
+
+    if (length > 0 && buffer[length - 1] == '\n')
+    {
+        buffer[length - 1] = '\0';
+        return 1;
+    }
+
+    /* No newline: either the line was too long, or the stream ended
+       without one. Only the first case leaves anything behind. */
+    if (!feof(stdin))
+    {
+        int discarded;
+
+        while ((discarded = fgetc(stdin)) != '\n' && discarded != EOF)
+        {
+            /* discard the rest of the over-long line */
+        }
+
+        return -1;
+    }
+
+    return 1;
+}
+
 int main(void)
 {
     char infix[512];
-    char postfix[1024];
+    char postfix[CALC_POSTFIX_SIZE];
 
     char variableName[32];
     char expression[256];
@@ -64,13 +111,22 @@ int main(void)
             /* Existing calculator code goes here */
             printf("Enter expression [%s]: ", angleModeName());
 
-            if (fgets(expression, sizeof(expression), stdin) == NULL)
             {
-                printf("Error reading input.\n");
-                break;
+                const int read_ = readLine(expression, sizeof(expression));
+            
+                if (read_ == 0)
+                {
+                    printf("Error reading input.\n");
+                    break;
+                }
+            
+                if (read_ < 0)
+                {
+                    printf("Error: Input was too long (limit %d characters).\n",
+                           (int)sizeof(expression) - 2);
+                    break;
+                }
             }
-
-            expression[strcspn(expression, "\n")] = '\0';
 
             /* ----------------------------
                Expression history shortcuts
@@ -417,13 +473,22 @@ int main(void)
 
             printf("Enter value with unit (e.g. 10km, 30C, or 10km to miles): ");
 
-            if (fgets(convInput, sizeof(convInput), stdin) == NULL)
             {
-                printf("Error reading input.\n");
-                break;
+                const int read_ = readLine(convInput, sizeof(convInput));
+            
+                if (read_ == 0)
+                {
+                    printf("Error reading input.\n");
+                    break;
+                }
+            
+                if (read_ < 0)
+                {
+                    printf("Error: Input was too long (limit %d characters).\n",
+                           (int)sizeof(convInput) - 2);
+                    break;
+                }
             }
-
-            convInput[strcspn(convInput, "\n")] = '\0';
 
             if (!parseConversion(convInput, &convValue, convFromUnit, convToUnit))
             {
@@ -448,13 +513,22 @@ int main(void)
 
             printf("Enter complex expression (e.g. (2+3i)*(4-5i), sqrt(-1)): ");
 
-            if (fgets(complexInput, sizeof(complexInput), stdin) == NULL)
             {
-                printf("Error reading input.\n");
-                break;
+                const int read_ = readLine(complexInput, sizeof(complexInput));
+            
+                if (read_ == 0)
+                {
+                    printf("Error reading input.\n");
+                    break;
+                }
+            
+                if (read_ < 0)
+                {
+                    printf("Error: Input was too long (limit %d characters).\n",
+                           (int)sizeof(complexInput) - 2);
+                    break;
+                }
             }
-
-            complexInput[strcspn(complexInput, "\n")] = '\0';
 
             if (evaluateComplexExpression(complexInput, complexResult, sizeof(complexResult)))
                 printf("%s = %s\n", complexInput, complexResult);
@@ -472,13 +546,22 @@ int main(void)
             printf("Enter matrix expression (e.g. det([[1,2],[3,4]]), "
                    "inverse([[1,2],[3,4]]), transpose([[1,2],[3,4]])): ");
 
-            if (fgets(matrixInput, sizeof(matrixInput), stdin) == NULL)
             {
-                printf("Error reading input.\n");
-                break;
+                const int read_ = readLine(matrixInput, sizeof(matrixInput));
+            
+                if (read_ == 0)
+                {
+                    printf("Error reading input.\n");
+                    break;
+                }
+            
+                if (read_ < 0)
+                {
+                    printf("Error: Input was too long (limit %d characters).\n",
+                           (int)sizeof(matrixInput) - 2);
+                    break;
+                }
             }
-
-            matrixInput[strcspn(matrixInput, "\n")] = '\0';
 
             if (evaluateMatrixExpression(matrixInput, matrixResult, sizeof(matrixResult)))
                 printf("%s = %s\n", matrixInput, matrixResult);
@@ -496,13 +579,22 @@ int main(void)
             printf("Enter statistics expression (e.g. mean(1,2,3,4), "
                    "median(2,7,5), stddev(4,8,6,5,3,7)): ");
 
-            if (fgets(statsInput, sizeof(statsInput), stdin) == NULL)
             {
-                printf("Error reading input.\n");
-                break;
+                const int read_ = readLine(statsInput, sizeof(statsInput));
+            
+                if (read_ == 0)
+                {
+                    printf("Error reading input.\n");
+                    break;
+                }
+            
+                if (read_ < 0)
+                {
+                    printf("Error: Input was too long (limit %d characters).\n",
+                           (int)sizeof(statsInput) - 2);
+                    break;
+                }
             }
-
-            statsInput[strcspn(statsInput, "\n")] = '\0';
 
             if (evaluateStatsExpression(statsInput, statsResult, sizeof(statsResult)))
                 printf("%s = %s\n", statsInput, statsResult);
@@ -520,13 +612,22 @@ int main(void)
             printf("Enter base expression (e.g. bin(25), hex(255), "
                    "oct(64), dec(1111b)): ");
 
-            if (fgets(baseInput, sizeof(baseInput), stdin) == NULL)
             {
-                printf("Error reading input.\n");
-                break;
+                const int read_ = readLine(baseInput, sizeof(baseInput));
+            
+                if (read_ == 0)
+                {
+                    printf("Error reading input.\n");
+                    break;
+                }
+            
+                if (read_ < 0)
+                {
+                    printf("Error: Input was too long (limit %d characters).\n",
+                           (int)sizeof(baseInput) - 2);
+                    break;
+                }
             }
-
-            baseInput[strcspn(baseInput, "\n")] = '\0';
 
             if (evaluateBaseExpression(baseInput, baseResult, sizeof(baseResult)))
                 printf("%s = %s\n", baseInput, baseResult);
@@ -543,13 +644,22 @@ int main(void)
 
             printf("Enter plot expression (e.g. plot(sin(x)), plot(x^2), plot(log(x))): ");
 
-            if (fgets(plotInput, sizeof(plotInput), stdin) == NULL)
             {
-                printf("Error reading input.\n");
-                break;
+                const int read_ = readLine(plotInput, sizeof(plotInput));
+            
+                if (read_ == 0)
+                {
+                    printf("Error reading input.\n");
+                    break;
+                }
+            
+                if (read_ < 0)
+                {
+                    printf("Error: Input was too long (limit %d characters).\n",
+                           (int)sizeof(plotInput) - 2);
+                    break;
+                }
             }
-
-            plotInput[strcspn(plotInput, "\n")] = '\0';
 
             if (!evaluatePlotExpression(plotInput, plotError, sizeof(plotError)))
             {

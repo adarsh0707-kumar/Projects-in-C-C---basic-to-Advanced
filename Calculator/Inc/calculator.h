@@ -20,6 +20,22 @@ double applyOperation(double a, double b, char op);
  *  expression too complex to parse, ...) -- a specific message is
  *  printed to stdout and getLastEvalError()/calculatorGetLastError()
  *  describe why. */
+/** @brief Bytes the postfix[] buffer passed to infixToPostfix() must hold.
+ *
+ *  The function takes no size argument, so this is the contract. It bounds
+ *  every write against this figure and fails rather than run past it; a
+ *  caller providing less would be handing it a promise it cannot keep.
+ *
+ *  Sized for the worst case: an expression of single-character variables
+ *  separated by operators, each substituted as up to 24 characters of
+ *  round-tripped double. */
+#define CALC_POSTFIX_SIZE 8192
+
+/** @brief Converts infix to postfix.
+ *  @param infix   Expression to convert.
+ *  @param postfix Output buffer of at least CALC_POSTFIX_SIZE bytes.
+ *  @return 1 on success; 0 on a malformed or over-long expression, with
+ *  the reason available from calculatorGetLastError(). */
 int infixToPostfix(char infix[], char postfix[]);
 
 double evaluatePostfix(char postfix[]);

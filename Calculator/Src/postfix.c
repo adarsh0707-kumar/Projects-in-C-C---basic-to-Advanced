@@ -132,6 +132,52 @@ static int reportTooComplex(void)
  * Converts an infix expression into postfix (Reverse Polish) form.
  * Returns 1 on success, 0 on failure -- see calculator.h.
  */
+/*
+Every token written into postfix[] goes through these.
+
+Twelve writes used to go in unbounded, and a long enough expression ran
+past the caller's buffer: sixty chained "ans" terms was sufficient, which
+AddressSanitizer reported as a stack-buffer-overflow on main.c's
+postfix[1024]. The expression before that produced a silently wrong answer
+and no error at all.
+
+Both macros return 0 from the enclosing function on overflow, so the
+caller is told the expression was too long instead of being handed
+whatever survived.
+*/
+#define POSTFIX_EMIT(...)                                                  \
+    do                                                                     \
+    {                                                                      \
+        const int remaining_ = CALC_POSTFIX_SIZE - j;                      \
+        if (remaining_ <= 1)                                               \
+        {                                                                  \
+            printf("Error: Expression is too long to convert.\n");         \
+            calculatorSetLastError(CALC_ERR_INTERNAL);                     \
+            return 0;                                                      \
+        }                                                                  \
+        const int written_ =                                               \
+            snprintf(&postfix[j], (size_t)remaining_, __VA_ARGS__);        \
+        if (written_ < 0 || written_ >= remaining_)                        \
+        {                                                                  \
+            printf("Error: Expression is too long to convert.\n");         \
+            calculatorSetLastError(CALC_ERR_INTERNAL);                     \
+            return 0;                                                      \
+        }                                                                  \
+        j += written_;                                                     \
+    } while (0)
+
+#define POSTFIX_EMIT_CHAR(character)                                       \
+    do                                                                     \
+    {                                                                      \
+        if (j + 1 >= CALC_POSTFIX_SIZE)                                    \
+        {                                                                  \
+            printf("Error: Expression is too long to convert.\n");         \
+            calculatorSetLastError(CALC_ERR_INTERNAL);                     \
+            return 0;                                                      \
+        }                                                                  \
+        postfix[j++] = (character);                                        \
+    } while (0)
+
 int infixToPostfix(char infix[], char postfix[])
 {
     TokenStack operators;
@@ -175,15 +221,27 @@ int infixToPostfix(char infix[], char postfix[])
 
             /* Built-in constants */
 
+            /*
+            %.17g, not %g. The postfix form is text, so every constant and
+            variable is printed here and parsed again by evaluatePostfix().
+            %g defaults to six significant figures, which quantised the
+            value on the way through: pi became 3.14159, so sin(pi) came
+            back as 2.65e-06 instead of 1.22e-16, and x=1/3 followed by
+            x*3 gave 0.999999.
+
+            Seventeen significant figures is the shortest precision that
+            round-trips an IEEE-754 double exactly, so the text carries the
+            same value the double held.
+            */
             if (strcmp(identifier, "pi") == 0)
             {
-                j += sprintf(&postfix[j], "%g ", getConstant("pi"));
+                POSTFIX_EMIT("%.17g ", getConstant("pi"));
                 continue;
             }
 
             if (strcmp(identifier, "e") == 0)
             {
-                j += sprintf(&postfix[j], "%g ", getConstant("e"));
+                POSTFIX_EMIT("%.17g ", getConstant("e"));
                 continue;
             }
 
@@ -216,7 +274,8 @@ int infixToPostfix(char infix[], char postfix[])
                 return 0;
             }
 
-            j += sprintf(&postfix[j], "%g ", value);
+            /* Round-trips exactly; see the note on the constants above. */
+            POSTFIX_EMIT("%.17g ", value);
 
             continue;
         }
@@ -235,7 +294,7 @@ int infixToPostfix(char infix[], char postfix[])
               isOperator(infix[prev]))))
         {
             if (infix[i] == '-')
-                postfix[j++] = infix[i++];
+                POSTFIX_EMIT_CHAR(infix[i++]);
 
             int dotCount = 0;
 
@@ -251,10 +310,10 @@ int infixToPostfix(char infix[], char postfix[])
                     return 0;
                 }
 
-                postfix[j++] = infix[i++];
+                POSTFIX_EMIT_CHAR(infix[i++]);
             }
 
-            postfix[j++] = ' ';
+            POSTFIX_EMIT_CHAR(' ');
             continue;
         }
 
@@ -290,7 +349,7 @@ int infixToPostfix(char infix[], char postfix[])
                 if (!popToken(&operators, &top))
                     return reportInternalStackError();
 
-                j += sprintf(&postfix[j], "%s ", top.text);
+                POSTFIX_EMIT("%s ", top.text);
             }
 
             if (isEmptyTokenStack(&operators))
@@ -318,7 +377,7 @@ int infixToPostfix(char infix[], char postfix[])
                     if (!popToken(&operators, &top))
                         return reportInternalStackError();
 
-                    j += sprintf(&postfix[j], "%s ", top.text);
+                    POSTFIX_EMIT("%s ", top.text);
                 }
             }
 
@@ -344,7 +403,7 @@ int infixToPostfix(char infix[], char postfix[])
                     if (!popToken(&operators, &top))
                         return reportInternalStackError();
 
-                    j += sprintf(&postfix[j], "%s ", top.text);
+                    POSTFIX_EMIT("%s ", top.text);
                 }
                 else
                 {
@@ -377,8 +436,7 @@ int infixToPostfix(char infix[], char postfix[])
                 if (!popToken(&operators, &top))
                     return reportInternalStackError();
 
-                j += sprintf(&postfix[j],
-                             "%s ",
+                POSTFIX_EMIT("%s ",
                              top.text);
             }
 
@@ -418,7 +476,7 @@ int infixToPostfix(char infix[], char postfix[])
                 if (!popToken(&operators, &top))
                     return reportInternalStackError();
 
-                j += sprintf(&postfix[j], "%s ", top.text);
+                POSTFIX_EMIT("%s ", top.text);
             }
             else
             {
@@ -454,7 +512,7 @@ int infixToPostfix(char infix[], char postfix[])
             return 0;
         }
 
-        j += sprintf(&postfix[j], "%s ", top.text);
+        POSTFIX_EMIT("%s ", top.text);
     }
 
     postfix[j] = '\0';

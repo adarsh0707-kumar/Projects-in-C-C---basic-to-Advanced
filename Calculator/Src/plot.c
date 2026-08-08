@@ -141,7 +141,7 @@ int evaluatePlotExpression(const char input[], char errorMsg[], size_t errorSize
 
         setVariable("x", x);
 
-        char postfix[400];
+        char postfix[CALC_POSTFIX_SIZE];
 
         if (!infixToPostfix(processed, postfix))
         {

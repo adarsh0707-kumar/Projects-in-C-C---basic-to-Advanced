@@ -4,6 +4,10 @@
 #include "variables.h"
 #include "error.h"
 
+#include <math.h>
+
+static void test_substituted_values_keep_full_precision(void);
+
 static void assertPostfix(const char *input, const char *expected, const char *msg)
 {
     char in[128];
@@ -127,4 +131,78 @@ void run_postfix_tests(void)
     test_infix_to_postfix_unbalanced_parentheses();
     test_operator_helpers();
     test_evaluate_postfix();
+    test_substituted_values_keep_full_precision();
+}
+/*
+ * Precision of substituted constants and variables.
+ *
+ * The postfix form is text, so every constant and variable is printed into
+ * it and parsed back out. Printing with %g quantised each one to six
+ * significant figures, and none of the 486 tests noticed: the suite checked
+ * that getVariable("pi") returned the right double -- which it always did --
+ * and never evaluated the expression "pi". Coverage was what pointed here,
+ * by reporting constants.c as entirely unexecuted while the calculator
+ * plainly understood pi.
+ *
+ * Every assertion below fails against the %g version.
+ */
+static double evaluateInfix(const char *expression)
+{
+    char in[256];
+    char out[512];
+
+    strcpy(in, expression);
+
+    if (!infixToPostfix(in, out))
+        return NAN;
+
+    return evaluatePostfix(out);
+}
+
+static void test_substituted_values_keep_full_precision(void)
+{
+    calculatorClearError();
+
+    /* The constant itself, to the last bit a double can hold. */
+    ASSERT_DOUBLE_NEAR(evaluateInfix("pi"), 3.14159265358979323846, 1e-15,
+                       "the expression 'pi' should evaluate to full precision");
+    ASSERT_DOUBLE_NEAR(evaluateInfix("e"), 2.71828182845904523536, 1e-15,
+                       "the expression 'e' should evaluate to full precision");
+
+    /*
+    Amplified, so the failure is unmistakable rather than a rounding
+    quibble: with pi truncated to 3.14159 this returns -2.
+    */
+    ASSERT_DOUBLE_NEAR(evaluateInfix("pi*1000000-3141592"),
+                       0.65358979301527, 1e-6,
+                       "pi scaled up should still carry its later digits");
+
+    /*
+    sin(pi) is the classic probe. Correct to a double it is ~1.2e-16;
+    with a six-figure pi it comes back as 2.65e-06, ten orders of
+    magnitude adrift.
+    */
+    ASSERT_DOUBLE_NEAR(evaluateInfix("sin(pi)"), 0.0, 1e-12,
+                       "sin(pi) should be zero to within double precision");
+
+    /* A variable must survive the round trip through the postfix text. */
+    setVariable("third", 1.0 / 3.0);
+
+    ASSERT_DOUBLE_NEAR(evaluateInfix("third*3"), 1.0, 1e-15,
+                       "a variable holding 1/3, tripled, should give exactly 1");
+
+    /* And a value with digits well past the sixth. */
+    setVariable("precise", 1.2345678901234567);
+
+    ASSERT_DOUBLE_NEAR(evaluateInfix("precise"), 1.2345678901234567, 1e-15,
+                       "a variable should evaluate to the value it was set to");
+
+    /*
+    ans is a variable too, so every chained calculation went through the
+    same truncation -- the most user-visible form of this defect.
+    */
+    setAns(1.0 / 3.0);
+
+    ASSERT_DOUBLE_NEAR(evaluateInfix("ans*3"), 1.0, 1e-15,
+                       "chaining through 'ans' should not lose precision");
 }
