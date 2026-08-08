@@ -29,11 +29,24 @@
 #include <cstdlib>
 #include <fcntl.h>
 #include <iostream>
-#include <pty.h>
 #include <string>
 #include <termios.h>
 #include <unistd.h>
 #include <vector>
+
+/*
+openpty() is declared in different headers depending on the C library: glibc
+puts it in <pty.h>, while macOS and the BSDs put it in <util.h>. There is no
+portable spelling, so the platform has to be tested for.
+*/
+#if defined(__linux__)
+#include <pty.h>
+#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || \
+    defined(__NetBSD__)
+#include <util.h>
+#else
+#include <pty.h>
+#endif
 
 namespace
 {
