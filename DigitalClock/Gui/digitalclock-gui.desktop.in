@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Digital Clock
+GenericName=Digital Clock
+Comment=Clock, alarms, stopwatch, countdown timer and world clock
+Exec="@EXEC@"
+Icon=digitalclock-gui
+Terminal=false
+Categories=Utility;Clock;
+Keywords=clock;time;alarm;stopwatch;timer;timezone;world;
+StartupNotify=true
+StartupWMClass=digitalclock-gui

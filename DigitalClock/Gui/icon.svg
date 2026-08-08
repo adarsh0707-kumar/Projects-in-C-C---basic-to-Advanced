@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!--
+    Digital Clock System application icon.
+
+    A clock face rather than digits: "12:34" is unreadable at 16 pixels,
+    where this icon spends most of its life, while a face with two hands
+    stays recognisable down to a handful of pixels.
+
+    The colours are the dark theme's own. Cyan for the ring, because
+    HEADER is cyan; bright green for the hands, because TIME is
+    BrightGreen. The icon belongs to the application it opens.
+  -->
+
+  <rect width="256" height="256" rx="52" fill="#12141A"/>
+
+  <!-- Outer ring. -->
+  <circle cx="128" cy="128" r="86" fill="none" stroke="#00CDCD" stroke-width="11"/>
+
+
+  <!--
+    Three o'clock, not the ten-past-ten of watch advertising. Symmetric
+    hands read as a single V at 16 pixels; one straight up and one
+    straight out stay unmistakably two hands of different lengths.
+
+    The quarter ticks that used to sit here were dropped for the same
+    reason: at small sizes they filled in against the ring.
+  -->
+  <g stroke="#00FF00" stroke-linecap="round">
+    <line x1="128" y1="128" x2="128" y2="86"  stroke-width="15"/>
+    <line x1="128" y1="128" x2="182" y2="128" stroke-width="11"/>
+  </g>
+
+  <circle cx="128" cy="128" r="10" fill="#00FF00"/>
+</svg>

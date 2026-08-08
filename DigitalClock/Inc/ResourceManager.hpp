@@ -84,6 +84,27 @@ public:
     void addSearchPath(const std::string &directory);
 
     /**
+     * @brief Adds a directory that every ResourceManager will search.
+     *
+     * The default search paths are relative to the working directory, which
+     * is fine for a console application: it is documented as being run from
+     * the project root, or from inside an extracted archive.
+     *
+     * A windowed application launched from a desktop menu has no such
+     * convention -- its working directory is typically the user's home --
+     * so it would find neither its themes nor its configuration and would
+     * silently fall back to the built-in defaults. The graphical front end
+     * therefore registers its own executable's directory at startup.
+     *
+     * Applies to instances constructed afterwards, including the ones owned
+     * by ThemeManager and AlarmManager, which is why it is not an instance
+     * method. Call it once, before anything else is constructed.
+     *
+     * @param directory Directory to search first.
+     */
+    static void addDefaultSearchPath(const std::string &directory);
+
+    /**
      * @brief Discards the currently loaded content.
      */
     void clear();

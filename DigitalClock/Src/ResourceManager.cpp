@@ -4,9 +4,48 @@
 #include <fstream>
 #include <sstream>
 
+namespace
+{
+    /**
+     * @brief Directories every ResourceManager searches, before its own.
+     *
+     * Function-local so it is initialised on first use, whichever
+     * translation unit gets there first.
+     */
+    std::vector<std::string> &defaultSearchPaths()
+    {
+        static std::vector<std::string> paths;
+
+        return paths;
+    }
+}
+
+void ResourceManager::addDefaultSearchPath(const std::string &directory)
+{
+    if (directory.empty())
+        return;
+
+    std::vector<std::string> &paths = defaultSearchPaths();
+
+    // Registering the same directory twice would only slow every lookup.
+    for (const std::string &existing : paths)
+    {
+        if (existing == directory)
+            return;
+    }
+
+    paths.push_back(directory);
+}
+
 ResourceManager::ResourceManager()
     : searchPaths{".", "..", "../.."}
 {
+    // Registered directories are tried first: they are the deliberate
+    // answer, where the relative defaults are a convention.
+    const std::vector<std::string> &defaults = defaultSearchPaths();
+
+    searchPaths.insert(
+        searchPaths.begin(), defaults.begin(), defaults.end());
 }
 
 std::string ResourceManager::resolve(const std::string &fileName) const

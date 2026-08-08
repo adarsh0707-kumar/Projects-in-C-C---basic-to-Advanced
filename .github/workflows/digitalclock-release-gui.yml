@@ -1,0 +1,358 @@
+# Builds the *graphical* Digital Clock for people who don't build
+# software: an AppImage on Linux, a .dmg on macOS, and a portable folder
+# on Windows. Each bundles the Qt runtime, so nothing needs installing.
+#
+# Separate from digitalclock-release.yml on purpose. That workflow ships
+# the console application, which has no dependencies and is small and
+# fast to build; this one installs Qt on every runner and runs the
+# per-platform deployment tools, which is slower and has far more that
+# can break. Keeping them apart means a GUI packaging failure cannot
+# block a console release.
+#
+# PLACEMENT: repository root, like the other workflows. Steps set
+# working-directory: DigitalClock.
+
+name: DigitalClock GUI Release
+
+on:
+  push:
+    tags:
+      - 'digitalclock-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version label for a manual test build (no tag created)'
+        required: false
+        default: '0.0.0-test'
+      qt_version:
+        description: 'Qt version to build against'
+        required: false
+        default: '6.9.1'
+
+defaults:
+  run:
+    working-directory: DigitalClock
+
+permissions:
+  contents: write
+
+env:
+  QT_VERSION: ${{ github.event.inputs.qt_version || '6.9.1' }}
+
+jobs:
+  # -------------------------------------------------------------------
+  # Linux -- AppImage. One executable file the user marks executable and
+  # runs; no install, no package manager, no Qt on the system.
+  # -------------------------------------------------------------------
+  linux:
+    name: AppImage (Linux)
+    runs-on: ubuntu-22.04   # older glibc than 24.04, so the AppImage
+                            # also runs on older distributions
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      # Qt's xcb platform plugin needs these at link and deploy time;
+      # they are not present on a bare runner.
+      - name: Install Qt platform dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgl1-mesa-dev libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 \
+            libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 \
+            libxcb-xinerama0 libxcb-xkb1 libfuse2 xvfb
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          cache: true
+
+      - name: Configure and build
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DDIGITALCLOCK_BUILD_GUI=ON
+          cmake --build build --config Release -j
+
+      - name: Set version
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#digitalclock-v}"
+          [ "${{ github.event_name }}" = "workflow_dispatch" ] && VERSION="${{ github.event.inputs.version }}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      # linuxdeploy wants a real .desktop file and an icon in the AppDir.
+      # The repo keeps a .desktop.in whose @EXEC@ placeholder is
+      # substituted here; inside an AppImage the binary is always on PATH
+      # as digitalclock-gui, so that is what it becomes.
+      #
+      # Config/ and Resources/ go in beside the binary because the
+      # application resolves them relative to its own executable as well
+      # as to the working directory. Without them the window would open
+      # on the built-in default theme with no alarms -- it would start,
+      # and look subtly wrong.
+      - name: Assemble AppDir
+        run: |
+          mkdir -p AppDir/usr/bin
+          mkdir -p AppDir/usr/share/applications
+          mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
+
+          cp Build/digitalclock-gui AppDir/usr/bin/
+          cp -r Resources Config AppDir/usr/bin/
+
+          sed 's|"@EXEC@"|digitalclock-gui|' Gui/digitalclock-gui.desktop.in \
+            > AppDir/usr/share/applications/digitalclock-gui.desktop
+          cp Gui/icons/digitalclock-256.png \
+            AppDir/usr/share/icons/hicolor/256x256/apps/digitalclock-gui.png
+
+          cat AppDir/usr/share/applications/digitalclock-gui.desktop
+
+      - name: Build AppImage
+        env:
+          # ubuntu-22.04 has no FUSE by default, so the linuxdeploy
+          # AppImages would fail to self-mount without this.
+          APPIMAGE_EXTRACT_AND_RUN: 1
+          OUTPUT: DigitalClock-${{ env.VERSION }}-x86_64.AppImage
+        run: |
+          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          chmod +x linuxdeploy*.AppImage
+
+          ./linuxdeploy-x86_64.AppImage \
+            --appdir AppDir \
+            --plugin qt \
+            --desktop-file AppDir/usr/share/applications/digitalclock-gui.desktop \
+            --icon-file AppDir/usr/share/icons/hicolor/256x256/apps/digitalclock-gui.png \
+            --output appimage
+
+          ls -lh ./*.AppImage
+
+      # An AppImage that cannot start is worse than none, so run it before
+      # shipping it. --once draws a frame and exits, which exercises the
+      # layout rather than only the loader.
+      - name: Verify the AppImage starts
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: 1
+        run: |
+          chmod +x DigitalClock-*.AppImage
+          xvfb-run -a ./DigitalClock-*.AppImage --once
+          echo "AppImage started, drew a frame and exited cleanly."
+
+      - name: Upload
+        uses: actions/upload-artifact@v6
+        with:
+          name: DigitalClock-${{ env.VERSION }}-linux-AppImage
+          path: DigitalClock/DigitalClock-*.AppImage
+          if-no-files-found: error
+
+  # -------------------------------------------------------------------
+  # macOS -- .app inside a .dmg, the format a Mac user expects to drag
+  # into Applications.
+  # -------------------------------------------------------------------
+  macos:
+    name: DMG (macOS)
+    runs-on: macos-14   # Apple Silicon, so the DMG stays arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          cache: true
+
+      - name: Configure and build
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DDIGITALCLOCK_BUILD_GUI=ON
+          cmake --build build --config Release -j
+
+      - name: Set version
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#digitalclock-v}"
+          [ "${{ github.event_name }}" = "workflow_dispatch" ] && VERSION="${{ github.event.inputs.version }}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      # macOS takes its Dock and Finder icon from the bundle, not from
+      # QApplication::setWindowIcon(), so the committed PNGs are turned
+      # into an .icns and registered in Info.plist. Without this the app
+      # ships with the generic placeholder icon.
+      - name: Build and install the bundle icon
+        run: |
+          APP=$(find build -maxdepth 2 -name "digitalclock-gui.app" | head -1)
+          echo "APP=$APP" >> "$GITHUB_ENV"
+
+          mkdir -p DigitalClock.iconset
+          for s in 16 32 128 256; do
+            cp "Gui/icons/digitalclock-$s.png" "DigitalClock.iconset/icon_${s}x${s}.png"
+          done
+          # Retina variants: a 2x entry is the next size up.
+          cp Gui/icons/digitalclock-32.png  DigitalClock.iconset/icon_16x16@2x.png
+          cp Gui/icons/digitalclock-64.png  DigitalClock.iconset/icon_32x32@2x.png
+          cp Gui/icons/digitalclock-256.png DigitalClock.iconset/icon_128x128@2x.png
+
+          iconutil -c icns DigitalClock.iconset -o DigitalClock.icns
+
+          mkdir -p "$APP/Contents/Resources"
+          cp DigitalClock.icns "$APP/Contents/Resources/"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string DigitalClock" \
+            "$APP/Contents/Info.plist" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile DigitalClock" \
+            "$APP/Contents/Info.plist"
+
+      # Beside the executable, in Contents/MacOS, because that is what
+      # QApplication::applicationDirPath() returns inside a bundle and
+      # therefore where the application looks.
+      - name: Stage the themes and configuration into the bundle
+        run: |
+          cp -r Resources Config "$APP/Contents/MacOS/"
+          ls "$APP/Contents/MacOS"
+
+      - name: Deploy Qt into the bundle and make the DMG
+        run: |
+          macdeployqt "$APP" -dmg
+          mv "$(dirname "$APP")/digitalclock-gui.dmg" \
+             "DigitalClock-${VERSION}-macos-arm64.dmg"
+          ls -lh ./*.dmg
+
+      - name: Verify the bundled app starts
+        run: |
+          QT_QPA_PLATFORM=offscreen "$APP/Contents/MacOS/digitalclock-gui" --once
+          echo "Bundled app started, drew a frame and exited cleanly."
+
+      - name: Upload
+        uses: actions/upload-artifact@v6
+        with:
+          name: DigitalClock-${{ env.VERSION }}-macos-dmg
+          path: DigitalClock/DigitalClock-*.dmg
+          if-no-files-found: error
+
+  # -------------------------------------------------------------------
+  # Windows -- a portable folder. windeployqt copies the Qt DLLs and
+  # plugins next to the .exe, so the user unzips and double-clicks.
+  # -------------------------------------------------------------------
+  windows:
+    name: Portable zip (Windows)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          cache: true
+
+      - name: Configure and build
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DDIGITALCLOCK_BUILD_GUI=ON
+          cmake --build build --config Release
+
+      - name: Set version
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#digitalclock-v}"
+          [ "${{ github.event_name }}" = "workflow_dispatch" ] && VERSION="${{ github.event.inputs.version }}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Stage and deploy Qt
+        shell: bash
+        run: |
+          # "DigitalClock-GUI-", not "DigitalClock-": the console workflow
+          # ships digitalclock-<v>-windows-x64.zip, and GitHub compares
+          # release asset names case-insensitively, so the two would
+          # collide and the second upload would fail as already_exists.
+          # The AppImage and .dmg are distinct by extension, so only the
+          # Windows package needs the marker.
+          DEST="DigitalClock-GUI-${VERSION}-windows-x64"
+          echo "DEST=$DEST" >> "$GITHUB_ENV"
+
+          mkdir -p "$DEST"
+          cp build/Release/digitalclock-gui.exe "$DEST/"
+          cp build/Release/DigitalClock.exe "$DEST/" 2>/dev/null || true
+          cp -r Resources Config "$DEST/"
+          cp LICENSE README.md "$DEST/"
+
+          windeployqt --release --no-translations "$DEST/digitalclock-gui.exe"
+          ls "$DEST"
+
+      - name: Verify the deployed app starts
+        shell: pwsh
+        run: |
+          $env:QT_QPA_PLATFORM = "offscreen"
+          & "$env:DEST\digitalclock-gui.exe" --once
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "::error::deployed app exited with $LASTEXITCODE"
+            exit 1
+          }
+          Write-Host "Deployed app started, drew a frame and exited cleanly."
+
+      - name: Create zip
+        shell: bash
+        run: 7z a -tzip "$DEST.zip" "$DEST"
+
+      - name: Upload
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ env.DEST }}
+          path: DigitalClock/${{ env.DEST }}.zip
+          if-no-files-found: error
+
+  # -------------------------------------------------------------------
+  # Attach everything to the same draft release the console archives go
+  # to.
+  # -------------------------------------------------------------------
+  release:
+    name: Attach to draft release
+    needs: [linux, macos, windows]
+    runs-on: ubuntu-latest
+    # A manual run builds and verifies the packages but has no tag to
+    # attach them to, so it stops after the build jobs.
+    if: startsWith(github.ref, 'refs/tags/digitalclock-v')
+
+    steps:
+      # Must match the title digitalclock-release.yml produces, or this
+      # attaches to a second draft instead of the one the console
+      # archives went to.
+      - name: Derive the version from the tag
+        id: version
+        run: echo "value=${GITHUB_REF_NAME#digitalclock-}" >> "$GITHUB_OUTPUT"
+        working-directory: ${{ github.workspace }}
+
+      - name: Download all packages
+        uses: actions/download-artifact@v7
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List what will be attached
+        run: ls -lR artifacts
+        working-directory: ${{ github.workspace }}
+
+      - name: Attach to draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          name: Digital Clock ${{ steps.version.outputs.value }}
+          files: artifacts/*
+          append_body: true
+          body: |
+
+            ### Graphical version
+
+            No installation, no Qt required — the runtime is bundled.
+
+            | Platform | Download | How to run |
+            |---|---|---|
+            | Linux | `DigitalClock-*-x86_64.AppImage` | `chmod +x` it, then run it |
+            | macOS | `DigitalClock-*-macos-arm64.dmg` | Open, drag to Applications |
+            | Windows | `DigitalClock-GUI-*-windows-x64.zip` | Unzip, run `digitalclock-gui.exe` |
+
+            The window has the same clock, alarms, stopwatch, countdown,
+            world clock, themes and configuration file as the console
+            application, and the same keyboard shortcuts.
+
+            Each package was started on its own platform before release
+            and drew a frame, so it is known to run rather than merely to
+            build.

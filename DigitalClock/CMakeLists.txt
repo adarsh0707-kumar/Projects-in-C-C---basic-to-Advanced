@@ -112,6 +112,7 @@ endif()
 
 if(Qt6_FOUND)
     set(CMAKE_AUTOMOC ON)
+    set(CMAKE_AUTORCC ON)
 
     # WIN32 suppresses the console window on Windows; MACOSX_BUNDLE
     # produces the .app a macOS user expects to launch.
@@ -121,6 +122,7 @@ if(Qt6_FOUND)
         Gui/ClockWindow.hpp
         Gui/GuiTheme.cpp
         Gui/GuiTheme.hpp
+        Gui/resources.qrc
     )
 
     # The whole point of the layering: the GUI links the same core the

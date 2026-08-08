@@ -11,6 +11,10 @@
 
 #include "TestFramework.hpp"
 
+#include <filesystem>
+#include <fstream>
+#include <string>
+
 #include "Banner.hpp"
 #include "ResourceManager.hpp"
 
@@ -171,4 +175,82 @@ TEST_CASE(UT_071, "ResourceManager searches its configured directories")
 
     CHECK_EQ(resources.getContent(), std::string(""));
     CHECK_TRUE(resources.exists("searched.txt"));
+}
+
+TEST_CASE(TC_086, "A registered default search path applies to later instances")
+{
+    /*
+    The graphical front end depends on this. Its working directory is
+    wherever the user launched it from -- a desktop menu gives it the home
+    directory -- so without a path anchored to the executable it finds
+    neither its themes nor its configuration, and falls back to the built-in
+    defaults without saying so.
+
+    This was observed rather than theorised: the window reported
+    "Theme: Default" when started from an unrelated directory.
+    */
+    /*
+    A directory of its own, not the shared scratch directory. A registered
+    path is process-global and cannot be removed, so registering the
+    directory every other test writes into would make it permanently
+    searchable -- which is exactly what UT-071 asserts is not the case. The
+    first version of this test did that, and UT-071 failed.
+    */
+    const std::filesystem::path directoryPath =
+        std::filesystem::path(TestFramework::tempDirectory()) /
+        "resource-search-only";
+
+    std::filesystem::create_directories(directoryPath);
+
+    const std::string bareName = "resource-search-marker.txt";
+
+    {
+        std::ofstream file(directoryPath / bareName, std::ios::trunc);
+        file << "found\n";
+    }
+
+    const std::string directory = directoryPath.string();
+
+    // Before registering, the bare name resolves against the working
+    // directory and its parents only, so it is not found.
+    {
+        ResourceManager before;
+
+        CHECK_FALSE(before.exists(bareName));
+    }
+
+    ResourceManager::addDefaultSearchPath(directory);
+
+    // Instances built afterwards search it. This is the whole point: the
+    // ResourceManagers that matter are owned by ThemeManager and
+    // AlarmManager, and are constructed well after startup.
+    {
+        ResourceManager after;
+
+        CHECK_TRUE(after.exists(bareName));
+        CHECK_EQ(after.read(bareName), std::string("found\n"));
+    }
+
+    // Registering the same directory again is harmless.
+    ResourceManager::addDefaultSearchPath(directory);
+
+    {
+        ResourceManager again;
+
+        CHECK_TRUE(again.exists(bareName));
+    }
+
+    // An empty directory is not a directory and must be ignored rather than
+    // inserted, where it would make every lookup try "" first.
+    ResourceManager::addDefaultSearchPath("");
+
+    {
+        ResourceManager unaffected;
+
+        CHECK_TRUE(unaffected.exists(bareName));
+
+        // The project's own resources still resolve, so registering a path
+        // adds somewhere to look rather than replacing the defaults.
+        CHECK_TRUE(unaffected.exists("Resources/themes/dark.theme"));
+    }
 }

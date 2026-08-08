@@ -17,9 +17,12 @@
 #include <string>
 
 #include <QApplication>
+#include <QDir>
+#include <QIcon>
 #include <QTimer>
 
 #include "ClockWindow.hpp"
+#include "ResourceManager.hpp"
 #include "Version.hpp"
 
 namespace
@@ -91,6 +94,44 @@ int main(int argc, char *argv[])
     QApplication::setApplicationName(QString::fromStdString(Version::NAME));
     QApplication::setApplicationVersion(
         QString::fromStdString(Version::VERSION));
+
+    /*
+    Every size, rather than one large PNG: Qt picks the closest match for
+    the window decoration, the task switcher and the panel, and each of
+    those looks better rendered at its own size than scaled down.
+    */
+    QIcon icon;
+
+    for (const int size : {16, 24, 32, 48, 64, 128, 256})
+    {
+        icon.addFile(
+            QString(":/icons/digitalclock-%1.png").arg(size),
+            QSize(size, size));
+    }
+
+    QApplication::setWindowIcon(icon);
+
+    /*
+    Where to find Config/ and Resources/. A console application is run from
+    the project root or from inside an extracted archive, so the working
+    directory is a sound assumption. A window opened from a desktop menu
+    inherits the user's home directory instead, and would find neither its
+    themes nor its configuration -- it would start, silently fall back to
+    the built-in default theme, and look subtly wrong.
+
+    Registered before the window is constructed, because every
+    ResourceManager takes its copy at construction.
+    */
+    const QDir executableDir(QApplication::applicationDirPath());
+
+    ResourceManager::addDefaultSearchPath(executableDir.absolutePath().toStdString());
+
+    // ...and its parent, which is where a development build finds them:
+    // the binary lands in Build/ while Resources/ and Config/ sit beside
+    // it at the project root. In a packaged layout the first path is the
+    // one that matches.
+    ResourceManager::addDefaultSearchPath(
+        QDir(executableDir.absoluteFilePath("..")).canonicalPath().toStdString());
 
     ClockWindow window(configPath);
     window.show();

@@ -1,0 +1,24 @@
+<!--
+  Icons compiled into the executable.
+
+  QApplication::setWindowIcon() needs the image at runtime, and a path on
+  disk would make the window icon depend on where the binary was launched
+  from. That is the same relative-path problem that makes an extracted
+  release archive lose its themes when run from the wrong directory.
+  Compiled in, the icon is always there.
+
+  Several sizes rather than one: Qt picks the closest match for the window
+  decoration, the task switcher and the panel, and scaling one large PNG
+  down to 16 pixels looks worse than a PNG rendered at 16.
+-->
+<RCC>
+    <qresource prefix="/icons">
+        <file alias="digitalclock-16.png">icons/digitalclock-16.png</file>
+        <file alias="digitalclock-24.png">icons/digitalclock-24.png</file>
+        <file alias="digitalclock-32.png">icons/digitalclock-32.png</file>
+        <file alias="digitalclock-48.png">icons/digitalclock-48.png</file>
+        <file alias="digitalclock-64.png">icons/digitalclock-64.png</file>
+        <file alias="digitalclock-128.png">icons/digitalclock-128.png</file>
+        <file alias="digitalclock-256.png">icons/digitalclock-256.png</file>
+    </qresource>
+</RCC>
