@@ -112,6 +112,83 @@ jobs:
 
           echo "Smoke test passed."
 
+  # The graphical interface added in v2.0.0.
+  #
+  # Building it would only prove it compiles. The parts most likely to
+  # break are the ones that need a running Qt event loop and a realised
+  # window -- the layout, the stylesheet built from the theme files, the
+  # timer that drives the readout -- so this starts it for real on a
+  # virtual display and asserts on what it did.
+  #
+  # The CLI jobs above deliberately do not install Qt. The console
+  # application has no third-party dependencies and its CI should keep
+  # proving that, rather than quietly building against whatever the GUI
+  # job happens to have pulled in.
+  gui:
+    name: Graphical interface
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Qt and a virtual display
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            qt6-base-dev libgl1-mesa-dev xvfb x11-utils
+
+      - name: Configure and build
+        run: |
+          cmake -B build-gui -DCMAKE_BUILD_TYPE=Release \
+                             -DDIGITALCLOCK_BUILD_GUI=ON
+          cmake --build build-gui -j
+
+      # If Qt were missing the CMake option would silently skip the
+      # target and every step below would pass by doing nothing, so the
+      # binary's existence is asserted rather than assumed.
+      - name: Confirm the GUI target was actually built
+        run: |
+          test -x Build/digitalclock-gui \
+            || { echo "::error::digitalclock-gui was not built"; exit 1; }
+
+          ./Build/digitalclock-gui --version
+
+      - name: Run the GUI headless
+        run: |
+          xvfb-run -a --server-args="-screen 0 1024x768x24" \
+            ./Build/digitalclock-gui --once
+
+          echo "GUI started, drew a frame and exited cleanly."
+
+      # A window that opens and immediately dies would still pass the
+      # step above if --once happened to exit first, so this one starts
+      # it normally and checks it is still alive a few seconds later.
+      - name: Confirm the window stays up
+        run: |
+          xvfb-run -a --server-args="-screen 0 1024x768x24" bash -c '
+            ./Build/digitalclock-gui &
+            PID=$!
+            sleep 6
+
+            if ! kill -0 $PID 2>/dev/null; then
+              wait $PID
+              echo "::error::the GUI exited on its own"
+              exit 1
+            fi
+
+            # It should also have put a real window on the display.
+            if ! xwininfo -root -children | grep -qi "digital clock"; then
+              echo "::error::no Digital Clock window found on the display"
+              xwininfo -root -children
+              kill $PID
+              exit 1
+            fi
+
+            echo "Window present and still running after 6 seconds."
+            kill $PID
+          '
+
   # The Makefile is POSIX-only by nature, so these jobs are Linux-only.
   build-and-test:
     name: Make (${{ matrix.build }})

@@ -503,6 +503,7 @@ The table below summarizes the official project versions.
 | **1.2.0** | Stable        | Stopwatch and countdown timer           |
 | **1.3.0** | Stable        | World clock and time zone support       |
 | **1.4.0** | Stable        | Theme styles and configuration reload   |
+| **2.0.0** | Stable        | Graphical interface                     |
 
 These versions represent the major milestones in the development lifecycle.
 
@@ -999,6 +1000,104 @@ landed. That work found DEF-009.
 
 ---
 
+# 3.9e Version 2.0.0 - Graphical Interface
+
+### Release Status
+
+Stable
+
+### Added
+
+- **A graphical interface**, `digitalclock-gui`, built with Qt6 Widgets. All
+  four modes, the alarms, the themes and the configuration behave as they do
+  in the console application, because they are the same code.
+- `Gui/ClockWindow`, which replaces the presentation layer and nothing else.
+- `Gui/GuiTheme`, which maps the theme vocabulary onto Qt colours and a
+  stylesheet, so both front ends read the same theme files.
+- A CI job that installs Qt, starts the window on a virtual display, and
+  checks it is still running with a real window on screen six seconds later.
+
+### Design Notes
+
+- **The console application is unchanged, and keeps its promise.** It links
+  `digitalclock_core` and the standard library, nothing else. A graphical
+  interface cannot make that promise, so it is a separate optional target
+  rather than a change to the existing one. `DIGITALCLOCK_BUILD_GUI=OFF`
+  makes the exclusion explicit, which is what the CLI release workflow
+  passes -- otherwise whether an archive contained a GUI binary would depend
+  on whether the build machine happened to have Qt installed.
+- **This is what the layering was for.** The business and service layers
+  needed no changes at all to gain a second interface: not one line of
+  `Clock`, `Date`, `TimeFormatter`, `AlarmManager`, `Stopwatch`,
+  `CountdownTimer`, `WorldClock`, `ConfigurationManager` or `ThemeManager`
+  was touched. Only `Console`, `Screen`, `StatusBar`, `Display` and
+  `Application`'s refresh loop are console-specific, and the window replaces
+  exactly those.
+- **The window holds core objects directly rather than wrapping
+  `Application`.** `Application`'s job is the console lifecycle; a window
+  that borrowed it would inherit a refresh loop it must not run.
+- **Themes are shared, not duplicated.** A theme is a property of the
+  application, not of one of its front ends. Colours map to the xterm palette
+  so a theme looks the same in the window as in a terminal.
+- **The window background is derived from the theme, not added to the
+  format.** Theme files name no background because the console inherits the
+  terminal's. Rather than extend the format or hardcode a list of theme
+  names, the window asks the theme: one that draws its status text in a dark
+  colour must expect a light background behind it. A user's own theme file
+  therefore gets a sensible background without being registered anywhere.
+- **The same keys as the console.** M, T, F, C, Q, Space, L, R, S and D all
+  do here what they do there. Someone moving between the two should not have
+  to learn a second set.
+- **`Dim` is applied as a colour, not a font weight**, because that is what
+  it is: there is no dim typeface. The colour is blended towards the
+  background rather than darkened, so it still reads as dimmer on a light
+  theme, where darkening would make it stand out more.
+
+### Fixed
+
+Found by running the window rather than by building it:
+
+- The menu bar was invisible on Linux. Qt exports it to a desktop-provided
+  global menu over D-Bus, and where no such panel exists -- a bare X session,
+  a headless runner, most tiling window managers -- it was exported to
+  nothing. macOS genuinely has a global menu bar and keeps the native
+  behaviour.
+- In clock mode the readout sat near the top of a mostly empty window. A
+  stretch factor of zero on the empty controls page only withholds the
+  *surplus* space; the widget still claims what its size policy asks for. It
+  is hidden instead.
+- Space, L and R did nothing. The buttons had them, but only while focused,
+  so the console's keys appeared to be missing.
+
+### Release Verification
+
+| Item | Result |
+|------|--------|
+| Release date | 2026-08-08 |
+| Automated tests | 130 of 130 passed (console) |
+| Line coverage | 93.70% of the core and console layers |
+| Compiler warnings | 0, console and GUI |
+| Platforms | Linux, Windows and macOS via CI |
+| GUI verification | Started on a virtual display; window confirmed present and alive; all four modes, both a dark and a light theme, and the stopwatch keys exercised and inspected |
+| Open defects | None |
+
+### Notes
+
+Version **2.0.0** delivers the graphical interface planned in section 6.3 and
+closes KI-005.
+
+The major version reflects a second interface, not a rewrite. Nothing about
+the console application changed: same binary, same dependencies, same
+behaviour, same tests.
+
+`Gui/` has no automated tests of its own. The console suite covers the logic
+the window drives, and CI proves the window starts, opens and survives; but
+the layout and the stylesheet are verified by eye and by the UAT plan, not by
+assertion. That is recorded here rather than glossed, and is why KI-010 is
+open below.
+
+---
+
 # 3.10 Documentation Milestones
 
 The following documentation was completed prior to the first stable release.
@@ -1356,7 +1455,8 @@ Features deferred to future releases:
 | ~~KI-002~~ | ~~Stopwatch feature is unavailable~~ | Enhancement | **Closed in v1.2.0** |
 | ~~KI-003~~ | ~~Countdown timer is not available~~ | Enhancement | **Closed in v1.2.0** |
 | ~~KI-004~~ | ~~Multiple time zone support is unavailable~~ | Enhancement | **Closed in v1.3.0** |
-| KI-005   | Graphical User Interface (GUI) is not implemented | Enhancement | Open |
+| ~~KI-005~~ | ~~Graphical User Interface (GUI) is not implemented~~ | Enhancement | **Closed in v2.0.0** |
+| KI-010   | The graphical interface has no automated tests of its own; its layout and stylesheet are verified by eye and by CI liveness checks | Low | Open |
 | KI-006   | Plugin architecture is not available | Enhancement | Open |
 
 KI-000 is closed. It was the only item that affected a claim already made
@@ -1553,7 +1653,7 @@ The following roadmap outlines the expected progression of future versions.
 | **1.2.0** | Stopwatch and countdown timer                                       |
 | **1.3.0** | Multiple time zone support                                          |
 | ~~**1.4.0**~~ | ~~Theme enhancements and improved configuration~~ - **delivered 2026-08-08** |
-| **2.0.0** | Graphical User Interface (GUI) and major architectural improvements |
+| ~~**2.0.0**~~ | ~~Graphical User Interface (GUI)~~ - **delivered 2026-08-08** |
 
 This roadmap is subject to change based on project priorities.
 
@@ -1860,14 +1960,15 @@ Developers and maintainers are encouraged to update the Change Log as an integra
 | Item | Details |
 | ---- | ------- |
 | Document | **09_ChangeLog.md** |
-| Document Version | **1.7** |
+| Document Version | **1.8** |
 | Project | **Digital Clock System** |
-| Current Version | **1.4.0** |
+| Current Version | **2.0.0** |
 | Release Date | **2026-08-08** |
 | Language | **C++17** |
 | Status | **Released** |
 | Verified On | Linux (GCC 16.1.1), Windows (MSVC 19.51) and macOS, via CI |
 | Test Result | 130 of 130 automated tests passed; 93.70% line coverage; no open defects |
+| Interfaces | Console and graphical, sharing one core library |
 | Known Gaps | No User Acceptance Testing has been performed (KI-007) |
 | Audience | Developers, Maintainers, Test Engineers, Project Managers, End Users |
 

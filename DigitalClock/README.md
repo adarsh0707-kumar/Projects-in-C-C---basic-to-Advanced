@@ -1,11 +1,14 @@
 # Digital Clock System
 
-A console digital clock in C++17. It displays the current system time and date
-in real time, refreshing on a configurable interval, with recurring alarms, a
-stopwatch, a countdown timer, a world clock, themeable colours, external
-configuration and file-based logging.
+A digital clock in C++17, in a terminal or a window. It displays the current
+system time and date in real time, refreshing on a configurable interval, with
+recurring alarms, a stopwatch, a countdown timer, a world clock, themeable
+colours, external configuration and file-based logging.
 
-No third-party dependencies — the standard library only.
+**The console application has no third-party dependencies — the standard
+library only.** The optional graphical interface added in v2.0.0 needs Qt6;
+it is a separate target and does not change the console build, which still
+links nothing but its own core library.
 
 ```text
                 ____  _       _ _        _    ____ _            _
@@ -68,6 +71,9 @@ make clean          # removes build output
 make help           # lists all targets
 ```
 
+The Makefile builds the console application only. The graphical interface
+needs CMake, because it needs Qt's moc.
+
 With CMake:
 
 ```bash
@@ -75,6 +81,17 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
+
+This builds `Build/digitalclock-gui` as well when Qt6 is installed, and
+quietly skips it when it is not — the GUI is optional and its absence is not
+an error. To leave it out on a machine that does have Qt:
+
+```bash
+cmake -S . -B build -DDIGITALCLOCK_BUILD_GUI=OFF
+```
+
+That flag exists so the contents of a release archive are a decision rather
+than an accident of whatever the build machine happened to have installed.
 
 Or via the helper scripts:
 
@@ -337,7 +354,12 @@ A layered design; each layer depends only on the ones beneath it.
 ```text
                         User
                          ▲
-   Presentation   Console · Display · Screen · Banner · StatusBar · Notifier
+              ┌──────────┴──────────┐
+   Presentation   Console front end     Graphical front end
+              Console · Display          ClockWindow · GuiTheme
+              Screen · Banner            (Qt6, optional)
+              StatusBar · Notifier
+              └──────────┬──────────┘
                          ▲
    Business logic   Clock · Date · TimeFormatter · Alarm · AlarmManager
                     Stopwatch · CountdownTimer · TimeZone · WorldClock
@@ -350,6 +372,11 @@ A layered design; each layer depends only on the ones beneath it.
 
 `Application` owns the component graph and drives startup, the refresh loop and
 shutdown. `main()` only parses arguments and delegates.
+
+The second front end arrived in v2.0.0 and needed no changes below the
+presentation layer — not one line of the business or service layers. That is
+what the separation was for. Both front ends link the same
+`digitalclock_core`; only the top box differs between them.
 
 | Component              | Responsibility                                     |
 | ---------------------- | -------------------------------------------------- |
@@ -403,6 +430,7 @@ DigitalClock/
 ├── Build/          Compiled executables (generated)
 ├── Config/         config.ini
 ├── Docs/           Specification and design documents
+├── Gui/            Qt6 graphical interface (optional)
 ├── Inc/            Headers
 ├── Logs/           Runtime logs (generated)
 ├── Obj/            Object files (generated)
@@ -439,6 +467,55 @@ project's only external dependency.
 
 Tests must run from the project root so they can find `Config/` and
 `Resources/`; `make test`, `Scripts/test.sh` and `ctest` all handle this.
+
+---
+
+## Graphical interface
+
+New in v2.0.0. Same clock, same alarms, same themes, same configuration file —
+the window replaces the presentation layer and nothing else, so both front
+ends run the same core library.
+
+```bash
+./Build/digitalclock-gui                        # uses Config/config.ini
+./Build/digitalclock-gui --config path/to.ini
+./Build/digitalclock-gui --once                 # draw one frame and exit
+```
+
+The keys are the console's keys, so moving between the two costs nothing:
+
+| Key | Action |
+| --- | ------ |
+| `M` | Next mode |
+| `Space` | Start / stop the stopwatch, start / pause the countdown |
+| `L` | Lap |
+| `R` | Reset |
+| `T` | Next theme |
+| `F` | 12 / 24-hour clock |
+| `C` | Reload the configuration file |
+| `S` / `D` | Snooze / dismiss a ringing alarm |
+| `Q` | Quit |
+
+Everything is also on the menus, so nothing is keyboard-only.
+
+Themes come from the same files in [`Resources/themes/`](Resources/themes/),
+mapped to the xterm palette so a theme looks the same in a window as in a
+terminal. Theme files name no background — the console inherits the
+terminal's — so the window derives one: a theme that draws its status text in
+a dark colour must be expecting a light background behind it. Your own theme
+file therefore gets a sensible background without having to be registered
+anywhere.
+
+`Dim` is applied as a colour rather than a font weight, because there is no
+dim typeface. It is blended towards the background, so it still reads as
+dimmer on a light theme, where simply darkening it would make it stand out
+more.
+
+**The GUI has no automated tests of its own.** The console suite covers the
+logic behind it, and CI starts the window on a virtual display and confirms
+it is still alive with a real window on screen. The layout and the stylesheet
+are checked by eye and by [`Docs/UAT_Plan.md`](Docs/UAT_Plan.md), not by
+assertion. That is KI-010, and it is open.
 
 ---
 

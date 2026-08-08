@@ -38,7 +38,7 @@ namespace Version
      * Incremented for significant releases containing
      * major architectural or functional changes.
      */
-    inline constexpr int MAJOR = 1;
+    inline constexpr int MAJOR = 2;
 
     /**
      * @brief Minor version number.
@@ -46,7 +46,7 @@ namespace Version
      * Incremented when new features are introduced while
      * maintaining backward compatibility.
      */
-    inline constexpr int MINOR = 4;
+    inline constexpr int MINOR = 0;
 
     /**
      * @brief Patch version number.

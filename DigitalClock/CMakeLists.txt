@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project(
     DigitalClock
-    VERSION 1.4.0
+    VERSION 2.0.0
     DESCRIPTION "Digital Clock System"
     LANGUAGES CXX
 )
@@ -84,6 +84,62 @@ target_link_libraries(DigitalClock PRIVATE digitalclock_core)
 set_target_properties(DigitalClock PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Build
 )
+
+# ----------------------------
+# Graphical interface (v2.0.0)
+# ----------------------------
+# The console application has no third-party dependencies and keeps none:
+# it links digitalclock_core and the standard library, nothing else. A
+# graphical interface cannot make that promise, so it is a separate,
+# optional target rather than a change to the existing one. Neither
+# build affects the other.
+#
+# The option exists so a build can opt out even when Qt *is* installed.
+# Without it, whether a release archive contains a GUI binary would
+# depend on whether the build machine happened to have Qt, and an
+# unbundled binary simply fails to start on a user's clean machine. The
+# CLI release workflow therefore passes OFF explicitly, so the archive's
+# contents are a decision rather than an accident of the environment.
+option(DIGITALCLOCK_BUILD_GUI
+       "Build the Qt6 graphical interface (requires Qt6; harmless if absent)"
+       ON)
+
+if(DIGITALCLOCK_BUILD_GUI)
+    find_package(Qt6 6.2 COMPONENTS Widgets QUIET)
+else()
+    message(STATUS "DIGITALCLOCK_BUILD_GUI=OFF -- skipping the GUI target")
+endif()
+
+if(Qt6_FOUND)
+    set(CMAKE_AUTOMOC ON)
+
+    # WIN32 suppresses the console window on Windows; MACOSX_BUNDLE
+    # produces the .app a macOS user expects to launch.
+    add_executable(digitalclock-gui WIN32 MACOSX_BUNDLE
+        Gui/main.cpp
+        Gui/ClockWindow.cpp
+        Gui/ClockWindow.hpp
+        Gui/GuiTheme.cpp
+        Gui/GuiTheme.hpp
+    )
+
+    # The whole point of the layering: the GUI links the same core the
+    # console front end does, and replaces only the presentation layer.
+    target_link_libraries(digitalclock-gui PRIVATE digitalclock_core Qt6::Widgets)
+
+    set_target_properties(digitalclock-gui PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Build
+        MACOSX_BUNDLE_BUNDLE_NAME "Digital Clock"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "io.github.adarsh0707-kumar.digitalclock"
+        MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
+        MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
+    )
+
+    message(STATUS "Qt6 ${Qt6_VERSION} found -- building digitalclock-gui")
+else()
+    message(STATUS "Qt6 not found -- building the console application and "
+                   "tests only (this is fine; the GUI is optional)")
+endif()
 
 # ----------------------------
 # Tests
