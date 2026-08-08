@@ -39,11 +39,25 @@ Prebuilt archives are attached to each
 [release](https://github.com/adarsh0707-kumar/Projects-in-C-C---basic-to-Advanced/releases).
 No installation and no dependencies — extract and run.
 
+**Console application** — small, and depends on nothing:
+
 | Platform | Archive |
 | -------- | ------- |
 | Linux (x86_64) | `digitalclock-*-linux-x86_64.tar.gz` |
 | macOS (Apple Silicon) | `digitalclock-*-macos-arm64.tar.gz` |
 | Windows (x64) | `digitalclock-*-windows-x64.zip` |
+
+**Graphical application** — larger, because the Qt runtime is bundled, so
+there is still nothing to install:
+
+| Platform | Package | How to run |
+| -------- | ------- | ---------- |
+| Linux | `DigitalClock-*-x86_64.AppImage` | `chmod +x` it, then run it |
+| macOS | `DigitalClock-*-macos-arm64.dmg` | Open, drag to Applications |
+| Windows | `DigitalClock-GUI-*-windows-x64.zip` | Unzip, run `digitalclock-gui.exe` |
+
+Every package is built on its own platform and started there before the
+release is drafted, so each is known to run rather than merely to build.
 
 ```bash
 tar -xzf digitalclock-1.4.0-linux-x86_64.tar.gz
@@ -459,7 +473,7 @@ make coverage                  # per-file line coverage
 Coverage is measured with `gcov`, which ships with GCC, so there is nothing
 extra to install. The total is **93.70%**; CI enforces a 92% floor.
 
-130 tests, covering TC-001 through TC-085 from
+131 tests, covering TC-001 through TC-086 from
 [`Docs/Testing_Report.md`](Docs/Testing_Report.md) plus supporting unit tests
 (`UT-*`) for the parsing and layout code. The harness is a small header in
 `Tests/TestFramework.hpp` — adding a third-party framework would have been the

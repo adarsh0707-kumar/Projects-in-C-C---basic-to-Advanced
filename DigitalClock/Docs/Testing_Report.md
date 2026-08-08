@@ -1937,9 +1937,10 @@ the CI smoke step, which runs the application with `--once` on a real console.
 | World Clock (v1.3.0) | 8 | 8 | 8 | 0 |
 | Console (pseudo-terminal) | 5 | 5 | 5 | 0 |
 | Refresh loop (pseudo-terminal) | 7 | 7 | 7 | 0 |
+| Resource resolution (v2.0.0) | 1 | 1 | 1 | 0 |
 | Themes & Configuration (v1.4.0) | 9 | 9 | 9 | 0 |
 | Presentation layer (v1.4.0) | 4 | 4 | 4 | 0 |
-| **Total** | **85** | **85** | **85** | **0** |
+| **Total** | **86** | **86** | **86** | **0** |
 
 Executed 2026-08-08. Two additional boundary cases, TC-005A and TC-006A, were
 added during implementation to cover the midnight and noon conversions that
@@ -2023,7 +2024,7 @@ boundary.
 
 | Test Category | Expected Result | Actual Result | Status |
 |---------------|-----------------|---------------|--------|
-| Unit Testing | All modules operate correctly | 130 of 130 tests passed | **Pass** |
+| Unit Testing | All modules operate correctly | 131 of 131 tests passed | **Pass** |
 | Integration Testing | Modules communicate without errors | All 11 integration paths passed | **Pass** |
 | System Testing | Complete application functions correctly | Application ran and rendered correctly | **Pass** |
 | Performance Testing | Meets target performance requirements | All targets met with margin (see 8.5) | **Pass** |
@@ -2125,6 +2126,20 @@ suite, which is why TC-041 was added: the unit tests exercised
 `AlarmManager::poll()` and `Alarm::minutesUntil()` separately and neither
 revealed the interaction between them.
 
+Found while packaging the graphical interface for release:
+
+| Defect ID | Description | Severity | Status |
+|-----------|-------------|----------|--------|
+| DEF-010 | The window resolved `Config/` and `Resources/` relative to the working directory. A desktop launcher sets that to the user's home, so it found neither its themes nor its alarms and fell back to the built-in defaults without saying so | Medium | **Closed** |
+
+DEF-010 is a third instance of the same pattern as DEF-007 and DEF-009:
+every component was correct, and the fault was in an assumption two of them
+shared. `ResourceManager`'s working-directory search is right for a console
+application documented as being run from the project root; the window simply
+had no such convention. It was found by starting the window from an unrelated
+directory and reading the status bar, which said `Theme: Default`. TC-086
+covers it.
+
 Found while closing the `Application.cpp` coverage gap:
 
 | Defect ID | Description | Severity | Status |
@@ -2139,7 +2154,7 @@ reproduces it. The fix moves the panel into its own `updateAlert()` step,
 which also removed a one-frame lag: `updateTimer()` runs after
 `updateAlarms()`, so a timer alert used to wait for the following frame.
 
-No defects remain open; the suite has passed at 130 of 130 since TC-085 was
+No defects remain open; the suite has passed at 131 of 131 since TC-086 was
 added.
 
 ---
@@ -2189,7 +2204,7 @@ Every component has direct automated coverage.
 | ConfigurationManager | 8 | ✔ |
 | ThemeManager / Theme | 11 | ✔ |
 | Logger | 6 | ✔ |
-| ResourceManager / Banner | 6 | ✔ |
+| ResourceManager / Banner | 7 | ✔ |
 | Utility | 9 | ✔ |
 | Console (via pseudo-terminal) | 6 | ✔ |
 | Application (startup & shutdown) | 6 | ✔ |
@@ -2197,7 +2212,7 @@ Every component has direct automated coverage.
 | Alarm / AlarmManager / Notifier | 18 | ✔ |
 | Stopwatch / CountdownTimer | 13 | ✔ |
 | TimeZone / WorldClock | 10 | ✔ |
-| **Total** | **130** | |
+| **Total** | **131** | |
 | Error handling | across all files | ✔ |
 
 The two pseudo-terminal groups are POSIX-only. On Windows each is replaced by
@@ -2411,7 +2426,7 @@ execution statistics, per-requirement outcomes, measured performance figures,
 the compatibility matrix, the defects found and closed, coverage, and the
 acceptance verdict.
 
-The headline result is 130 of 130 automated tests passing, with all documented
+The headline result is 131 of 131 automated tests passing, with all documented
 test cases executed and passed, and no open defects. Continuous integration
 verifies Linux, Windows and macOS on every change, so the compatibility matrix
 reflects executed runs rather than intent. The remaining gap is User
@@ -2813,7 +2828,7 @@ This completes the **06_Testing_Report.md** document.
 | Document Version | **1.8** |
 | Status | **Executed** |
 | Test Execution Date | **2026-08-08** |
-| Result | **130 of 130 automated tests passed; TC-001 – TC-085 all passed** |
+| Result | **131 of 131 automated tests passed; TC-001 – TC-086 all passed** |
 | Open Defects | **None** |
 | Known Gaps | No User Acceptance Testing has been performed (KI-007); a plan is ready in `Docs/UAT_Plan.md`. The graphical interface has no automated tests of its own (KI-010) |
 | Environment | Garuda Linux (kernel 7.1.5-zen1-2-zen, x86_64), GCC 16.1.1, GNU Make 4.4.1, CMake 4.4.2 |

@@ -1055,6 +1055,14 @@ Stable
 
 ### Fixed
 
+- **DEF-010.** The window resolved `Config/` and `Resources/` relative to the
+  working directory, which a desktop launcher sets to the user's home. It
+  found neither its themes nor its alarms and fell back to the built-in
+  defaults silently. `ResourceManager` gained a process-wide default search
+  path and the window registers its own executable's directory at startup.
+  The third instance of the DEF-007 pattern: every component correct, the
+  fault in an assumption two of them shared.
+
 Found by running the window rather than by building it:
 
 - The menu bar was invisible on Linux. Qt exports it to a desktop-provided
@@ -1074,11 +1082,12 @@ Found by running the window rather than by building it:
 | Item | Result |
 |------|--------|
 | Release date | 2026-08-08 |
-| Automated tests | 130 of 130 passed (console) |
+| Automated tests | 131 of 131 passed (console) |
 | Line coverage | 93.70% of the core and console layers |
 | Compiler warnings | 0, console and GUI |
 | Platforms | Linux, Windows and macOS via CI |
 | GUI verification | Started on a virtual display; window confirmed present and alive; all four modes, both a dark and a light theme, and the stopwatch keys exercised and inspected |
+| Packaging | AppImage, .dmg and portable zip, each built on its own platform and started there before release |
 | Open defects | None |
 
 ### Notes
@@ -1967,7 +1976,7 @@ Developers and maintainers are encouraged to update the Change Log as an integra
 | Language | **C++17** |
 | Status | **Released** |
 | Verified On | Linux (GCC 16.1.1), Windows (MSVC 19.51) and macOS, via CI |
-| Test Result | 130 of 130 automated tests passed; 93.70% line coverage; no open defects |
+| Test Result | 131 of 131 automated tests passed; 93.70% line coverage; no open defects |
 | Interfaces | Console and graphical, sharing one core library |
 | Known Gaps | No User Acceptance Testing has been performed (KI-007) |
 | Audience | Developers, Maintainers, Test Engineers, Project Managers, End Users |
