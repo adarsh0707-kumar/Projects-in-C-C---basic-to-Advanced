@@ -2390,19 +2390,35 @@ What *is* verified, and how:
 | It compiles on Linux, and against an older Qt than the author's | CI, Qt 6.4.2 | Automated |
 | It starts, draws a frame and exits cleanly | CI, `--once` on a virtual display | Automated |
 | It opens a real window and is still alive six seconds later | CI, `xwininfo` on a virtual display | Automated |
-| All four modes render correctly | Inspection on a virtual display | By eye |
-| Themes apply, dark and light | Inspection | By eye |
-| The console's keys work | Inspection with scripted keystrokes | By eye |
+| Mode switching, and each mode's readout | TC-088, keyboard-driven | Automated assertion |
+| The console's keys: Space, L, R, F, T | TC-089 to TC-093 | Automated assertion |
+| A theme change reaching the paint, not just the label | TC-093 | Automated assertion |
+| All four modes render *correctly* | Inspection on a virtual display | By eye |
+| Themes are legible, dark and light | Inspection | By eye |
 
 The middle rows matter more than they look. Building a GUI proves only that
 it compiles, and a window that opened and immediately died would still pass a
 `--once` check if the exit happened to come first — hence the separate
 liveness step.
 
-The bottom rows are the gap. Layout and stylesheet are judged by eye, because
-what is being asked is whether something is legible and well-proportioned, and
-no assertion answers that. Three defects were found this way during
-development, none of which a compile or a liveness check would have caught:
+The bottom two rows are what remains. Layout and stylesheet are judged by
+eye, because what is being asked is whether something is legible and
+well-proportioned, and no assertion answers that.
+
+TC-087 to TC-093 close the behavioural half. They drive the window by
+keyboard and assert on what is displayed -- label text, button captions, list
+contents, the stylesheet -- rather than on the window's members, because
+every GUI defect this project has produced was a discrepancy between correct
+internal state and what the user could see or do. A test reading the members
+would have passed through all three of them.
+
+That claim was checked rather than asserted: with the Space, L and R
+shortcuts commented out, three of the seven cases fail. A test that passes
+but would not catch the defect it names is worth nothing, and the only way to
+know which kind you have is to reintroduce the defect.
+
+Three defects were found by eye during development, none of which a compile
+or a liveness check would have caught:
 
 - The menu bar was invisible on Linux, exported to a global menu that did not
   exist.
@@ -2411,11 +2427,14 @@ development, none of which a compile or a liveness check would have caught:
 
 All three are fixed. All three were found by looking.
 
-This is recorded as **KI-010**. Closing it would mean either Qt Test driving
-the widgets, or image comparison against reference frames; neither is free,
-and neither is pretended to exist here. In the meantime the UAT plan in
-[`UAT_Plan.md`](UAT_Plan.md) is the instrument that covers it, and its
-scenarios apply to both interfaces.
+**KI-010 is narrowed, not closed.** Qt Test now drives the widgets, which
+covers the first two of those three defects. The third -- a readout stranded
+near the top of an empty window -- is a matter of proportion, and closing
+that would mean image comparison against reference frames: a much heavier
+instrument that fails on a font change and tells you nothing about whether
+the new arrangement is better or worse. It is not pretended to exist here.
+The UAT plan in [`UAT_Plan.md`](UAT_Plan.md) remains the instrument for it,
+and its scenarios apply to both interfaces.
 
 ---
 
@@ -2830,7 +2849,7 @@ This completes the **06_Testing_Report.md** document.
 | Test Execution Date | **2026-08-08** |
 | Result | **131 of 131 automated tests passed; TC-001 – TC-086 all passed** |
 | Open Defects | **None** |
-| Known Gaps | No User Acceptance Testing has been performed (KI-007); a plan is ready in `Docs/UAT_Plan.md`. The graphical interface has no automated tests of its own (KI-010) |
+| Known Gaps | No User Acceptance Testing has been performed (KI-007); a plan is ready in `Docs/UAT_Plan.md`. The graphical interface's visual proportions are judged by eye (KI-010, narrowed) |
 | Environment | Garuda Linux (kernel 7.1.5-zen1-2-zen, x86_64), GCC 16.1.1, GNU Make 4.4.1, CMake 4.4.2 |
 | Reproduce With | `make test` or `ctest --test-dir build --output-on-failure` |
 | Target Audience | Developers, Test Engineers, Reviewers, Project Maintainers |

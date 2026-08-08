@@ -110,6 +110,14 @@ std::int64_t ClockWindow::monotonicNow()
 
 void ClockWindow::buildLayout()
 {
+    /*
+    The widgets that carry information are given object names so the tests
+    can find them with findChild() and assert on what is actually on screen.
+    Exposing the members instead would let a test pass while the window
+    displayed something else entirely, which is the failure mode that
+    matters here: every GUI defect found so far was a discrepancy between
+    the state and the screen, not a wrong value.
+    */
     QWidget *central = new QWidget(this);
     column = new QVBoxLayout(central);
     column->setContentsMargins(24, 18, 24, 18);
@@ -135,12 +143,14 @@ void ClockWindow::buildLayout()
     */
     readoutLabel = new QLabel("00 : 00 : 00", central);
     readoutLabel->setAlignment(Qt::AlignCenter);
+    readoutLabel->setObjectName("readout");
     readoutLabel->setFont(
         QFontDatabase::systemFont(QFontDatabase::FixedFont));
     column->addWidget(readoutLabel);
 
     secondaryLabel = new QLabel(central);
     secondaryLabel->setAlignment(Qt::AlignCenter);
+    secondaryLabel->setObjectName("secondary");
     column->addWidget(secondaryLabel);
 
     column->addStretch(1);
@@ -165,6 +175,7 @@ void ClockWindow::buildLayout()
     connect(dismissButton, &QPushButton::clicked,
             this, &ClockWindow::onDismissAlarm);
 
+    alertPanel->setObjectName("alertPanel");
     alertPanel->hide();
     column->addWidget(alertPanel);
 
@@ -180,10 +191,12 @@ void ClockWindow::buildLayout()
     stopwatchColumn->setContentsMargins(0, 0, 0, 0);
 
     lapList = new QListWidget(stopwatchPage);
+    lapList->setObjectName("lapList");
     stopwatchColumn->addWidget(lapList);
 
     QHBoxLayout *stopwatchButtons = new QHBoxLayout();
     stopwatchStartButton = new QPushButton("Start", stopwatchPage);
+    stopwatchStartButton->setObjectName("stopwatchStart");
     stopwatchLapButton = new QPushButton("Lap", stopwatchPage);
     QPushButton *stopwatchResetButton =
         new QPushButton("Reset", stopwatchPage);
@@ -214,6 +227,7 @@ void ClockWindow::buildLayout()
 
     QHBoxLayout *timerButtons = new QHBoxLayout();
     timerStartButton = new QPushButton("Start", timerPage);
+    timerStartButton->setObjectName("timerStart");
     QPushButton *timerResetButton = new QPushButton("Reset", timerPage);
 
     timerButtons->addWidget(timerStartButton);
@@ -233,6 +247,7 @@ void ClockWindow::buildLayout()
     worldColumn->setContentsMargins(0, 0, 0, 0);
 
     worldTable = new QTableWidget(0, 3, worldPage);
+    worldTable->setObjectName("worldTable");
     worldTable->setHorizontalHeaderLabels({"Zone", "Time", "Offset"});
     worldTable->verticalHeader()->setVisible(false);
     worldTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -251,10 +266,12 @@ void ClockWindow::buildLayout()
     // ---- Status rows ----
     statusLabel = new QLabel(central);
     statusLabel->setAlignment(Qt::AlignCenter);
+    statusLabel->setObjectName("status");
     column->addWidget(statusLabel);
 
     messageLabel = new QLabel(central);
     messageLabel->setAlignment(Qt::AlignCenter);
+    messageLabel->setObjectName("message");
     column->addWidget(messageLabel);
 
     setCentralWidget(central);

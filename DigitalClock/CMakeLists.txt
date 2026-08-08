@@ -86,6 +86,15 @@ set_target_properties(DigitalClock PROPERTIES
 )
 
 # ----------------------------
+# Tests
+# ----------------------------
+# Declared before the GUI section because that section builds GUI tests
+# when Qt6::Test is present, and an option consulted before it is
+# declared is simply empty -- the GUI tests would have been silently
+# skipped on every machine.
+option(BUILD_TESTING_SUITE "Build the Digital Clock test suite" ON)
+
+# ----------------------------
 # Graphical interface (v2.0.0)
 # ----------------------------
 # The console application has no third-party dependencies and keeps none:
@@ -138,6 +147,60 @@ if(Qt6_FOUND)
     )
 
     message(STATUS "Qt6 ${Qt6_VERSION} found -- building digitalclock-gui")
+
+    # ---- GUI tests (KI-010) ----
+    #
+    # A separate target, and a separate find_package, because Qt6::Test is
+    # a component a Qt installation can legitimately lack. Where it does,
+    # the GUI still builds; only its tests are skipped.
+    #
+    # These drive the window by keyboard and assert on what is displayed,
+    # so they need a display: ctest runs them under the offscreen platform,
+    # which is enough for widgets, layout and shortcuts.
+    if(BUILD_TESTING_SUITE)
+        find_package(Qt6 ${Qt6_VERSION} COMPONENTS Test QUIET)
+
+        if(Qt6Test_FOUND)
+            enable_testing()
+
+            add_executable(digitalclock_gui_tests
+                Tests/gui/test_clockwindow.cpp
+                Gui/ClockWindow.cpp
+                Gui/ClockWindow.hpp
+                Gui/GuiTheme.cpp
+                Gui/GuiTheme.hpp
+                Gui/resources.qrc
+            )
+
+            target_include_directories(digitalclock_gui_tests
+                PRIVATE ${PROJECT_SOURCE_DIR}/Gui
+            )
+
+            target_link_libraries(digitalclock_gui_tests
+                PRIVATE digitalclock_core Qt6::Widgets Qt6::Test
+            )
+
+            set_target_properties(digitalclock_gui_tests PROPERTIES
+                RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Build
+            )
+
+            add_test(
+                NAME digitalclock_gui_tests
+                COMMAND digitalclock_gui_tests
+                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+            )
+
+            # Without a display the tests would fail rather than skip, and
+            # a failure that means "no X server" is not a useful signal.
+            set_tests_properties(digitalclock_gui_tests PROPERTIES
+                ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+            )
+
+            message(STATUS "Qt6 Test found -- building digitalclock_gui_tests")
+        else()
+            message(STATUS "Qt6 Test not found -- skipping the GUI tests")
+        endif()
+    endif()
 else()
     message(STATUS "Qt6 not found -- building the console application and "
                    "tests only (this is fine; the GUI is optional)")
@@ -146,7 +209,6 @@ endif()
 # ----------------------------
 # Tests
 # ----------------------------
-option(BUILD_TESTING_SUITE "Build the Digital Clock test suite" ON)
 
 if(BUILD_TESTING_SUITE)
     enable_testing()

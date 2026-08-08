@@ -525,11 +525,15 @@ dim typeface. It is blended towards the background, so it still reads as
 dimmer on a light theme, where simply darkening it would make it stand out
 more.
 
-**The GUI has no automated tests of its own.** The console suite covers the
-logic behind it, and CI starts the window on a virtual display and confirms
-it is still alive with a real window on screen. The layout and the stylesheet
-are checked by eye and by [`Docs/UAT_Plan.md`](Docs/UAT_Plan.md), not by
-assertion. That is KI-010, and it is open.
+**The GUI has its own tests, but they cannot see.** Qt Test drives the window
+by keyboard and asserts on what is displayed — label text, button captions,
+lap list, the stylesheet — rather than on its internal state, because every
+GUI defect this project has produced was a discrepancy between correct state
+and what the user could see or do.
+
+What no assertion answers is whether the result is *legible* or
+well-proportioned. That half stays with [`Docs/UAT_Plan.md`](Docs/UAT_Plan.md)
+and the eye. KI-010 is narrowed, not closed.
 
 ---
 

@@ -136,7 +136,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            qt6-base-dev libgl1-mesa-dev xvfb x11-utils
+            qt6-base-dev qt6-base-dev-tools libgl1-mesa-dev xvfb x11-utils
 
       - name: Configure and build
         run: |
@@ -153,6 +153,15 @@ jobs:
             || { echo "::error::digitalclock-gui was not built"; exit 1; }
 
           ./Build/digitalclock-gui --version
+
+      # The window driven by keyboard, asserting on what is displayed
+      # rather than on its members -- every GUI defect so far has been a
+      # discrepancy between correct state and what the user could see or
+      # do, which a state-only assertion passes straight through.
+      - name: Run the GUI test suite
+        run: |
+          ctest --test-dir build-gui -R digitalclock_gui_tests \
+                --output-on-failure -V
 
       - name: Run the GUI headless
         run: |

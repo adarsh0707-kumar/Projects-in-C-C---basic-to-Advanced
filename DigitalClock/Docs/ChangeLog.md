@@ -1465,7 +1465,7 @@ Features deferred to future releases:
 | ~~KI-003~~ | ~~Countdown timer is not available~~ | Enhancement | **Closed in v1.2.0** |
 | ~~KI-004~~ | ~~Multiple time zone support is unavailable~~ | Enhancement | **Closed in v1.3.0** |
 | ~~KI-005~~ | ~~Graphical User Interface (GUI) is not implemented~~ | Enhancement | **Closed in v2.0.0** |
-| KI-010   | The graphical interface has no automated tests of its own; its layout and stylesheet are verified by eye and by CI liveness checks | Low | Open |
+| KI-010   | The graphical interface's layout and stylesheet are judged by eye; no assertion covers whether the result is legible or well-proportioned | Low | **Narrowed 2026-08-08** — TC-087 to TC-093 drive the window by keyboard and assert on what is displayed. The behavioural half is covered; the visual half is not, and is left to `Docs/UAT_Plan.md` |
 | KI-006   | Plugin architecture is not available | Enhancement | Open |
 
 KI-000 is closed. It was the only item that affected a claim already made
