@@ -176,7 +176,7 @@ jobs:
         run: make COVERAGE=1 Build/DigitalClockTests && ./Build/DigitalClockTests > /dev/null
 
       - name: Report coverage
-        run: ./Scripts/coverage.sh 80
+        run: ./Scripts/coverage.sh 85
 
   sanitizers:
     name: Sanitizer (${{ matrix.sanitizer }})

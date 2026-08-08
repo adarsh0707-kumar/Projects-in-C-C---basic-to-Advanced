@@ -18,7 +18,7 @@ reason — the standard-library-only constraint is deliberate.
 
 ## Before you open a pull request
 
-1. `make test` passes — all 101 tests.
+1. `make test` passes — all 108 tests.
 2. The build is warning-free. The project compiles with `-Wall -Wextra
    -Wpedantic -Wshadow -Wconversion`; keep it at zero warnings.
 3. New behaviour comes with a test.
@@ -34,7 +34,7 @@ make SANITIZE=undefined test                # UndefinedBehaviorSanitizer
 cmake -S . -B build && ctest --test-dir build --output-on-failure
 ```
 
-CI enforces an 80% line-coverage floor, so a change that meaningfully reduces
+CI enforces an 85% line-coverage floor, so a change that meaningfully reduces
 coverage will fail. `make coverage` lists the worst-covered files first.
 
 ## Code style
@@ -94,7 +94,7 @@ Available assertions: `CHECK_TRUE`, `CHECK_FALSE`, `CHECK_EQ`, `CHECK_NE`,
 `CHECK_CONTAINS`, `CHECK_NOT_CONTAINS`, `FAIL_TEST`.
 
 Identifiers: use `TC_nnn` for cases traced to `Docs/Testing_Report.md`, and
-`UT_nnn` for supporting unit tests. TC-060 is the highest currently in use.
+`UT_nnn` for supporting unit tests. TC-065 is the highest currently in use.
 Register a new file by adding it to `CMakeLists.txt`; the Makefile globs
 `Tests/*.cpp` automatically.
 

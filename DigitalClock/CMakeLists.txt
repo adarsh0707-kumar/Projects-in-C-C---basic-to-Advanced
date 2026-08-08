@@ -108,6 +108,7 @@ if(BUILD_TESTING_SUITE)
         Tests/test_alarm.cpp
         Tests/test_timing.cpp
         Tests/test_timezone.cpp
+        Tests/test_console.cpp
     )
 
     target_include_directories(DigitalClockTests

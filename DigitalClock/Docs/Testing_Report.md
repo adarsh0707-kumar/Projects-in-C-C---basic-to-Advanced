@@ -2114,9 +2114,7 @@ every change to `DigitalClock/`.
 
 | Coverage | Lines | File |
 |---------:|------:|------|
-| 50.50% | 101 | `Theme.cpp` |
 | 55.71% | 429 | `Application.cpp` |
-| 61.76% | 102 | `Console.cpp` |
 | 74.29% | 70 | `Display.cpp` |
 | 79.66% | 59 | `StatusBar.cpp` |
 | 86.64% | 277 | `Alarm.cpp` |
@@ -2128,37 +2126,44 @@ every change to `DigitalClock/`.
 | 93.89% | 131 | `Screen.cpp` |
 | 94.49% | 127 | `CountdownTimer.cpp` |
 | 94.74% | 95 | `Logger.cpp` |
+| 95.10% | 102 | `Console.cpp` |
 | 95.74% | 94 | `Date.cpp` |
 | 96.26% | 107 | `ConfigurationManager.cpp` |
 | 96.49% | 57 | `WorldClock.cpp` |
 | 96.55% | 58 | `Clock.cpp` |
+| 98.02% | 101 | `Theme.cpp` |
 | 98.46% | 65 | `TimeFormatter.cpp` |
 | 98.59% | 71 | `Stopwatch.cpp` |
 | 100.00% | 45 | `Banner.cpp` |
 | 100.00% | 68 | `Utility.cpp` |
-| **83.03%** | **2552** | **TOTAL** (2118 covered) |
+| **86.25%** | **2552** | **TOTAL** (2200 covered) |
 
-CI enforces a floor of 80%. The threshold guards against backsliding rather
+CI enforces a floor of 85%. The threshold guards against backsliding rather
 than demanding a number: it sits just below the current total, so a change
 that meaningfully reduces coverage fails while ordinary churn does not.
 
-### What the measurement revealed
+### What the measurement revealed, and what was done about it
 
 Replacing the previous component-level claim -- "every component has tests" --
-with a measured figure changed the picture in three places:
+with a measured figure exposed three gaps the claim had hidden. Two are now
+closed:
 
-- **`Theme.cpp` at 50.50%.** A pure lookup table mapping colour names to ANSI
-  sequences. The tests exercised a representative sample rather than every
-  entry, so half the table a theme file can name was never executed.
-- **`Application.cpp` at 55.71%**, and the largest absolute gap at roughly
-  190 uncovered lines. The refresh loop and key handling are only reachable
-  by driving the loop, which the suite does not do; it calls `renderFrame()`
-  directly instead.
-- **`Console.cpp` at 61.76%**, which quantifies KI-009. The component was
-  known to be covered only indirectly; this puts a number on it.
+| File | Before | After | Action |
+|------|-------:|------:|--------|
+| `Console.cpp` | 61.76% | **95.10%** | Direct tests through a pseudo-terminal (TC-061 - TC-065), closing KI-009 |
+| `Theme.cpp` | 50.50% | **98.02%** | Exhaustive colour and style table test (UT-062) |
+| `Application.cpp` | 55.71% | 55.71% | **Still open** |
 
-The bottom of the table is the useful end, and none of these were visible
-before the measurement existed.
+The total moved from 83.03% to 86.25%.
+
+`Application.cpp` remains the largest absolute gap, at roughly 190 uncovered
+lines. Those lines are the refresh loop and key handling, reachable only by
+driving the loop; the suite calls `renderFrame()` directly instead. Closing it
+would need either a headless loop mode or a scripted pty session, and neither
+is free -- so it is recorded here rather than quietly rounded away.
+
+The bottom of the table is the useful end, and none of this was visible before
+the measurement existed.
 
 Two further points stand:
 
@@ -2222,8 +2227,9 @@ Arising from this cycle:
    `make coverage` reports per-file line coverage via gcov, and a CI job
    enforces an 80% floor. The measurement immediately identified three real
    gaps that the component-level claim had hidden.
-4. **Exercise `Console` directly** using a pseudo-terminal, which would close
-   the last indirect-coverage gap.
+4. ~~**Exercise `Console` directly** using a pseudo-terminal.~~ **Done
+   2026-08-08.** TC-061 to TC-065 open a pty so the real terminal paths run,
+   lifting `Console.cpp` from 61.76% to 95.10% and closing KI-009.
 5. **Keep this report in step with the code.** It previously described a
    system that did not compile; the discipline worth adopting is to update it
    in the same commit as the behaviour it describes.
@@ -2423,7 +2429,7 @@ The following limitations apply to the validation process.
   closed.
 - **No User Acceptance Testing was performed**, as no UAT participants were
   involved.
-- **Line coverage is measured at 83.03%** and enforced at 80% in CI. It is
+- **Line coverage is measured at 86.25%** and enforced at 85% in CI. It is
   line coverage, not branch coverage.
 - `Console` is validated indirectly through `Display` and `Application`, plus
   one manual check under a pseudo-terminal.
@@ -2626,7 +2632,7 @@ This completes the **06_Testing_Report.md** document.
 | Test Execution Date | **2026-08-07** |
 | Result | **101 of 101 automated tests passed; TC-001 – TC-060 all passed** |
 | Open Defects | **None** |
-| Known Gaps | No UAT; `Console` covered only indirectly |
+| Known Gaps | No UAT; `Application.cpp` refresh loop uncovered |
 | Environment | Garuda Linux (kernel 7.1.5-zen1-2-zen, x86_64), GCC 16.1.1, GNU Make 4.4.1, CMake 4.4.2 |
 | Reproduce With | `make test` or `ctest --test-dir build --output-on-failure` |
 | Target Audience | Developers, Test Engineers, Reviewers, Project Maintainers |

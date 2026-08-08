@@ -1245,8 +1245,8 @@ Verification gaps carried by this release:
 | -------- | ----------- | -------- | ------ |
 | ~~KI-000~~ | ~~Windows support is implemented but has never been compiled or executed~~ | Medium | **Closed 2026-08-07** — verified by CI under MSVC 19.51; 78 tests passed and the application rendered a frame |
 | KI-007   | No User Acceptance Testing was performed | Low | Open |
-| ~~KI-008~~ | ~~Line coverage is not measured~~ | Low | **Closed 2026-08-07** — measured at 83.03% via `make coverage`, enforced at 80% in CI |
-| KI-009   | `Console` has no direct automated tests; it is covered indirectly and by one manual check under a pseudo-terminal | Low | Open |
+| ~~KI-008~~ | ~~Line coverage is not measured~~ | Low | **Closed 2026-08-07** — measured at 83.03% via `make coverage`, enforced at 85% in CI, now 86.25% |
+| ~~KI-009~~ | ~~`Console` has no direct automated tests~~ | Low | **Closed 2026-08-08** - TC-061 to TC-065 drive it through a pseudo-terminal; coverage 61.76% to 95.10% |
 
 Features deferred to future releases:
 
@@ -1264,8 +1264,13 @@ about a release, and it was closed by evidence — a Windows CI run — rather
 than by revising the claim. macOS was verified by the same run and is now
 supported in practice as well as in intent.
 
-KI-009 is partly addressed: `Console` still has no direct unit tests, but the
-CI smoke step now executes it on all three platforms via `--once`.
+KI-009 is closed: `Console` is now driven directly through a pseudo-terminal,
+which is the only way to reach its terminal-dependent paths -- a test with
+piped stdio measures the redirected-output fallback and reports success.
+
+One gap remains open and is deliberately not disguised: `Application.cpp` sits
+at 55.71%, its refresh loop and key handling reachable only by driving the
+loop rather than calling `renderFrame()` directly.
 
 The remaining items describe work not yet attempted. The enhancement items are
 planned for consideration in future releases.
@@ -1755,14 +1760,14 @@ Developers and maintainers are encouraged to update the Change Log as an integra
 | Item | Details |
 | ---- | ------- |
 | Document | **09_ChangeLog.md** |
-| Document Version | **1.5** |
+| Document Version | **1.6** |
 | Project | **Digital Clock System** |
 | Current Version | **1.3.0** |
 | Release Date | **2026-08-07** |
 | Language | **C++17** |
 | Status | **Released** |
 | Verified On | Linux (GCC 16.1.1), Windows (MSVC 19.51) and macOS, via CI |
-| Test Result | 101 of 101 automated tests passed; no open defects |
+| Test Result | 108 of 108 automated tests passed; no open defects |
 | Known Gaps | No UAT (KI-007); line coverage not measured (KI-008) |
 | Audience | Developers, Maintainers, Test Engineers, Project Managers, End Users |
 
