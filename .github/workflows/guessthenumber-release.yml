@@ -116,7 +116,23 @@ jobs:
           chmod +x "$BIN" || true
           echo "Running extracted binary: $BIN"
 
-          OUT=$({ echo x; seq 1 100; } | timeout 60 "$BIN")
+          # A guard, so a game that never terminates fails the job instead
+          # of holding a runner for six hours -- which is exactly the
+          # failure this project was rewritten to remove.
+          #
+          # `timeout` is GNU coreutils and is not in base macOS: this step
+          # failed there with "timeout: command not found" while Linux and
+          # Windows passed, because Git for Windows ships coreutils. perl
+          # is on all three runners and its alarm does the same job.
+          guarded() {
+            if command -v timeout > /dev/null 2>&1; then
+              timeout 60 "$@"
+            else
+              perl -e 'alarm 60; exec @ARGV or exit 127' -- "$@"
+            fi
+          }
+
+          OUT=$({ echo x; seq 1 100; } | guarded "$BIN")
           echo "$OUT"
 
           echo "$OUT" | grep -q "not a whole number" \
