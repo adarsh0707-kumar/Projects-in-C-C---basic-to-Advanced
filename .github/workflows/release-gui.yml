@@ -342,7 +342,7 @@ jobs:
         working-directory: ${{ github.workspace }}
 
       - name: Attach to draft release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           draft: true
           name: Calculator ${{ steps.version.outputs.value }}

@@ -203,8 +203,13 @@ output/
 # History File (Optional)
 ############################################################
 
-# Uncomment if you don't want calculator history tracked
-# Build/history.txt
+# Generated at runtime, and no longer even written here: history.c moved
+# to a per-user data directory (~/.local/share/calculator, %APPDATA%, or
+# the macOS equivalent) precisely so that history survives moving or
+# deleting the build folder. The copy that used to sit here was tracked
+# until v1.1.1 -- somebody's old calculation history, committed.
+Build/history.txt
+history.txt
 
 ############################################################
 # Local Configuration
