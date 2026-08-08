@@ -1767,8 +1767,8 @@ Developers and maintainers are encouraged to update the Change Log as an integra
 | Language | **C++17** |
 | Status | **Released** |
 | Verified On | Linux (GCC 16.1.1), Windows (MSVC 19.51) and macOS, via CI |
-| Test Result | 108 of 108 automated tests passed; no open defects |
-| Known Gaps | No UAT (KI-007); line coverage not measured (KI-008) |
+| Test Result | 115 of 115 automated tests passed; no open defects |
+| Known Gaps | No User Acceptance Testing has been performed (KI-007) |
 | Audience | Developers, Maintainers, Test Engineers, Project Managers, End Users |
 
 ---

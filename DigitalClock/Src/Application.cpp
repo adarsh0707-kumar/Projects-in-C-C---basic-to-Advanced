@@ -64,6 +64,7 @@ const int Application::EXIT_STARTUP_FAILED = 1;
 Application::Application()
     : interval(DEFAULT_INTERVAL),
       alarmsEnabled(true),
+      alertRaised(false),
       currentMode(Mode::Clock),
       running(false),
       initialized(false)
@@ -386,6 +387,8 @@ void Application::updateTimer(std::int64_t nowMs)
         "TIMER  " + CountdownTimer::format(countdown.duration()),
         "Countdown finished",
         "[D] Dismiss   [R] Reset");
+
+    alertRaised = true;
 }
 
 void Application::updateAlarms()
@@ -404,16 +407,10 @@ void Application::updateAlarms()
 
             alertNotifier.notify(*ringing, alarmManager.snoozeMinutes());
             display.setStatusField("Status", "ALARM");
+
+            alertRaised = true;
         }
     }
-    else if (alertNotifier.isActive())
-    {
-        // Keep signalling while the alarm waits to be acknowledged.
-        alertNotifier.pulse();
-    }
-
-    display.showNotification(
-        alertNotifier.lines(display.screen().width()));
 
     if (alarmManager.count() > 0)
     {
@@ -421,6 +418,30 @@ void Application::updateAlarms()
 
         display.setStatusField("Next Alarm", next.empty() ? "none" : next);
     }
+}
+
+void Application::updateAlert()
+{
+    /*
+    The alert panel belongs to whoever raised it, not to the alarm subsystem.
+    Drawing it from updateAlarms() meant a countdown that finished while
+    alarms were switched off was never shown: the timer expired, the bell
+    rang once, and the screen said nothing (DEF-009).
+
+    Drawing it here also removes a one-frame lag, because updateTimer() runs
+    after updateAlarms() and its alert used to wait for the next frame.
+    */
+    if (alertNotifier.isActive() && !alertRaised)
+    {
+        // Keep signalling while the alert waits to be acknowledged. Skipped on
+        // the frame it was raised, where notify() has already rung.
+        alertNotifier.pulse();
+    }
+
+    alertRaised = false;
+
+    display.showNotification(
+        alertNotifier.lines(display.screen().width()));
 }
 
 bool Application::snoozeAlarm()
@@ -589,6 +610,7 @@ void Application::renderFrame()
     // neither is missed while the user is looking at something else.
     updateAlarms();
     updateTimer(nowMs);
+    updateAlert();
 
     switch (currentMode)
     {

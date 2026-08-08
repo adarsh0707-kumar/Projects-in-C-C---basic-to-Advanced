@@ -1847,6 +1847,46 @@ behaviour rather than a documented requirement:
   would corrupt every later `localtime()` call in the process -- a fault that
   would surface far from its cause.
 
+## Terminal and refresh loop (TC-061 - TC-072)
+
+These are the cases that need a real terminal. Everything above can be
+asserted with ordinary objects; the console and the refresh loop cannot,
+because they depend on being attached to a terminal -- `isatty()`, `ioctl()`,
+`tcsetattr()` and a keystroke actually arriving. A test with piped stdio does
+not fail on these paths, which is worse: it silently measures the
+redirected-output fallbacks and reports success.
+
+So each of these opens a pseudo-terminal, points the process at it, and drives
+the code the way a user would.
+
+| Test Case ID | Objective | Actual Result | Status |
+|--------------|-----------|---------------|--------|
+| TC-061 | Verify the console detects a terminal and emits colour | Colour enabled when attached to a pty, which the fallback path can never show | **Pass** |
+| TC-062 | Verify `NO_COLOR` suppresses colour even on a terminal | The convention honoured regardless of terminal capability | **Pass** |
+| TC-063 | Verify console output emits the expected escape sequences | Clear, home, cursor hide/show and one-based row;column addressing all correct | **Pass** |
+| TC-064 | Verify cursor positions are clamped to the visible area | Zero and negative coordinates never reached the terminal | **Pass** |
+| TC-065 | Verify raw input reads keystrokes and restores the terminal | `ICANON` and `ECHO` off while running, keystrokes read without blocking, original mode restored on shutdown | **Pass** |
+| TC-066 | Verify the refresh loop draws frames and exits on Q | Frames drawn by the loop itself; Q returned `EXIT_OK`; redraw homes the cursor rather than clearing | **Pass** |
+| TC-067 | Verify M cycles through every mode in the running loop | Clock to Stopwatch to Timer to World and back; each mode drew its own readout and its own footer hints | **Pass** |
+| TC-068 | Verify stopwatch keys work through the running loop | Space started and stopped, L recorded a lap, R cleared elapsed time and lap history | **Pass** |
+| TC-069 | Verify the countdown expires and is acknowledged in the loop | Alert panel raised on expiry, dismissed with D, reset with R — **found DEF-009** | **Pass** |
+| TC-070 | Verify a termination signal stops the refresh loop | `SIGINT` noticed mid-sleep and the loop exited cleanly, which is what sleeping in slices buys | **Pass** |
+| TC-071 | Verify an alarm fires in the loop and can be snoozed | Panel raised with the alarm's label and snooze hint; S stopped the ringing and left the alarm armed for its snooze time | **Pass** |
+| TC-072 | Verify a ringing alarm can be dismissed in the loop | D cleared the alert; a repeating alarm stayed enabled for the next day | **Pass** |
+
+TC-069 is the one that earned its keep. It failed on first run, and the defect
+was not in the countdown or the notifier but in where the panel was drawn from
+-- see DEF-009 in section 8.7. No test that called the components directly
+could have found it.
+
+TC-071 and TC-072 write an alarm for the current minute, and wait for the next
+one first if the current minute is nearly over. Without that, the minute could
+roll between writing the file and the first poll, and the test would fail for
+a reason that has nothing to do with the code.
+
+The whole group is POSIX-only. On Windows the equivalent paths are covered by
+the CI smoke step, which runs the application with `--once` on a real console.
+
 ---
 
 # 7.13 Test Case Execution Summary
@@ -1866,15 +1906,18 @@ behaviour rather than a documented requirement:
 | Alarm Module (v1.1.0) | 16 | 16 | 16 | 0 |
 | Stopwatch & Timer (v1.2.0) | 11 | 11 | 11 | 0 |
 | World Clock (v1.3.0) | 8 | 8 | 8 | 0 |
-| **Total** | **60** | **60** | **60** | **0** |
+| Console (pseudo-terminal) | 5 | 5 | 5 | 0 |
+| Refresh loop (pseudo-terminal) | 7 | 7 | 7 | 0 |
+| **Total** | **72** | **72** | **72** | **0** |
 
-Executed 2026-08-07. Two additional boundary cases, TC-005A and TC-006A, were
+Executed 2026-08-08. Two additional boundary cases, TC-005A and TC-006A, were
 added during implementation to cover the midnight and noon conversions that
 the FR-004 acceptance criteria require; both pass. TC-026 to TC-041 arrived
 with the v1.1.0 alarm module, TC-042 to TC-052 with the v1.2.0 stopwatch
-and timer, and TC-053 to TC-060 with the v1.3.0 world clock. The wider
-automated suite contains 101 tests in total, the remainder carrying `UT-`
-identifiers.
+and timer, and TC-053 to TC-060 with the v1.3.0 world clock. TC-061 to TC-065
+and TC-066 to TC-072 were added to close the `Console` and `Application`
+coverage gaps respectively. The wider automated suite contains 115 tests in
+total, the remainder carrying `UT-` identifiers.
 
 ---
 
@@ -1946,7 +1989,7 @@ boundary.
 
 | Test Category | Expected Result | Actual Result | Status |
 |---------------|-----------------|---------------|--------|
-| Unit Testing | All modules operate correctly | 101 of 101 tests passed | **Pass** |
+| Unit Testing | All modules operate correctly | 115 of 115 tests passed | **Pass** |
 | Integration Testing | Modules communicate without errors | All 11 integration paths passed | **Pass** |
 | System Testing | Complete application functions correctly | Application ran and rendered correctly | **Pass** |
 | Performance Testing | Meets target performance requirements | All targets met with margin (see 8.5) | **Pass** |
@@ -2048,8 +2091,22 @@ suite, which is why TC-041 was added: the unit tests exercised
 `AlarmManager::poll()` and `Alarm::minutesUntil()` separately and neither
 revealed the interaction between them.
 
-No defects remain open; the suite has passed at 78 of 78 on every run since
-completion.
+Found while closing the `Application.cpp` coverage gap:
+
+| Defect ID | Description | Severity | Status |
+|-----------|-------------|----------|--------|
+| DEF-009 | With `Alarms=Disabled`, a finished countdown raised its alert but never displayed it: the panel was drawn inside `updateAlarms()`, which returns early when alarms are off | Medium | **Closed** |
+
+DEF-009 is the same shape as DEF-007. `CountdownTimer::poll()` was correct,
+`Notifier` was correct, and `updateAlarms()` was correct for alarms; the fault
+was in where the drawing call had been placed, so it only appeared with one
+particular setting, in a running loop, after a timer had expired. TC-069
+reproduces it. The fix moves the panel into its own `updateAlert()` step,
+which also removed a one-frame lag: `updateTimer()` runs after
+`updateAlarms()`, so a timer alert used to wait for the following frame.
+
+No defects remain open; the suite has passed at 115 of 115 since TC-072 was
+added.
 
 ---
 
@@ -2096,71 +2153,91 @@ Every component has direct automated coverage.
 | TimeFormatter | 5 | ✔ |
 | Display / Screen / StatusBar | 7 | ✔ |
 | ConfigurationManager | 7 | ✔ |
-| ThemeManager / Theme | 5 | ✔ |
+| ThemeManager / Theme | 6 | ✔ |
 | Logger | 6 | ✔ |
 | ResourceManager / Banner | 6 | ✔ |
 | Utility | 8 | ✔ |
+| Console (via pseudo-terminal) | 6 | ✔ |
 | Application (startup & shutdown) | 6 | ✔ |
+| Application (refresh loop, via pseudo-terminal) | 7 | ✔ |
 | Alarm / AlarmManager / Notifier | 18 | ✔ |
 | Stopwatch / CountdownTimer | 13 | ✔ |
 | TimeZone / WorldClock | 10 | ✔ |
+| **Total** | **115** | |
 | Error handling | across all files | ✔ |
+
+The two pseudo-terminal groups are POSIX-only. On Windows each is replaced by
+a single guard test, and the equivalent paths are covered by the CI smoke
+step, which runs the application with `--once` on a real console.
 
 ## Measured line coverage
 
 Line coverage is measured with `gcov` and reported by `make coverage`. The
-figures below are from the run on 2026-08-07, and a CI job reproduces them on
+figures below are from the run on 2026-08-08, and a CI job reproduces them on
 every change to `DigitalClock/`.
 
 | Coverage | Lines | File |
 |---------:|------:|------|
-| 55.71% | 429 | `Application.cpp` |
-| 74.29% | 70 | `Display.cpp` |
 | 79.66% | 59 | `StatusBar.cpp` |
-| 86.64% | 277 | `Alarm.cpp` |
+| 81.43% | 70 | `Display.cpp` |
+| 87.36% | 277 | `Alarm.cpp` |
 | 89.68% | 155 | `AlarmManager.cpp` |
 | 89.85% | 197 | `TimeZone.cpp` |
+| 90.83% | 436 | `Application.cpp` |
 | 92.45% | 106 | `ThemeManager.cpp` |
 | 93.33% | 60 | `ResourceManager.cpp` |
 | 93.59% | 78 | `Notifier.cpp` |
-| 93.89% | 131 | `Screen.cpp` |
-| 94.49% | 127 | `CountdownTimer.cpp` |
 | 94.74% | 95 | `Logger.cpp` |
 | 95.10% | 102 | `Console.cpp` |
 | 95.74% | 94 | `Date.cpp` |
 | 96.26% | 107 | `ConfigurationManager.cpp` |
 | 96.49% | 57 | `WorldClock.cpp` |
 | 96.55% | 58 | `Clock.cpp` |
+| 97.64% | 127 | `CountdownTimer.cpp` |
 | 98.02% | 101 | `Theme.cpp` |
 | 98.46% | 65 | `TimeFormatter.cpp` |
+| 98.47% | 131 | `Screen.cpp` |
 | 98.59% | 71 | `Stopwatch.cpp` |
 | 100.00% | 45 | `Banner.cpp` |
 | 100.00% | 68 | `Utility.cpp` |
-| **86.25%** | **2552** | **TOTAL** (2200 covered) |
+| **92.81%** | **2559** | **TOTAL** (2375 covered) |
 
-CI enforces a floor of 85%. The threshold guards against backsliding rather
+CI enforces a floor of 90%. The threshold guards against backsliding rather
 than demanding a number: it sits just below the current total, so a change
 that meaningfully reduces coverage fails while ordinary churn does not.
 
 ### What the measurement revealed, and what was done about it
 
 Replacing the previous component-level claim -- "every component has tests" --
-with a measured figure exposed three gaps the claim had hidden. Two are now
-closed:
+with a measured figure exposed three gaps the claim had hidden. All three are
+now closed:
 
 | File | Before | After | Action |
 |------|-------:|------:|--------|
 | `Console.cpp` | 61.76% | **95.10%** | Direct tests through a pseudo-terminal (TC-061 - TC-065), closing KI-009 |
 | `Theme.cpp` | 50.50% | **98.02%** | Exhaustive colour and style table test (UT-062) |
-| `Application.cpp` | 55.71% | 55.71% | **Still open** |
+| `Application.cpp` | 55.71% | **90.83%** | The refresh loop driven through a pseudo-terminal (TC-066 - TC-072) |
 
-The total moved from 83.03% to 86.25%.
+The total moved from 83.03% to 86.25% to 92.81%.
 
-`Application.cpp` remains the largest absolute gap, at roughly 190 uncovered
-lines. Those lines are the refresh loop and key handling, reachable only by
-driving the loop; the suite calls `renderFrame()` directly instead. Closing it
-would need either a headless loop mode or a scripted pty session, and neither
-is free -- so it is recorded here rather than quietly rounded away.
+`Application.cpp` was the largest absolute gap, at roughly 190 uncovered
+lines: the refresh loop and key handling, reachable only by driving the loop.
+The earlier suite called `renderFrame()` directly and never entered `run()`.
+
+TC-066 to TC-072 close it by attaching the process to a pseudo-terminal,
+starting `run()`, and typing at it from a second thread -- the same technique
+TC-061 to TC-065 already used for `Console`, pointed at the whole application
+instead. The assertions are made against what appeared on the terminal and the
+state the components were left in.
+
+That was worth doing for more than the number. The first run of these tests
+found **DEF-009**, a defect no unit test could have reached: with `Alarms` set
+to `Disabled`, a countdown that finished raised its alert but never drew it,
+because the panel was rendered inside `updateAlarms()`, which returns early
+when alarms are off. The timer expired, the bell rang once, and the screen
+said nothing. This is the same shape as DEF-007 -- two components each correct
+alone, wrong in combination -- and the same reason it took a running loop to
+see it.
 
 The bottom of the table is the useful end, and none of this was visible before
 the measurement existed.
@@ -2230,7 +2307,11 @@ Arising from this cycle:
 4. ~~**Exercise `Console` directly** using a pseudo-terminal.~~ **Done
    2026-08-08.** TC-061 to TC-065 open a pty so the real terminal paths run,
    lifting `Console.cpp` from 61.76% to 95.10% and closing KI-009.
-5. **Keep this report in step with the code.** It previously described a
+5. ~~**Drive the refresh loop**, which the suite never entered.~~ **Done
+   2026-08-08.** TC-066 to TC-072 run the loop on a pty and type at it,
+   lifting `Application.cpp` from 55.71% to 90.83% and the project total to
+   92.81%. The CI floor rose from 85% to 90%. The first run found DEF-009.
+6. **Keep this report in step with the code.** It previously described a
    system that did not compile; the discipline worth adopting is to update it
    in the same commit as the behaviour it describes.
 
@@ -2243,7 +2324,7 @@ execution statistics, per-requirement outcomes, measured performance figures,
 the compatibility matrix, the defects found and closed, coverage, and the
 acceptance verdict.
 
-The headline result is 101 of 101 automated tests passing, with all documented
+The headline result is 115 of 115 automated tests passing, with all documented
 test cases executed and passed, and no open defects. Continuous integration
 verifies Linux, Windows and macOS on every change, so the compatibility matrix
 reflects executed runs rather than intent. The remaining gap is User
@@ -2627,12 +2708,12 @@ This completes the **06_Testing_Report.md** document.
 | Project | **Digital Clock System** |
 | Language | **C++17** |
 | Application Version | **1.3.0** |
-| Document Version | **1.5** |
+| Document Version | **1.6** |
 | Status | **Executed** |
-| Test Execution Date | **2026-08-07** |
-| Result | **101 of 101 automated tests passed; TC-001 – TC-060 all passed** |
+| Test Execution Date | **2026-08-08** |
+| Result | **115 of 115 automated tests passed; TC-001 – TC-072 all passed** |
 | Open Defects | **None** |
-| Known Gaps | No UAT; `Application.cpp` refresh loop uncovered |
+| Known Gaps | No User Acceptance Testing has been performed (KI-007) |
 | Environment | Garuda Linux (kernel 7.1.5-zen1-2-zen, x86_64), GCC 16.1.1, GNU Make 4.4.1, CMake 4.4.2 |
 | Reproduce With | `make test` or `ctest --test-dir build --output-on-failure` |
 | Target Audience | Developers, Test Engineers, Reviewers, Project Maintainers |

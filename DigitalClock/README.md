@@ -388,9 +388,9 @@ make coverage                  # per-file line coverage
 ```
 
 Coverage is measured with `gcov`, which ships with GCC, so there is nothing
-extra to install. The total is **86.25%**; CI enforces an 85% floor.
+extra to install. The total is **92.81%**; CI enforces a 90% floor.
 
-108 tests, covering TC-001 through TC-065 from
+115 tests, covering TC-001 through TC-072 from
 [`Docs/Testing_Report.md`](Docs/Testing_Report.md) plus supporting unit tests
 (`UT-*`) for the parsing and layout code. The harness is a small header in
 `Tests/TestFramework.hpp` — adding a third-party framework would have been the

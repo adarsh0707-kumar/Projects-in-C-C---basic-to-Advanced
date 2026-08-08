@@ -263,6 +263,14 @@ private:
     void updateTimer(std::int64_t nowMs);
 
     /**
+     * @brief Draws the alert panel and keeps an unacknowledged alert ringing.
+     *
+     * Separate from updateAlarms() because an alert can be raised by the
+     * countdown as well, and must still be shown when alarms are switched off.
+     */
+    void updateAlert();
+
+    /**
      * @brief Applies the timer settings from the configuration.
      */
     void configureTimer();
@@ -311,6 +319,7 @@ private:
 
     int interval;     ///< Refresh interval in milliseconds.
     bool alarmsEnabled; ///< Whether alarm checking is active.
+    bool alertRaised;   ///< Whether this frame raised the alert.
     Mode currentMode;   ///< What the main readout is showing.
     bool running;     ///< Whether the refresh loop should continue.
     bool initialized; ///< Whether initialize() completed.
