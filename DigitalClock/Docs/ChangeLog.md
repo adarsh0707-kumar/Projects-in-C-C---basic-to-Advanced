@@ -926,6 +926,9 @@ Stable
 - `Theme::parseColor()` and `Theme::parseStyle()`, which answer whether a
   name was recognised; `ThemeManager::styles()`, `describe()` and
   `cycleTheme()`; `ConfigurationManager::unknownKeys()`.
+- `Utility::environment()` and `hasEnvironment()`, a portable environment
+  lookup that reports whether a variable is *set* rather than whether it has
+  a value -- the distinction the NO_COLOR convention depends on.
 - Status messages that clear themselves after three seconds.
 
 ### Changed
@@ -965,15 +968,19 @@ Stable
   alert but never drew it: the panel was rendered inside `updateAlarms()`,
   which returns early when alarms are off. The timer expired, the bell rang
   once, and the screen said nothing. Found by TC-069 on its first run.
+- MSVC emitted C4996 for `std::getenv` on every Windows build. `Console` now
+  goes through `Utility::environment()` instead. Defining
+  `_CRT_SECURE_NO_WARNINGS` would have been shorter and would also have
+  silenced the genuine cases the diagnostic is for.
 
 ### Release Verification
 
 | Item | Result |
 |------|--------|
 | Release date | 2026-08-08 |
-| Automated tests | 125 of 125 passed |
-| New test cases | TC-066 - TC-081 |
-| Line coverage | 92.79%, enforced at 90% in CI |
+| Automated tests | 130 of 130 passed |
+| New test cases | TC-066 - TC-085 |
+| Line coverage | 93.70%, enforced at 92% in CI |
 | Compiler warnings | 0 under `-Wall -Wextra -Wpedantic -Wshadow -Wconversion` |
 | Sanitizers | Clean under Address, UndefinedBehavior and Thread |
 | Platforms | Linux, Windows and macOS via CI |
@@ -1860,7 +1867,7 @@ Developers and maintainers are encouraged to update the Change Log as an integra
 | Language | **C++17** |
 | Status | **Released** |
 | Verified On | Linux (GCC 16.1.1), Windows (MSVC 19.51) and macOS, via CI |
-| Test Result | 125 of 125 automated tests passed; 92.79% line coverage; no open defects |
+| Test Result | 130 of 130 automated tests passed; 93.70% line coverage; no open defects |
 | Known Gaps | No User Acceptance Testing has been performed (KI-007) |
 | Audience | Developers, Maintainers, Test Engineers, Project Managers, End Users |
 

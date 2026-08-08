@@ -112,6 +112,31 @@ public:
      * @return int Parsed value, or @p defaultValue on failure.
      */
     static int toInt(const std::string &text, int defaultValue = 0);
+
+    /**
+     * @brief Reads an environment variable portably.
+     *
+     * MSVC deprecates @c std::getenv and warns (C4996) on every use, offering
+     * @c _dupenv_s instead. Wrapping the difference here keeps that warning
+     * out of the Windows build without defining @c _CRT_SECURE_NO_WARNINGS,
+     * which would also silence the genuine cases the diagnostic exists for.
+     *
+     * Reports whether the variable is @e set rather than whether it has a
+     * value, because the two differ: the NO_COLOR convention treats a
+     * variable set to an empty string as switching colour off.
+     *
+     * @param name  Variable name.
+     * @param value Receives the value; set to empty when the variable is not.
+     * @return true if the variable is present in the environment.
+     */
+    static bool environment(const std::string &name, std::string &value);
+
+    /**
+     * @brief Reports whether an environment variable is set.
+     * @param name Variable name.
+     * @return true if the variable is present, whatever its value.
+     */
+    static bool hasEnvironment(const std::string &name);
 };
 
 #endif // UTILITY_HPP

@@ -12,6 +12,13 @@
 
 #include "TestFramework.hpp"
 
+#include <cstddef>
+#include <string>
+
+#ifndef _WIN32
+#include <cstdlib>
+#endif
+
 #include "Utility.hpp"
 
 TEST_CASE(UT_001, "Utility::trim removes surrounding whitespace")
@@ -112,4 +119,56 @@ TEST_CASE(UT_008, "Utility::currentDateTime returns a full timestamp")
     CHECK_EQ(stamp[10], ' ');
     CHECK_EQ(stamp[13], ':');
     CHECK_EQ(stamp[16], ':');
+}
+
+TEST_CASE(UT_009, "Utility::environment distinguishes unset from empty")
+{
+    /*
+    The distinction matters rather than being pedantry. The NO_COLOR
+    convention switches colour off for a variable that is merely *present*,
+    whatever its value, so a helper that reported an empty string for both
+    "unset" and "set to empty" would quietly break Console's colour probe on
+    every platform.
+    */
+    static const char *const NAME = "DIGITALCLOCK_UT009";
+
+    std::string value = "untouched";
+
+    // Not set: reported absent, and the caller's buffer is cleared rather
+    // than left holding whatever it had.
+    CHECK_FALSE(Utility::environment(NAME, value));
+    CHECK_EQ(value, std::string(""));
+    CHECK_FALSE(Utility::hasEnvironment(NAME));
+
+#ifndef _WIN32
+    // Set to a value.
+    setenv(NAME, "present", 1);
+
+    CHECK_TRUE(Utility::environment(NAME, value));
+    CHECK_EQ(value, std::string("present"));
+    CHECK_TRUE(Utility::hasEnvironment(NAME));
+
+    // Set, but empty: still set. This is the case the NO_COLOR convention
+    // turns on, and the one a naive implementation gets wrong.
+    setenv(NAME, "", 1);
+
+    CHECK_TRUE(Utility::environment(NAME, value));
+    CHECK_EQ(value, std::string(""));
+    CHECK_TRUE(Utility::hasEnvironment(NAME));
+
+    unsetenv(NAME);
+
+    CHECK_FALSE(Utility::hasEnvironment(NAME));
+#endif
+
+    // An empty name is not a variable and must not be looked up.
+    CHECK_FALSE(Utility::environment("", value));
+    CHECK_FALSE(Utility::hasEnvironment(""));
+
+    // A variable the environment always has, so the lookup is exercised even
+    // where the setenv branch above is skipped.
+    std::string path;
+
+    if (Utility::environment("PATH", path))
+        CHECK_FALSE(path.empty());
 }

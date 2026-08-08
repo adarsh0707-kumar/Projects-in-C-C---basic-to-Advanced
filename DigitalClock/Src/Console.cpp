@@ -1,7 +1,9 @@
 #include "Console.hpp"
 
-#include <cstdlib>
 #include <iostream>
+#include <string>
+
+#include "Utility.hpp"
 
 #ifdef _WIN32
 #include <conio.h>
@@ -58,15 +60,17 @@ namespace
      */
     bool detectColorSupport()
     {
-        if (std::getenv("NO_COLOR") != nullptr)
+        // NO_COLOR is honoured when merely present, even if empty, which is
+        // what the convention specifies.
+        if (Utility::hasEnvironment("NO_COLOR"))
             return false;
 
         if (!stdoutIsTerminal())
             return false;
 
-        const char *term = std::getenv("TERM");
+        std::string term;
 
-        if (term != nullptr && std::string(term) == "dumb")
+        if (Utility::environment("TERM", term) && term == "dumb")
             return false;
 
         return true;

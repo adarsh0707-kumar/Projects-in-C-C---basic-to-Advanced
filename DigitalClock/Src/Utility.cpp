@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <chrono>
+#include <cstdlib>
 #include <ctime>
 #include <fstream>
 #include <iomanip>
@@ -147,4 +148,51 @@ int Utility::toInt(const std::string &text, int defaultValue)
     {
         return defaultValue;
     }
+}
+
+bool Utility::environment(const std::string &name, std::string &value)
+{
+    value.clear();
+
+    if (name.empty())
+        return false;
+
+#ifdef _WIN32
+    /*
+    _dupenv_s allocates, and returns 0 with a null buffer when the variable
+    is not set -- so a zero return is not by itself proof that it exists.
+    */
+    char *buffer = nullptr;
+    std::size_t length = 0;
+
+    if (_dupenv_s(&buffer, &length, name.c_str()) != 0)
+        return false;
+
+    if (buffer == nullptr)
+        return false;
+
+    // length counts the terminator; assigning from the pointer avoids
+    // carrying it into the string.
+    value.assign(buffer);
+
+    std::free(buffer);
+
+    return true;
+#else
+    const char *found = std::getenv(name.c_str());
+
+    if (found == nullptr)
+        return false;
+
+    value.assign(found);
+
+    return true;
+#endif
+}
+
+bool Utility::hasEnvironment(const std::string &name)
+{
+    std::string ignored;
+
+    return environment(name, ignored);
 }

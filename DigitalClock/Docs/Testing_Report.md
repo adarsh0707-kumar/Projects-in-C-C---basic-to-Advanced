@@ -1938,7 +1938,8 @@ the CI smoke step, which runs the application with `--once` on a real console.
 | Console (pseudo-terminal) | 5 | 5 | 5 | 0 |
 | Refresh loop (pseudo-terminal) | 7 | 7 | 7 | 0 |
 | Themes & Configuration (v1.4.0) | 9 | 9 | 9 | 0 |
-| **Total** | **81** | **81** | **81** | **0** |
+| Presentation layer (v1.4.0) | 4 | 4 | 4 | 0 |
+| **Total** | **85** | **85** | **85** | **0** |
 
 Executed 2026-08-08. Two additional boundary cases, TC-005A and TC-006A, were
 added during implementation to cover the midnight and noon conversions that
@@ -1947,7 +1948,9 @@ with the v1.1.0 alarm module, TC-042 to TC-052 with the v1.2.0 stopwatch
 and timer, and TC-053 to TC-060 with the v1.3.0 world clock. TC-061 to TC-065
 and TC-066 to TC-072 were added to close the `Console` and `Application`
 coverage gaps respectively, and TC-073 to TC-081 with the v1.4.0 theme and
-configuration work. The wider automated suite contains 125 tests in total,
+configuration work, and TC-082 to TC-085 with the presentation-layer tests
+that closed the last two coverage gaps. The wider automated suite contains 130
+tests in total,
 the remainder carrying `UT-` identifiers.
 
 ---
@@ -2020,7 +2023,7 @@ boundary.
 
 | Test Category | Expected Result | Actual Result | Status |
 |---------------|-----------------|---------------|--------|
-| Unit Testing | All modules operate correctly | 125 of 125 tests passed | **Pass** |
+| Unit Testing | All modules operate correctly | 130 of 130 tests passed | **Pass** |
 | Integration Testing | Modules communicate without errors | All 11 integration paths passed | **Pass** |
 | System Testing | Complete application functions correctly | Application ran and rendered correctly | **Pass** |
 | Performance Testing | Meets target performance requirements | All targets met with margin (see 8.5) | **Pass** |
@@ -2136,7 +2139,7 @@ reproduces it. The fix moves the panel into its own `updateAlert()` step,
 which also removed a one-frame lag: `updateTimer()` runs after
 `updateAlarms()`, so a timer alert used to wait for the following frame.
 
-No defects remain open; the suite has passed at 125 of 125 since TC-081 was
+No defects remain open; the suite has passed at 130 of 130 since TC-085 was
 added.
 
 ---
@@ -2182,19 +2185,19 @@ Every component has direct automated coverage.
 | Clock | 5 | ✔ |
 | Date | 5 | ✔ |
 | TimeFormatter | 5 | ✔ |
-| Display / Screen / StatusBar | 7 | ✔ |
+| Display / Screen / StatusBar | 11 | ✔ |
 | ConfigurationManager | 8 | ✔ |
 | ThemeManager / Theme | 11 | ✔ |
 | Logger | 6 | ✔ |
 | ResourceManager / Banner | 6 | ✔ |
-| Utility | 8 | ✔ |
+| Utility | 9 | ✔ |
 | Console (via pseudo-terminal) | 6 | ✔ |
 | Application (startup & shutdown) | 6 | ✔ |
 | Application (refresh loop, via pseudo-terminal) | 11 | ✔ |
 | Alarm / AlarmManager / Notifier | 18 | ✔ |
 | Stopwatch / CountdownTimer | 13 | ✔ |
 | TimeZone / WorldClock | 10 | ✔ |
-| **Total** | **125** | |
+| **Total** | **130** | |
 | Error handling | across all files | ✔ |
 
 The two pseudo-terminal groups are POSIX-only. On Windows each is replaced by
@@ -2209,8 +2212,6 @@ reproduces them on every change to `DigitalClock/`.
 
 | Coverage | Lines | File |
 |---------:|------:|------|
-| 79.66% | 59 | `StatusBar.cpp` |
-| 81.43% | 70 | `Display.cpp` |
 | 87.36% | 277 | `Alarm.cpp` |
 | 89.68% | 155 | `AlarmManager.cpp` |
 | 89.85% | 197 | `TimeZone.cpp` |
@@ -2219,21 +2220,23 @@ reproduces them on every change to `DigitalClock/`.
 | 93.59% | 78 | `Notifier.cpp` |
 | 94.64% | 168 | `ThemeManager.cpp` |
 | 94.74% | 95 | `Logger.cpp` |
-| 95.10% | 102 | `Console.cpp` |
+| 95.15% | 103 | `Console.cpp` |
 | 95.35% | 129 | `Theme.cpp` |
 | 95.74% | 94 | `Date.cpp` |
 | 96.49% | 57 | `WorldClock.cpp` |
 | 96.55% | 58 | `Clock.cpp` |
 | 96.67% | 120 | `ConfigurationManager.cpp` |
 | 97.64% | 127 | `CountdownTimer.cpp` |
+| 98.31% | 59 | `StatusBar.cpp` |
 | 98.46% | 65 | `TimeFormatter.cpp` |
 | 98.47% | 131 | `Screen.cpp` |
 | 98.59% | 71 | `Stopwatch.cpp` |
 | 100.00% | 45 | `Banner.cpp` |
-| 100.00% | 68 | `Utility.cpp` |
-| **92.79%** | **2747** | **TOTAL** (2549 covered) |
+| 100.00% | 70 | `Display.cpp` |
+| 100.00% | 81 | `Utility.cpp` |
+| **93.70%** | **2761** | **TOTAL** (2587 covered) |
 
-CI enforces a floor of 90%. The threshold guards against backsliding rather
+CI enforces a floor of 92%. The threshold guards against backsliding rather
 than demanding a number: it sits just below the current total, so a change
 that meaningfully reduces coverage fails while ordinary churn does not.
 
@@ -2249,8 +2252,17 @@ now closed:
 | `Theme.cpp` | 50.50% | **98.02%** | Exhaustive colour and style table test (UT-062) |
 | `Application.cpp` | 55.71% | **90.60%** | The refresh loop driven through a pseudo-terminal (TC-066 - TC-072) |
 
-The total moved from 83.03% to 86.25% to 92.81%, and stands at 92.79% after
-the v1.4.0 features added a further 188 lines.
+The total moved from 83.03% to 86.25% to 92.81%, and stands at **93.70%**
+after the v1.4.0 features and the presentation-layer tests that followed
+them (TC-082 to TC-085).
+
+`StatusBar.cpp` and `Display.cpp` were the last two below 85%, at 79.66% and
+81.43%. What was uncovered turned out to be documented API that nothing in
+the application calls: `Display::render()` and `update()`, both one-line
+forwards to `renderScreen()`; `clear()` and `refresh()`; and the status bar's
+visibility switch. Thin code, but an alias that quietly stopped forwarding
+would leave a caller with a frame that never redraws, and nothing would have
+noticed. They now sit at 98.31% and 100.00%.
 
 `Application.cpp` was the largest absolute gap, at roughly 190 uncovered
 lines: the refresh loop and key handling, reachable only by driving the loop.
@@ -2356,7 +2368,7 @@ execution statistics, per-requirement outcomes, measured performance figures,
 the compatibility matrix, the defects found and closed, coverage, and the
 acceptance verdict.
 
-The headline result is 125 of 125 automated tests passing, with all documented
+The headline result is 130 of 130 automated tests passing, with all documented
 test cases executed and passed, and no open defects. Continuous integration
 verifies Linux, Windows and macOS on every change, so the compatibility matrix
 reflects executed runs rather than intent. The remaining gap is User
@@ -2758,7 +2770,7 @@ This completes the **06_Testing_Report.md** document.
 | Document Version | **1.7** |
 | Status | **Executed** |
 | Test Execution Date | **2026-08-08** |
-| Result | **125 of 125 automated tests passed; TC-001 – TC-081 all passed** |
+| Result | **130 of 130 automated tests passed; TC-001 – TC-085 all passed** |
 | Open Defects | **None** |
 | Known Gaps | No User Acceptance Testing has been performed (KI-007); a plan is ready in `Docs/UAT_Plan.md` |
 | Environment | Garuda Linux (kernel 7.1.5-zen1-2-zen, x86_64), GCC 16.1.1, GNU Make 4.4.1, CMake 4.4.2 |

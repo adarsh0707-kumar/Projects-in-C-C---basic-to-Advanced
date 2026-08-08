@@ -263,3 +263,158 @@ TEST_CASE(UT_086, "Display forwards formatted text to the layout")
     // shutdown() before initialize() must be safe.
     display.shutdown();
 }
+
+TEST_CASE(TC_082, "The status bar can be hidden and shown again")
+{
+    StatusBar status;
+
+    status.setField("Theme", "Dark");
+    status.setField("Mode", "Clock");
+    status.setMessage("Ready");
+
+    CHECK_TRUE(status.isVisible());
+    CHECK_EQ(status.lines().size(), static_cast<std::size_t>(3));
+
+    /*
+    Hiding must suppress the rows without discarding them. Clearing the
+    fields instead would make hiding a destructive operation, and showing the
+    bar again would produce an empty one.
+    */
+    status.setVisible(false);
+
+    CHECK_FALSE(status.isVisible());
+    CHECK_TRUE(status.lines().empty());
+
+    // The fields survived being hidden.
+    CHECK_EQ(status.field("Theme"), std::string("Dark"));
+    CHECK_EQ(status.message(), std::string("Ready"));
+
+    status.setVisible(true);
+
+    CHECK_TRUE(status.isVisible());
+    CHECK_EQ(status.lines().size(), static_cast<std::size_t>(3));
+
+    // A field with no name is not a field, and must not create a blank row.
+    status.setField("", "ignored");
+    status.setField("   ", "ignored");
+
+    CHECK_EQ(status.lines().size(), static_cast<std::size_t>(3));
+
+    // An unknown field reads as empty rather than inventing a value.
+    CHECK_EQ(status.field("NotAField"), std::string(""));
+}
+
+TEST_CASE(TC_083, "StatusBar::show writes its rows, and nothing when hidden")
+{
+    StatusBar status;
+
+    status.setField("Theme", "Blue");
+    status.setField("Status", "Running");
+
+    std::string drawn;
+
+    {
+        TestFramework::OutputCapture capture;
+
+        status.show();
+
+        drawn = capture.text();
+    }
+
+    CHECK_CONTAINS(drawn, "Theme");
+    CHECK_CONTAINS(drawn, "Blue");
+    CHECK_CONTAINS(drawn, "Running");
+
+    // Labels are padded to a common width so the colons form a column.
+    CHECK_CONTAINS(drawn, "Theme  : Blue");
+
+    std::string hidden;
+
+    {
+        TestFramework::OutputCapture capture;
+
+        status.setVisible(false);
+        status.show();
+
+        hidden = capture.text();
+    }
+
+    // Hidden means nothing is emitted at all, not a blank line.
+    CHECK_EQ(hidden, std::string(""));
+}
+
+TEST_CASE(TC_084, "Display's render aliases all draw the same frame")
+{
+    /*
+    render(), update() and renderScreen() are documented as equivalent (API
+    Documentation, section 4.4). They are one-line forwards, which is exactly
+    why they are worth asserting: an alias that quietly stopped forwarding
+    would leave a caller with a frame that never redraws, and nothing else in
+    the suite calls them.
+    */
+    Display display;
+
+    display.renderClock("11 : 05 : 00");
+    display.renderDate("Tuesday, 04 August 2026");
+    display.setStatusField("Theme", "Green");
+
+    std::string viaRenderScreen;
+    std::string viaRender;
+    std::string viaUpdate;
+
+    {
+        TestFramework::OutputCapture capture;
+        display.renderScreen();
+        viaRenderScreen = capture.text();
+    }
+
+    {
+        TestFramework::OutputCapture capture;
+        display.render();
+        viaRender = capture.text();
+    }
+
+    {
+        TestFramework::OutputCapture capture;
+        display.update();
+        viaUpdate = capture.text();
+    }
+
+    CHECK_FALSE(viaRenderScreen.empty());
+    CHECK_CONTAINS(viaRenderScreen, "11 : 05 : 00");
+
+    // Identical output, not merely similar.
+    CHECK_EQ(viaRender, viaRenderScreen);
+    CHECK_EQ(viaUpdate, viaRenderScreen);
+}
+
+TEST_CASE(TC_085, "Display::clear and refresh reach the console")
+{
+    Display display;
+
+    std::string cleared;
+
+    {
+        TestFramework::OutputCapture capture;
+
+        display.clear();
+
+        cleared = capture.text();
+    }
+
+    // 2J erases the screen; without the flush it would sit in the buffer.
+    CHECK_CONTAINS(cleared, "\033[2J");
+
+    // refresh() on its own emits nothing new; it flushes what is pending.
+    {
+        TestFramework::OutputCapture capture;
+
+        display.refresh();
+
+        CHECK_EQ(capture.text(), std::string(""));
+    }
+
+    // readKey() without an initialised console reports no key rather than
+    // blocking or reading from a terminal that was never prepared.
+    CHECK_EQ(display.readKey(), -1);
+}
