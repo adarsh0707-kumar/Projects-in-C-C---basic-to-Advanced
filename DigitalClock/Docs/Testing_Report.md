@@ -2361,6 +2361,49 @@ Arising from this cycle:
 
 ---
 
+# 8.13b The Graphical Interface (v2.0.0)
+
+The window added in v2.0.0 is **not covered by the automated suite**, and that
+is worth stating plainly rather than leaving to be inferred from a coverage
+table that does not mention it.
+
+What *is* verified, and how:
+
+| Aspect | Verified by | Kind of evidence |
+|--------|-------------|------------------|
+| The logic behind every readout | The 130 console tests | Automated assertion |
+| It compiles on Linux, and against an older Qt than the author's | CI, Qt 6.4.2 | Automated |
+| It starts, draws a frame and exits cleanly | CI, `--once` on a virtual display | Automated |
+| It opens a real window and is still alive six seconds later | CI, `xwininfo` on a virtual display | Automated |
+| All four modes render correctly | Inspection on a virtual display | By eye |
+| Themes apply, dark and light | Inspection | By eye |
+| The console's keys work | Inspection with scripted keystrokes | By eye |
+
+The middle rows matter more than they look. Building a GUI proves only that
+it compiles, and a window that opened and immediately died would still pass a
+`--once` check if the exit happened to come first — hence the separate
+liveness step.
+
+The bottom rows are the gap. Layout and stylesheet are judged by eye, because
+what is being asked is whether something is legible and well-proportioned, and
+no assertion answers that. Three defects were found this way during
+development, none of which a compile or a liveness check would have caught:
+
+- The menu bar was invisible on Linux, exported to a global menu that did not
+  exist.
+- In clock mode the readout sat near the top of a mostly empty window.
+- Space, L and R did nothing, so the console's keys appeared to be missing.
+
+All three are fixed. All three were found by looking.
+
+This is recorded as **KI-010**. Closing it would mean either Qt Test driving
+the widgets, or image comparison against reference frames; neither is free,
+and neither is pretended to exist here. In the meantime the UAT plan in
+[`UAT_Plan.md`](UAT_Plan.md) is the instrument that covers it, and its
+scenarios apply to both interfaces.
+
+---
+
 # 8.14 Chapter Summary
 
 This chapter recorded the actual test results for the Digital Clock System:
@@ -2766,13 +2809,13 @@ This completes the **06_Testing_Report.md** document.
 | Document | **06_Testing_Report.md** |
 | Project | **Digital Clock System** |
 | Language | **C++17** |
-| Application Version | **1.4.0** |
-| Document Version | **1.7** |
+| Application Version | **2.0.0** |
+| Document Version | **1.8** |
 | Status | **Executed** |
 | Test Execution Date | **2026-08-08** |
 | Result | **130 of 130 automated tests passed; TC-001 – TC-085 all passed** |
 | Open Defects | **None** |
-| Known Gaps | No User Acceptance Testing has been performed (KI-007); a plan is ready in `Docs/UAT_Plan.md` |
+| Known Gaps | No User Acceptance Testing has been performed (KI-007); a plan is ready in `Docs/UAT_Plan.md`. The graphical interface has no automated tests of its own (KI-010) |
 | Environment | Garuda Linux (kernel 7.1.5-zen1-2-zen, x86_64), GCC 16.1.1, GNU Make 4.4.1, CMake 4.4.2 |
 | Reproduce With | `make test` or `ctest --test-dir build --output-on-failure` |
 | Target Audience | Developers, Test Engineers, Reviewers, Project Maintainers |
