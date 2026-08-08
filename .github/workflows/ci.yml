@@ -100,6 +100,43 @@ jobs:
       - name: Run unit test suite
         run: make BUILD=${{ matrix.build }} test
 
+  # The project builds warning-free under five flags, and this is what
+  # keeps that true rather than aspirational. It was -Wall -Wextra only
+  # until a sweep under the other three found seven conversion warnings
+  # -- among them two unguarded buffer sizes in stack.c, where a zero
+  # would have become SIZE_MAX inside strncpy.
+  warnings:
+    name: Warnings as errors
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Build with -Werror
+        run: make WARN_FLAGS="-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Werror" all
+
+      - name: Build the test suite with -Werror
+        run: make WARN_FLAGS="-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Werror" test
+
+  # Replaces "the suite is large" with a measured figure. Uses gcov,
+  # which ships with GCC, so the job installs nothing and the same
+  # command works locally.
+  #
+  # The threshold guards against backsliding rather than demanding a
+  # number: it sits just below the current total, so a change that
+  # meaningfully reduces coverage fails while ordinary churn does not.
+  coverage:
+    name: Line coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Build instrumented, run the suite and report
+        run: make coverage THRESHOLD=78
+
   sanitizers:
     name: Sanitizer checks (${{ matrix.build }})
     runs-on: ubuntu-latest

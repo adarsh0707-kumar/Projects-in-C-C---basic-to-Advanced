@@ -55,7 +55,8 @@ static int parseNumberList(const char expr[], int *i, double values[], int *coun
         if (len <= 0 || len >= (int)sizeof(buf))
             return 0;
 
-        strncpy(buf, expr + start, len);
+        /* len is > 0 and < sizeof(buf) by the check above. */
+        strncpy(buf, expr + start, (size_t)len);
         buf[len] = '\0';
         values[(*count)++] = atof(buf);
 

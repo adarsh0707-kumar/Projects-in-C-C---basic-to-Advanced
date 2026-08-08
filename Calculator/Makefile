@@ -57,6 +57,12 @@ else ifeq ($(BUILD),asan)
 else ifeq ($(BUILD),ubsan)
     OPT_FLAGS = -g -O0 -fno-omit-frame-pointer
     SAN_FLAGS = -fsanitize=undefined
+else ifeq ($(BUILD),coverage)
+    # -O0 because optimisation reorders and merges lines, and gcov then
+    # reports coverage against a shape the source no longer has.
+    OPT_FLAGS = -g -O0
+    SAN_FLAGS =
+    COV_FLAGS = --coverage -fprofile-abs-path
 else
     $(error Unknown BUILD '$(BUILD)'. Use one of: debug, release, asan, ubsan)
 endif
@@ -65,12 +71,22 @@ OBJ_DIR      = Obj/$(BUILD)
 TEST_OBJ_DIR = Obj/$(BUILD)-tests
 GUI_OBJ_DIR  = Obj/$(BUILD)-gui
 
-WARN_FLAGS = -Wall -Wextra
+# The same five the other projects in this repository build under. The
+# last three were added after a sweep found seven conversion warnings,
+# one of which was an unguarded buffer size that became SIZE_MAX.
+WARN_FLAGS = -Wall -Wextra -Wpedantic -Wshadow -Wconversion
 DEPFLAGS   = -MMD -MP
 
-CFLAGS   = $(WARN_FLAGS) -std=c11   -I$(INC_DIR) $(OPT_FLAGS) $(SAN_FLAGS) $(DEPFLAGS)
-CXXFLAGS = $(WARN_FLAGS) -std=c++17 -I$(INC_DIR) $(OPT_FLAGS) $(SAN_FLAGS) $(DEPFLAGS)
-LDFLAGS  = -lm $(SAN_FLAGS)
+# Empty for every build but BUILD=coverage. Needed at both compile and
+# link time, which is why it is separate from SAN_FLAGS.
+COV_FLAGS ?=
+
+# Passed to Scripts/coverage.sh by the coverage target; 0 reports only.
+THRESHOLD ?= 0
+
+CFLAGS   = $(WARN_FLAGS) -std=c11   -I$(INC_DIR) $(OPT_FLAGS) $(SAN_FLAGS) $(COV_FLAGS) $(DEPFLAGS)
+CXXFLAGS = $(WARN_FLAGS) -std=c++17 -I$(INC_DIR) $(OPT_FLAGS) $(SAN_FLAGS) $(COV_FLAGS) $(DEPFLAGS)
+LDFLAGS  = -lm $(SAN_FLAGS) $(COV_FLAGS)
 
 # ------------------------------------------------------------------
 # Phase 31 -- GUI (Qt6). Only resolved/used by the gui/run-gui
@@ -195,7 +211,11 @@ ENGINE_OBJS_FOR_GUI = $(filter-out $(OBJ_DIR)/main.o,$(OBJS)) $(CXX_OBJS)
 # ------------------------------------------------------------------
 # Primary targets
 # ------------------------------------------------------------------
-.PHONY: all debug release asan ubsan run test docs clean distclean rebuild gui run-gui icons \
+# `coverage` must be here: the script writes a directory called
+# coverage/, and without this Make sees that directory, decides the
+# target is up to date, and does nothing at all -- silently, and
+# including in CI.
+.PHONY: all debug release asan ubsan coverage run test docs clean distclean rebuild gui run-gui icons \
         install-desktop uninstall-desktop
 
 all: $(TARGET)
@@ -208,6 +228,10 @@ release:
 
 asan:
 	$(MAKE) BUILD=asan all
+
+coverage:
+	$(MAKE) BUILD=coverage test
+	./Scripts/coverage.sh $(THRESHOLD)
 
 ubsan:
 	$(MAKE) BUILD=ubsan all

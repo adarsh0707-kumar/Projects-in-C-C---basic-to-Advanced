@@ -133,7 +133,23 @@ int popString(StringStack *s, char out[], int outSize)
         return 0;
     }
 
-    strncpy(out, s->items[s->top--], outSize - 1);
+    /*
+    outSize is the caller's word for how big out[] is, and nothing checked
+    it. At zero, "outSize - 1" is -1, which strncpy takes as a size_t: it
+    becomes SIZE_MAX and the copy runs until it happens upon a NUL. The
+    following line then writes out[-1], before the buffer.
+
+    Every caller today passes sizeof(buffer), so this was a hazard rather
+    than a live defect -- but it is the callee's job to refuse a size it
+    cannot honour, and the cast below is only safe because of this check.
+    */
+    if (outSize <= 0)
+    {
+        calculatorSetLastError(CALC_ERR_INTERNAL);
+        return 0;
+    }
+
+    strncpy(out, s->items[s->top--], (size_t)(outSize - 1));
     out[outSize - 1] = '\0';
     return 1;
 }
@@ -146,7 +162,14 @@ int peekString(StringStack *s, char out[], int outSize)
         return 0;
     }
 
-    strncpy(out, s->items[s->top], outSize - 1);
+    /* Same unguarded size as popString above. */
+    if (outSize <= 0)
+    {
+        calculatorSetLastError(CALC_ERR_INTERNAL);
+        return 0;
+    }
+
+    strncpy(out, s->items[s->top], (size_t)(outSize - 1));
     out[outSize - 1] = '\0';
     return 1;
 }

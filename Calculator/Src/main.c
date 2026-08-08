@@ -201,7 +201,8 @@ int main(void)
 
             if (equal != NULL)
             {
-                int len = equal - infix;
+                /* infix is a bounded buffer, so the difference fits. */
+                int len = (int)(equal - infix);
 
                 if (len <= 0)
                 {
@@ -215,7 +216,8 @@ int main(void)
                     break;
                 }
 
-                strncpy(variableName, infix, len);
+                /* len is > 0 and < sizeof(variableName) by the checks above. */
+                strncpy(variableName, infix, (size_t)len);
                 variableName[len] = '\0';
 
                 char *start = variableName;

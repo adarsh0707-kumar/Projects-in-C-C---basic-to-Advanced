@@ -109,7 +109,8 @@ int parseValueWithUnit(const char input[], double *value, char unit[16])
     if (len <= 0 || len >= (int)sizeof(numBuf))
         return 0;
 
-    strncpy(numBuf, input + start, len);
+    /* len is > 0 and < sizeof(numBuf) by the check above. */
+    strncpy(numBuf, input + start, (size_t)len);
     numBuf[len] = '\0';
     *value = atof(numBuf);
 
@@ -214,7 +215,8 @@ int parseConversion(const char input[], double *value, char fromUnit[16], char t
     if (len <= 0 || len >= (int)sizeof(numBuf))
         return 0;
 
-    strncpy(numBuf, input + start, len);
+    /* len is > 0 and < sizeof(numBuf) by the check above. */
+    strncpy(numBuf, input + start, (size_t)len);
     numBuf[len] = '\0';
     *value = atof(numBuf);
 

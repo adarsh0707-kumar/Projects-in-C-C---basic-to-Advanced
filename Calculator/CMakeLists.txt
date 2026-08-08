@@ -54,7 +54,7 @@ if(MSVC)
     # code deliberately keeps the standard ones.
     add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 else()
-    add_compile_options(-Wall -Wextra)
+    add_compile_options(-Wall -Wextra -Wpedantic -Wshadow -Wconversion)
 endif()
 
 # ---------------------------------------------------------------------
