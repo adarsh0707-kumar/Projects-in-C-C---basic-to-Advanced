@@ -60,8 +60,8 @@ Every package is built on its own platform and started there before the
 release is drafted, so each is known to run rather than merely to build.
 
 ```bash
-tar -xzf digitalclock-1.4.0-linux-x86_64.tar.gz
-cd digitalclock-1.4.0-linux-x86_64
+tar -xzf digitalclock-2.0.0-linux-x86_64.tar.gz
+cd digitalclock-2.0.0-linux-x86_64
 ./DigitalClock
 ```
 
