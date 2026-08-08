@@ -1,0 +1,12 @@
+# Build output. Never committed: it is platform-specific, it goes stale the
+# moment the source changes, and nobody can tell from a diff whether a
+# checked-in binary matches the source beside it.
+#
+# The repository carried GuessTheNumber/main -- a 16 KB x86-64 ELF -- until
+# v0.2.0. It is untracked from here on; the blob stays in history, which is
+# not worth rewriting published commits over.
+Build/
+build/
+*.o
+main
+guessthenumber

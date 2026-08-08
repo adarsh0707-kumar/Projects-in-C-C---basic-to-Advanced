@@ -1,0 +1,169 @@
+# NOTE ON PLACEMENT: this repo hosts multiple independent projects, but
+# GitHub Actions only reads workflow files from <repo-root>/.github/
+# workflows/ -- not from a subproject's own. So this file lives at the
+# repository root and every step sets working-directory: GuessTheNumber.
+#
+# The path filters keep a DigitalClock change from triggering this
+# workflow, and vice versa.
+
+name: GuessTheNumber CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'GuessTheNumber/**'
+      - '.github/workflows/guessthenumber-ci.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'GuessTheNumber/**'
+      - '.github/workflows/guessthenumber-ci.yml'
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: GuessTheNumber
+
+jobs:
+  cross-platform:
+    name: CMake (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      # -V rather than --output-on-failure: on a pass the latter hides
+      # everything, so the per-platform check count never reaches the log.
+      - name: Run test suite
+        run: ctest --test-dir build --build-config Release -V
+
+  build-and-test:
+    name: Make (${{ matrix.build }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        build: [release, debug]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Build (${{ matrix.build }})
+        run: |
+          if [ "${{ matrix.build }}" = "debug" ]; then
+            make debug
+          else
+            make
+          fi
+
+      - name: Run test suite
+        run: make test
+
+  warnings:
+    name: Warnings as errors
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Build with -Werror
+        run: make OPTIMIZE="-O2 -Werror" all test
+
+  # The regression that gave this project its rewrite. The old version
+  # used scanf("%d"), which leaves unparsed characters in the buffer: one
+  # stray letter made it print "too low" forever. Measured at 36 million
+  # lines in three seconds before a timeout killed it.
+  #
+  # A unit test covers the reader (TC-006), but the failure was a hang of
+  # the whole program, so it is worth also driving the real binary and
+  # requiring it to finish.
+  no-hang:
+    name: Bad input terminates
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Build
+        run: make
+
+      - name: Feed it rubbish and require it to exit
+        run: |
+          # A generous timeout: the point is "terminates at all", not
+          # "terminates quickly". The old version would still be running.
+          printf 'x\nhello\n???\n3.5\n0\n101\n' \
+            | timeout 30 ./Build/guessthenumber > output.txt
+
+          echo "--- output ---"
+          cat output.txt
+          echo "--------------"
+
+          grep -q "not a whole number" output.txt \
+            || { echo "::error::bad input was not reported"; exit 1; }
+
+          grep -q "No more input" output.txt \
+            || { echo "::error::did not stop when input ran out"; exit 1; }
+
+          echo "Terminated cleanly on exhausted input."
+
+      - name: Play a full game through a pipe
+        run: |
+          # Every number in the range, in order. The secret is seeded from
+          # the clock and cannot be fixed from outside, so the only input
+          # guaranteed to win is one that contains every possible answer.
+          # A binary-search sequence was tried first and lost: it only
+          # finds the number if the number is on its path.
+          seq 1 100 | timeout 30 ./Build/guessthenumber > played.txt
+
+          cat played.txt
+
+          grep -q "Congratulations" played.txt \
+            || { echo "::error::no guess sequence covering the range won"; exit 1; }
+
+          grep -q "Thank you for playing" played.txt \
+            || { echo "::error::the game did not finish cleanly"; exit 1; }
+
+  sanitizers:
+    name: Sanitizer (${{ matrix.sanitizer }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: [address, undefined]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Build and test under ${{ matrix.sanitizer }}
+        env:
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+          ASAN_OPTIONS: detect_leaks=1
+        run: |
+          make OPTIMIZE="-O1 -g -fsanitize=${{ matrix.sanitizer }}" all test
+
+      - name: Play a game under ${{ matrix.sanitizer }}
+        env:
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+          ASAN_OPTIONS: detect_leaks=1
+        run: |
+          { echo x; seq 1 100; } \
+            | timeout 30 ./Build/guessthenumber > /dev/null
