@@ -130,7 +130,7 @@ MS  MR  MC  M+  M-
 ```
 
 Constants and variables carry full `double` precision through an
-expression. Up to v1.1.0 they did not: each was rendered into the internal
+expression. Up to and including v1.1.0 they did not: each was rendered into the internal
 postfix form with `%g`, six significant figures, and parsed back. `pi`
 became `3.14159`, so `sin(pi)` returned `2.65e-06` instead of `1.22e-16`,
 and `x = 1/3` followed by `x*3` gave `0.999999`. `ans` is a variable too,
