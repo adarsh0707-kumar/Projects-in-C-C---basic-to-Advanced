@@ -12,7 +12,9 @@
  * Only ever built into Build/ for the test suite.
  ******************************************************************************/
 
-int digitalclock_something_else(void)
+#include "Plugin.h"
+
+DIGITALCLOCK_PLUGIN_EXPORT int digitalclock_something_else(void)
 {
     return 42;
 }

@@ -145,6 +145,12 @@ typedef struct DigitalClockPlugin
  * Named rather than guessed at, so a library that is not a plugin fails to
  * load with a clear message instead of by calling something arbitrary.
  *
+ * Declared in a plugin as:
+ * @code
+ * DIGITALCLOCK_PLUGIN_EXPORT const DigitalClockPlugin *
+ * digitalclock_plugin_init(const DigitalClockHost *host);
+ * @endcode
+ *
  * @param host Services the plugin may use; valid until shutdown().
  * @return The plugin, or null to decline being loaded. The application does
  *         not take ownership: the pointer must stay valid until shutdown().
@@ -154,6 +160,26 @@ typedef const DigitalClockPlugin *(*DigitalClockPluginInit)(
 
 /** The exported symbol's name, as the loader looks it up. */
 #define DIGITALCLOCK_PLUGIN_INIT_SYMBOL "digitalclock_plugin_init"
+
+/**
+ * @brief Marks the init function as exported.
+ *
+ * Required, not decorative. A Windows DLL exports nothing by default, so a
+ * plugin without this builds and loads perfectly well and then fails the
+ * symbol lookup -- which is precisely how the first Windows run of these
+ * plugins failed, with two cases refused for a missing entry point that was
+ * sitting right there in the source.
+ *
+ * On ELF platforms it restores default visibility, so a plugin built with
+ * -fvisibility=hidden still exports the one symbol the loader needs.
+ */
+#if defined(_WIN32)
+#define DIGITALCLOCK_PLUGIN_EXPORT __declspec(dllexport)
+#elif defined(__GNUC__) || defined(__clang__)
+#define DIGITALCLOCK_PLUGIN_EXPORT __attribute__((visibility("default")))
+#else
+#define DIGITALCLOCK_PLUGIN_EXPORT
+#endif
 
 #ifdef __cplusplus
 }

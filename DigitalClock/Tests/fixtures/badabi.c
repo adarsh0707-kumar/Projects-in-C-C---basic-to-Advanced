@@ -37,7 +37,7 @@ static const DigitalClockPlugin BAD = {
     NULL
 };
 
-const DigitalClockPlugin *digitalclock_plugin_init(
+DIGITALCLOCK_PLUGIN_EXPORT const DigitalClockPlugin *digitalclock_plugin_init(
     const DigitalClockHost *host)
 {
     (void)host;

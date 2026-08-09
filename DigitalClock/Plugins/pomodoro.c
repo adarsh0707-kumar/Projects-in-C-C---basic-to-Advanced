@@ -172,7 +172,7 @@ static const DigitalClockPlugin POMODORO = {
     pomodoroShutdown
 };
 
-const DigitalClockPlugin *digitalclock_plugin_init(
+DIGITALCLOCK_PLUGIN_EXPORT const DigitalClockPlugin *digitalclock_plugin_init(
     const DigitalClockHost *host)
 {
     hostServices = host;

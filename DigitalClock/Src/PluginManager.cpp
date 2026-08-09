@@ -77,7 +77,40 @@ namespace
     std::string lastError()
     {
 #if defined(_WIN32)
-        return "the library could not be loaded";
+        /*
+        The code, not just "it failed". A generic message cost real time
+        once: two plugins were being refused for a missing export and the
+        rejection said nothing that pointed there.
+        */
+        const DWORD code = GetLastError();
+
+        char *text = nullptr;
+
+        const DWORD length = FormatMessageA(
+            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+                FORMAT_MESSAGE_IGNORE_INSERTS,
+            nullptr, code, 0, reinterpret_cast<char *>(&text), 0, nullptr);
+
+        std::string message = "error " + std::to_string(code);
+
+        if (length > 0 && text != nullptr)
+        {
+            std::string described(text, length);
+
+            // FormatMessage ends its text with a newline.
+            while (!described.empty() &&
+                   (described.back() == '\n' || described.back() == '\r'))
+            {
+                described.pop_back();
+            }
+
+            message += ": " + described;
+        }
+
+        if (text != nullptr)
+            LocalFree(text);
+
+        return message;
 #else
         const char *message = dlerror();
 
