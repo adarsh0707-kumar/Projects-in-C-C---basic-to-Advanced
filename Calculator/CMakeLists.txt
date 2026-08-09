@@ -20,7 +20,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(Calculator
-    VERSION 1.1.1
+    VERSION 1.1.2
     DESCRIPTION "Scientific calculator with variables, matrices, complex numbers, and plotting"
     LANGUAGES C CXX)
 

@@ -142,6 +142,12 @@ expression `pi`. Line coverage is what pointed at it, by reporting
 `constants.c` as entirely unexecuted while the calculator plainly
 understood `pi`.
 
+Input that simply runs out no longer hangs the calculator. Up to and
+including v1.1.1, piping it anything that did not end with menu option 12 --
+or pressing Ctrl+D -- span forever on a closed stream: `while (getchar() !=
+'\n');` does not terminate at EOF, and the menu read EOF as a bad choice and
+said so endlessly.
+
 An expression longer than the input buffer is now refused with a message.
 Previously `fgets` cut it at 254 characters and left the remainder in the
 input stream, where the menu read it as your next choice: a long sum
