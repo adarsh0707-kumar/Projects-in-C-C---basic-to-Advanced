@@ -321,12 +321,24 @@ TEST_CASE(TC_051, "Verify countdown formatting rounds up")
 
 TEST_CASE(TC_052, "Verify mode switching leaves the other modes undisturbed")
 {
+    /*
+    Plugins switched off, so the cycle is the four built-in modes whatever
+    happens to be sitting in Plugins/. A plugin adds a step, which is the
+    point of it -- but a test asserting the shape of the cycle must not
+    depend on what a particular machine has installed.
+    */
+    const std::string path = TestFramework::writeTempFile(
+        "modes-no-plugins.ini",
+        "RefreshInterval=1000\n"
+        "Logging=Disabled\n"
+        "Plugins=false\n");
+
     Application application;
 
     {
         TestFramework::OutputCapture capture;
 
-        CHECK_TRUE(application.initialize("Config/config.ini"));
+        CHECK_TRUE(application.initialize(path));
 
         // The clock is the default view.
         CHECK_TRUE(application.mode() == Application::Mode::Clock);

@@ -29,7 +29,17 @@ WARNINGS  = -Wall -Wextra -Wpedantic -Wshadow -Wconversion
 OPTIMIZE ?= -O2
 SANFLAGS  =
 COVFLAGS  =
-LDLIBS    = -pthread
+# -ldl for dlopen(). Modern glibc folds it into libc, but older ones and
+# the BSDs still need it, and asking for it costs nothing where it is
+# already there.
+LDLIBS    = -pthread $(DL_LIB)
+
+# Not on Windows, and not needed on macOS.
+ifeq ($(shell uname -s 2>/dev/null),Linux)
+DL_LIB = -ldl
+else
+DL_LIB =
+endif
 
 ifdef SANITIZE
   SANFLAGS = -fsanitize=$(SANITIZE) -fno-omit-frame-pointer -g
@@ -66,7 +76,7 @@ TEST_OBJECTS = $(TEST_SOURCES:$(TESTDIR)/%.cpp=$(OBJDIR)/tests/%.o)
 
 HEADERS = $(wildcard $(INCDIR)/*.hpp)
 
-.PHONY: all run test debug coverage clean distclean help
+.PHONY: all run test debug coverage plugins clean distclean help
 
 all: $(TARGET)
 
@@ -91,7 +101,25 @@ run: $(TARGET)
 	./$(TARGET)
 
 # The suite resolves Resources/ and Config/ relative to the project root.
-test: $(TEST_TARGET)
+# The bundled plugin, and a deliberately broken one the tests refuse.
+# Built as shared libraries against Inc/Plugin.h alone -- they link nothing
+# from the application, which is what lets a plugin be built by a different
+# compiler than the clock.
+PLUGIN_CFLAGS = -std=c11 -Wall -Wextra -shared -fPIC -IInc
+
+plugins: Plugins/pomodoro.so $(BUILDDIR)/badabi.so $(BUILDDIR)/notaplugin.so
+
+Plugins/pomodoro.so: Plugins/pomodoro.c Inc/Plugin.h
+	$(CC) $(PLUGIN_CFLAGS) -o $@ $<
+	@echo "Built $@"
+
+$(BUILDDIR)/badabi.so: Tests/fixtures/badabi.c Inc/Plugin.h | $(BUILDDIR)
+	$(CC) $(PLUGIN_CFLAGS) -o $@ $<
+
+$(BUILDDIR)/notaplugin.so: Tests/fixtures/notaplugin.c | $(BUILDDIR)
+	$(CC) $(PLUGIN_CFLAGS) -o $@ $<
+
+test: $(TEST_TARGET) plugins
 	./$(TEST_TARGET)
 
 debug: OPTIMIZE = -O0 -g

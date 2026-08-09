@@ -2024,7 +2024,7 @@ boundary.
 
 | Test Category | Expected Result | Actual Result | Status |
 |---------------|-----------------|---------------|--------|
-| Unit Testing | All modules operate correctly | 131 of 131 tests passed | **Pass** |
+| Unit Testing | All modules operate correctly | 136 of 136 tests passed | **Pass** |
 | Integration Testing | Modules communicate without errors | All 11 integration paths passed | **Pass** |
 | System Testing | Complete application functions correctly | Application ran and rendered correctly | **Pass** |
 | Performance Testing | Meets target performance requirements | All targets met with margin (see 8.5) | **Pass** |
@@ -2154,7 +2154,7 @@ reproduces it. The fix moves the panel into its own `updateAlert()` step,
 which also removed a one-frame lag: `updateTimer()` runs after
 `updateAlarms()`, so a timer alert used to wait for the following frame.
 
-No defects remain open; the suite has passed at 131 of 131 since TC-086 was
+No defects remain open; the suite has passed at 136 of 136 since TC-086 was
 added.
 
 ---
@@ -2376,6 +2376,38 @@ Arising from this cycle:
 
 ---
 
+# 8.13a Plugins (v2.1.0)
+
+Five cases, TC-094 to TC-098, and four of them are about refusal. That is
+the right proportion. Loading a plugin means running code the application
+did not compile, and it is the one thing here that can take the application
+down without a bug of its own.
+
+| Test Case ID | Objective | Actual Result | Status |
+|--------------|-----------|---------------|--------|
+| TC-094 | A missing plugin directory is normal, not an error | No warning, no failure; the manager stayed empty and unloading twice was safe | **Pass** |
+| TC-095 | A library that is not a plugin is refused by name | A valid shared library exporting something else was refused for the missing symbol; a non-existent path and a text file were refused with the loader's own reason | **Pass** |
+| TC-096 | A plugin built for another ABI is refused, not called | Refused before any other field was read, with both version numbers named | **Pass** |
+| TC-097 | The bundled plugin loads, renders and shuts down | Pomodoro loaded, reported 25:00 ready, counted down when started, declined a key it does not use, advanced on N, and unloaded cleanly | **Pass** |
+| TC-098 | A plugin mode is reachable and driveable in the loop | Three presses of M reached it in the running application; its readout, footer and name appeared; Space and N were handled by the plugin | **Pass** |
+
+Two of these need fixtures that are deliberately broken -- a library
+reporting an ABI this build does not implement, and one that is a perfectly
+good shared library and simply not a plugin. Both are built by the build
+system into `Build/`, because a refusal that is never exercised is an
+assumption rather than a test.
+
+TC-096 is the one that matters most. A plugin reporting a different
+interface version may not have its struct laid out where this build expects,
+so the version is checked before any other field is read. Reading further to
+produce a better diagnostic would mean trusting exactly the thing under
+suspicion.
+
+TC-098 is the end-to-end claim: code the application never compiled reaches
+the screen and answers the keyboard.
+
+---
+
 # 8.13b The Graphical Interface (v2.0.0)
 
 The window added in v2.0.0 is **not covered by the automated suite**, and that
@@ -2445,7 +2477,7 @@ execution statistics, per-requirement outcomes, measured performance figures,
 the compatibility matrix, the defects found and closed, coverage, and the
 acceptance verdict.
 
-The headline result is 131 of 131 automated tests passing, with all documented
+The headline result is 136 of 136 automated tests passing, with all documented
 test cases executed and passed, and no open defects. Continuous integration
 verifies Linux, Windows and macOS on every change, so the compatibility matrix
 reflects executed runs rather than intent. The remaining gap is User
@@ -2843,11 +2875,11 @@ This completes the **06_Testing_Report.md** document.
 | Document | **06_Testing_Report.md** |
 | Project | **Digital Clock System** |
 | Language | **C++17** |
-| Application Version | **2.0.0** |
-| Document Version | **1.8** |
+| Application Version | **2.1.0** |
+| Document Version | **1.9** |
 | Status | **Executed** |
 | Test Execution Date | **2026-08-08** |
-| Result | **131 of 131 automated tests passed; TC-001 – TC-086 all passed** |
+| Result | **136 of 136 automated tests passed; TC-001 – TC-086 all passed** |
 | Open Defects | **None** |
 | Known Gaps | No User Acceptance Testing has been performed (KI-007); a plan is ready in `Docs/UAT_Plan.md`. The graphical interface's visual proportions are judged by eye (KI-010, narrowed) |
 | Environment | Garuda Linux (kernel 7.1.5-zen1-2-zen, x86_64), GCC 16.1.1, GNU Make 4.4.1, CMake 4.4.2 |

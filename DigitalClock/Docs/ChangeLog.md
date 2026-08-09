@@ -504,6 +504,7 @@ The table below summarizes the official project versions.
 | **1.3.0** | Stable        | World clock and time zone support       |
 | **1.4.0** | Stable        | Theme styles and configuration reload   |
 | **2.0.0** | Stable        | Graphical interface                     |
+| **2.1.0** | Stable        | Plugin modes                            |
 
 These versions represent the major milestones in the development lifecycle.
 
@@ -1107,6 +1108,88 @@ open below.
 
 ---
 
+# 3.9f Version 2.1.0 - Plugins
+
+### Release Status
+
+Stable
+
+### Added
+
+- **A plugin interface.** A shared library in `Plugins/` can supply a
+  *mode* -- a fifth entry in the `M` cycle, with the large readout, the line
+  beneath it, its own keys and its own footer hint.
+- `Inc/Plugin.h`, the C ABI a plugin compiles against, and nothing else.
+- `PluginManager`, which finds, validates, loads and unloads them.
+- `Plugins/pomodoro.c`, the bundled example: twenty-five minutes of work,
+  five of break, repeating, with a longer break after the fourth.
+- Configuration keys `Plugins` and `PluginDirectory`.
+
+### Design Notes
+
+- **A mode is the extension point because it is the one with real pull.**
+  A Pomodoro cycle, a countdown to a date, a binary clock: all things people
+  want from a clock, none of which belong in one, and all of which want
+  exactly what a mode already has. The bundled plugin is a Pomodoro because
+  it makes that case concretely rather than shipping a loader and hoping
+  somebody finds a use for it.
+- **The boundary is a C ABI, not C++.** C++ has no stable ABI across
+  compilers or even across versions of one, so a C++ interface would mean a
+  plugin only loads if built with very nearly the same toolchain. That is
+  not a plugin system; it is a recompile with extra steps. For the same
+  reason the buffers are plain `char` arrays with an explicit size rather
+  than `std::string`.
+- **A plugin never links the application.** It receives what it may call in
+  a host struct, so it has no undefined symbols to resolve and cannot reach
+  into the host's internals by accident.
+- **The loader's job is mostly refusing.** Loading a plugin means running
+  code the application did not compile, and every way that goes wrong ends
+  in the same place if unchecked: a call through a pointer into something
+  that is not what it claims to be. A library is refused unless it exports
+  the documented symbol *by name*, reports the ABI this build implements,
+  and supplies a name and a render function. The version check happens
+  before anything else in the struct is read, because a struct built to
+  another layout may not have the fields where this build expects them.
+- **A plugin cannot capture the keys that get the user out.** Q, M, T, F, C,
+  S and D are handled first and never offered, so no plugin can leave
+  somebody unable to change mode or quit.
+- **`RTLD_LOCAL`**, so two plugins defining the same symbol do not silently
+  resolve to whichever loaded first.
+- **A missing plugin directory is not an error.** It is the normal state of
+  an installation with no plugins.
+
+### Changed
+
+- The mode cycle gains a step per loaded plugin, each named in the status
+  bar by the plugin's own name rather than the word "Plugin" -- with two
+  installed, the status bar has to say which is on screen.
+- TC-052 and TC-067 now disable plugins explicitly. Both assert the shape of
+  the mode cycle, and that must not depend on what a particular machine
+  happens to have installed. They found this themselves, by failing.
+
+### Release Verification
+
+| Item | Result |
+|------|--------|
+| Release date | 2026-08-09 |
+| Automated tests | 136 of 136 passed |
+| New test cases | TC-094 - TC-098 |
+| Compiler warnings | 0, application and plugins |
+| Sanitizers | Clean under Address, UndefinedBehavior and Thread, with a library loaded and unloaded |
+| Platforms | Linux, Windows and macOS via CI |
+| End-to-end check | The Pomodoro mode reached by pressing M three times in the real application, counting down and answering its own keys |
+| Open defects | None |
+
+### Notes
+
+Version **2.1.0** closes KI-006, the last item on the roadmap.
+
+Four of the five new tests are about refusal, which is the right proportion:
+a loader that accepts a bad plugin has failed at the only job that can take
+the application down without a bug of its own.
+
+---
+
 # 3.10 Documentation Milestones
 
 The following documentation was completed prior to the first stable release.
@@ -1466,7 +1549,7 @@ Features deferred to future releases:
 | ~~KI-004~~ | ~~Multiple time zone support is unavailable~~ | Enhancement | **Closed in v1.3.0** |
 | ~~KI-005~~ | ~~Graphical User Interface (GUI) is not implemented~~ | Enhancement | **Closed in v2.0.0** |
 | KI-010   | The graphical interface's layout and stylesheet are judged by eye; no assertion covers whether the result is legible or well-proportioned | Low | **Narrowed 2026-08-08** — TC-087 to TC-093 drive the window by keyboard and assert on what is displayed. The behavioural half is covered; the visual half is not, and is left to `Docs/UAT_Plan.md` |
-| KI-006   | Plugin architecture is not available | Enhancement | Open |
+| ~~KI-006~~ | ~~Plugin architecture is not available~~ | Enhancement | **Closed in v2.1.0** — a mode supplied by a shared library, with a bundled Pomodoro example |
 
 KI-000 is closed. It was the only item that affected a claim already made
 about a release, and it was closed by evidence — a Windows CI run — rather
@@ -1969,14 +2052,14 @@ Developers and maintainers are encouraged to update the Change Log as an integra
 | Item | Details |
 | ---- | ------- |
 | Document | **09_ChangeLog.md** |
-| Document Version | **1.8** |
+| Document Version | **1.9** |
 | Project | **Digital Clock System** |
-| Current Version | **2.0.0** |
+| Current Version | **2.1.0** |
 | Release Date | **2026-08-08** |
 | Language | **C++17** |
 | Status | **Released** |
 | Verified On | Linux (GCC 16.1.1), Windows (MSVC 19.51) and macOS, via CI |
-| Test Result | 131 of 131 automated tests passed; 93.70% line coverage; no open defects |
+| Test Result | 136 of 136 automated tests passed; no open defects |
 | Interfaces | Console and graphical, sharing one core library |
 | Known Gaps | No User Acceptance Testing has been performed (KI-007) |
 | Audience | Developers, Maintainers, Test Engineers, Project Managers, End Users |

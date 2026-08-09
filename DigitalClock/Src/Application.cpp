@@ -68,6 +68,7 @@ Application::Application()
     : interval(DEFAULT_INTERVAL),
       alarmsEnabled(true),
       alertRaised(false),
+      currentPlugin(0),
       unknownKeys(0),
       messageUntilMs(0),
       currentMode(Mode::Clock),
@@ -182,6 +183,7 @@ bool Application::initialize(const std::string &path)
     configureAlarms();
     configureTimer();
     configureZones();
+    configurePlugins();
 
     // Stages 5 and 7 - Console and Display.
     display.initialize(theme);
@@ -231,7 +233,9 @@ std::vector<std::string> Application::recognisedKeys()
         "Logging",
         "LogFile",
         "LogLevel",
-        "ConsoleLog"};
+        "ConsoleLog",
+        "Plugins",
+        "PluginDirectory"};
 }
 
 void Application::validateConfiguration()
@@ -678,6 +682,9 @@ std::string Application::modeName(Mode mode)
     case Mode::World:
         return "World";
 
+    case Mode::Plugin:
+        return "Plugin";
+
     case Mode::Clock:
         break;
     }
@@ -694,7 +701,15 @@ void Application::setMode(Mode mode)
 {
     currentMode = mode;
 
-    display.setStatusField("Mode", modeName(mode));
+    /*
+    A plugin's own name, not the word "Plugin": with two loaded, the status
+    bar has to say which one is on screen.
+    */
+    if (mode == Mode::Plugin && pluginManager.count() > 0)
+        display.setStatusField("Mode", pluginManager.nameAt(currentPlugin));
+    else
+        display.setStatusField("Mode", modeName(mode));
+
     display.screen().setFooterHint(footerHint());
 }
 
@@ -713,11 +728,43 @@ Application::Mode Application::cycleMode()
     case Mode::Timer:
         // Skip the world clock when no extra zones are configured; an empty
         // mode is a dead step in the cycle.
-        setMode(zones.count() > 0 ? Mode::World : Mode::Clock);
+        if (zones.count() > 0)
+            setMode(Mode::World);
+        else if (pluginManager.count() > 0)
+        {
+            currentPlugin = 0;
+            setMode(Mode::Plugin);
+        }
+        else
+            setMode(Mode::Clock);
         break;
 
     case Mode::World:
-        setMode(Mode::Clock);
+        // Likewise for plugins: none loaded means no plugin step.
+        if (pluginManager.count() > 0)
+        {
+            currentPlugin = 0;
+            setMode(Mode::Plugin);
+        }
+        else
+            setMode(Mode::Clock);
+        break;
+
+    case Mode::Plugin:
+        /*
+        Each plugin is its own step in the cycle rather than a submenu, so
+        M keeps meaning the same thing however many are installed.
+        */
+        if (currentPlugin + 1 < pluginManager.count())
+        {
+            ++currentPlugin;
+            setMode(Mode::Plugin);
+        }
+        else
+        {
+            currentPlugin = 0;
+            setMode(Mode::Clock);
+        }
         break;
     }
 
@@ -754,6 +801,21 @@ std::string Application::footerHint() const
     case Mode::Timer:
         return "[Space] Start/Pause  [R] Reset  [M] Mode  [T] Theme  [Q] Quit";
 
+    case Mode::Plugin:
+    {
+        const DigitalClockPlugin *plugin = pluginManager.at(currentPlugin);
+
+        if (plugin != nullptr && plugin->footerHint != nullptr)
+        {
+            const char *hint = plugin->footerHint();
+
+            if (hint != nullptr)
+                return hint;
+        }
+
+        return "[M] Mode  [T] Theme  [Q] Quit";
+    }
+
     case Mode::World:
     case Mode::Clock:
         break;
@@ -761,6 +823,88 @@ std::string Application::footerHint() const
 
     return "[M] Mode  [T] Theme  [F] 12/24  [C] Reload   "
            "Press Q or Ctrl+C to Exit";
+}
+
+PluginManager &Application::plugins()
+{
+    return pluginManager;
+}
+
+const DigitalClockPlugin *Application::activePlugin() const
+{
+    if (currentMode != Mode::Plugin)
+        return nullptr;
+
+    return pluginManager.at(currentPlugin);
+}
+
+namespace
+{
+    /*
+    The host services lent to every plugin. File-scope because their
+    addresses are handed across a C ABI and must outlive any Application:
+    a plugin may hold the host pointer until its shutdown().
+    */
+    Logger *pluginLogger = nullptr;
+
+    extern "C" void pluginLog(const char *message)
+    {
+        if (pluginLogger != nullptr && message != nullptr)
+            pluginLogger->info(std::string("[plugin] ") + message);
+    }
+
+    extern "C" long long pluginMonotonicNow()
+    {
+        return static_cast<long long>(Application::monotonicNow());
+    }
+
+    DigitalClockHost pluginHost = {
+        DIGITALCLOCK_PLUGIN_ABI, pluginLog, pluginMonotonicNow};
+}
+
+void Application::configurePlugins()
+{
+    if (!config.getBool("Plugins", true))
+    {
+        logger.info("Plugins disabled by configuration.");
+        return;
+    }
+
+    if (!PluginManager::isSupported())
+    {
+        logger.info("Plugins are not supported on this platform.");
+        return;
+    }
+
+    pluginLogger = &logger;
+
+    const std::string directory = config.getValue("PluginDirectory", "Plugins");
+
+    const std::size_t added =
+        pluginManager.loadDirectory(directory, pluginHost);
+
+    if (added > 0)
+    {
+        logger.info(
+            "Loaded " + std::to_string(added) + " plugin(s) from " +
+            directory + ".");
+
+        for (std::size_t index = 0; index < pluginManager.count(); ++index)
+        {
+            const DigitalClockPlugin *plugin = pluginManager.at(index);
+
+            logger.info(
+                "Plugin: " + pluginManager.nameAt(index) + " " +
+                ((plugin != nullptr && plugin->version != nullptr)
+                     ? plugin->version
+                     : "?"));
+        }
+    }
+
+    // Refusals are warnings rather than silence: a plugin that is present
+    // but not loaded is exactly the case a user needs told about.
+    for (const std::string &reason : pluginManager.rejections())
+        logger.warning("Plugin refused: " + reason);
 }
 
 AlarmManager &Application::alarms()
@@ -832,6 +976,33 @@ void Application::renderFrame()
         display.renderDate(
             "Timer - " + state + "   of " +
             CountdownTimer::format(countdown.duration()));
+        break;
+    }
+
+    case Mode::Plugin:
+    {
+        const DigitalClockPlugin *plugin = pluginManager.at(currentPlugin);
+
+        /*
+        Fixed buffers, pre-terminated. A plugin that writes nothing shows
+        nothing rather than whatever the stack held, and one that writes
+        too much is truncated rather than trusted with our memory.
+        */
+        char readout[128] = {0};
+        char secondary[192] = {0};
+
+        if (plugin != nullptr && plugin->render != nullptr)
+        {
+            plugin->render(static_cast<long long>(nowMs),
+                           readout, static_cast<int>(sizeof(readout)),
+                           secondary, static_cast<int>(sizeof(secondary)));
+
+            readout[sizeof(readout) - 1] = '\0';
+            secondary[sizeof(secondary) - 1] = '\0';
+        }
+
+        display.renderClock(readout);
+        display.renderDate(secondary);
         break;
     }
 
@@ -966,6 +1137,21 @@ bool Application::handleKey(int key)
 
         break;
 
+    case Mode::Plugin:
+    {
+        /*
+        Offered last, and only keys the application has not already taken.
+        A plugin cannot capture Q, M, T, F, C, S or D, so no plugin can
+        leave the user unable to change mode or quit.
+        */
+        const DigitalClockPlugin *plugin = pluginManager.at(currentPlugin);
+
+        if (plugin != nullptr && plugin->handleKey != nullptr)
+            return plugin->handleKey(key, static_cast<long long>(nowMs)) != 0;
+
+        break;
+    }
+
     case Mode::World:
     case Mode::Clock:
         break;
@@ -1066,6 +1252,9 @@ void Application::shutdown()
 
     display.setStatusField("Status", "Stopped");
     display.shutdown();
+
+    pluginManager.unloadAll();
+    pluginLogger = nullptr;
 
     logger.info("Resources released.");
     logger.info("Shutdown complete.");

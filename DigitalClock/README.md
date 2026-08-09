@@ -60,8 +60,8 @@ Every package is built on its own platform and started there before the
 release is drafted, so each is known to run rather than merely to build.
 
 ```bash
-tar -xzf digitalclock-2.0.0-linux-x86_64.tar.gz
-cd digitalclock-2.0.0-linux-x86_64
+tar -xzf digitalclock-2.1.0-linux-x86_64.tar.gz
+cd digitalclock-2.1.0-linux-x86_64
 ./DigitalClock
 ```
 
@@ -172,6 +172,8 @@ Press **C** while the clock is running to re-read the file without restarting.
 | `LogFile`         | path; missing directories are created            | `Logs/application.log` |
 | `LogLevel`        | `DEBUG`, `INFO`, `WARNING`, `ERROR`              | `INFO`                 |
 | `ConsoleLog`      | `true`, `false`                                  | `false`                |
+| `Plugins`         | `Enabled`, `Disabled`                            | `Enabled`              |
+| `PluginDirectory` | directory scanned for plugin libraries           | `Plugins`              |
 
 ### Time formats
 
@@ -446,6 +448,7 @@ DigitalClock/
 ├── Docs/           Specification and design documents
 ├── Gui/            Qt6 graphical interface (optional)
 ├── Inc/            Headers
+├── Plugins/        Plugin modes (optional)
 ├── Logs/           Runtime logs (generated)
 ├── Obj/            Object files (generated)
 ├── Resources/      Banner, logo and theme files
@@ -534,6 +537,43 @@ and what the user could see or do.
 What no assertion answers is whether the result is *legible* or
 well-proportioned. That half stays with [`Docs/UAT_Plan.md`](Docs/UAT_Plan.md)
 and the eye. KI-010 is narrowed, not closed.
+
+---
+
+## Plugins
+
+New in v2.1.0. A shared library in [`Plugins/`](Plugins/) can add a **mode** —
+a fifth entry in the `M` cycle, with the large readout, the line beneath it,
+its own keys and its own footer hint.
+
+The bundled example is a Pomodoro cycle: twenty-five minutes of work, five of
+break, with a longer break after the fourth.
+
+```bash
+cc -std=c11 -shared -fPIC -IInc -o Plugins/pomodoro.so Plugins/pomodoro.c
+```
+
+A plugin compiles against [`Inc/Plugin.h`](Inc/Plugin.h) and nothing else. It
+never links the application: whatever it may call arrives in a host struct, so
+it has no undefined symbols and cannot reach into the host's internals by
+accident. The boundary is a **C ABI**, deliberately — C++ has no stable ABI
+across compilers, so a C++ interface would mean a plugin only loads if built
+with very nearly the same toolchain, which is a recompile with extra steps
+rather than a plugin system.
+
+A library is refused unless it exports the documented symbol *by name*,
+reports the ABI this build implements, and supplies a name and a render
+function. The version is checked before any other field is read, because a
+struct built to a different layout may not have its fields where this build
+expects them.
+
+Q, M, T, F, C, S and D are handled before a plugin sees them, so no plugin can
+leave you unable to change mode or quit.
+
+| Key | Meaning |
+| --- | ------- |
+| `Plugins` | `Enabled` or `Disabled` |
+| `PluginDirectory` | Directory to scan; missing is normal, not an error |
 
 ---
 

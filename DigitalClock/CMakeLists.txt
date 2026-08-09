@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.16)
 
 project(
     DigitalClock
-    VERSION 2.0.0
+    VERSION 2.1.0
     DESCRIPTION "Digital Clock System"
-    LANGUAGES CXX
+    LANGUAGES CXX C
 )
 
 # ----------------------------
@@ -51,6 +51,7 @@ add_library(digitalclock_core STATIC
     Src/Display.cpp
     Src/Logger.cpp
     Src/Notifier.cpp
+    Src/PluginManager.cpp
     Src/ResourceManager.cpp
     Src/Screen.cpp
     Src/Stopwatch.cpp
@@ -70,6 +71,10 @@ target_include_directories(digitalclock_core
 find_package(Threads REQUIRED)
 target_link_libraries(digitalclock_core PUBLIC Threads::Threads)
 
+# dlopen(): part of libc on current glibc, a separate library on older
+# ones and elsewhere. CMAKE_DL_LIBS is empty where it is not needed.
+target_link_libraries(digitalclock_core PUBLIC ${CMAKE_DL_LIBS})
+
 # GCC versions before 9 need a separate library for std::filesystem.
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
     target_link_libraries(digitalclock_core PUBLIC stdc++fs)
@@ -84,6 +89,44 @@ target_link_libraries(DigitalClock PRIVATE digitalclock_core)
 set_target_properties(DigitalClock PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Build
 )
+
+# ----------------------------
+# Plugins (v2.1.0)
+# ----------------------------
+# Built as MODULE libraries: loaded at runtime with dlopen, never linked
+# against. Each compiles against Inc/Plugin.h alone -- no part of the
+# application -- which is what lets a plugin be built by a different
+# compiler than the clock.
+#
+# PREFIX and SUFFIX are set explicitly so the filenames match what
+# PluginManager::librarySuffix() looks for. CMake would otherwise produce
+# libpomodoro.so here and, on macOS, give a MODULE the .so suffix while
+# the loader expects .dylib.
+if(APPLE)
+    set(DIGITALCLOCK_PLUGIN_SUFFIX ".dylib")
+elseif(WIN32)
+    set(DIGITALCLOCK_PLUGIN_SUFFIX ".dll")
+else()
+    set(DIGITALCLOCK_PLUGIN_SUFFIX ".so")
+endif()
+
+function(digitalclock_add_plugin target source destination)
+    add_library(${target} MODULE ${source})
+
+    target_include_directories(${target} PRIVATE ${PROJECT_SOURCE_DIR}/Inc)
+
+    set_target_properties(${target} PROPERTIES
+        PREFIX ""
+        SUFFIX "${DIGITALCLOCK_PLUGIN_SUFFIX}"
+        C_STANDARD 11
+        C_STANDARD_REQUIRED ON
+        LIBRARY_OUTPUT_DIRECTORY "${destination}"
+    )
+endfunction()
+
+# The bundled example: a Pomodoro mode.
+digitalclock_add_plugin(pomodoro Plugins/pomodoro.c
+                        ${PROJECT_SOURCE_DIR}/Plugins)
 
 # ----------------------------
 # Tests
@@ -230,6 +273,7 @@ if(BUILD_TESTING_SUITE)
         Tests/test_timezone.cpp
         Tests/test_console.cpp
         Tests/test_lifecycle.cpp
+        Tests/test_plugin.cpp
     )
 
     target_include_directories(DigitalClockTests
@@ -237,6 +281,16 @@ if(BUILD_TESTING_SUITE)
     )
 
     target_link_libraries(DigitalClockTests PRIVATE digitalclock_core)
+
+    # Deliberately broken plugins, so the loader's refusals are tested
+    # rather than assumed. Built into Build/ where the tests look.
+    digitalclock_add_plugin(badabi Tests/fixtures/badabi.c
+                            ${PROJECT_SOURCE_DIR}/Build)
+    digitalclock_add_plugin(notaplugin Tests/fixtures/notaplugin.c
+                            ${PROJECT_SOURCE_DIR}/Build)
+
+    # ctest must not run before the plugins it loads exist.
+    add_dependencies(DigitalClockTests pomodoro badabi notaplugin)
 
     set_target_properties(DigitalClockTests PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Build

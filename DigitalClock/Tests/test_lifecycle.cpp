@@ -36,6 +36,9 @@
 #include <string>
 #include <thread>
 
+#include <filesystem>
+
+#include "PluginManager.hpp"
 #include "PseudoTerminal.hpp"
 
 using TestSupport::PseudoTerminal;
@@ -178,7 +181,10 @@ TEST_CASE(TC_067, "Verify M cycles through every mode in the running loop")
         "RefreshInterval=50\n"
         "Logging=Disabled\n"
         "Alarms=false\n"
-        "TimeZones=UTC | Coordinated, +05:30 | Kolkata\n");
+        "TimeZones=UTC | Coordinated, +05:30 | Kolkata\n"
+        // The four built-in modes only, so the cycle's length does not
+        // depend on what is installed in Plugins/.
+        "Plugins=false\n");
 
     Application application;
 
@@ -799,6 +805,92 @@ TEST_CASE(TC_080, "Verify a reload leaves a running countdown alone")
     CHECK_TRUE(countdown.isRunning());
     CHECK_EQ(countdown.duration(), static_cast<std::int64_t>(60000));
     CHECK_TRUE(countdown.remaining(Application::monotonicNow()) < 60000);
+}
+
+TEST_CASE(TC_098, "A plugin mode is reachable and driveable in the loop")
+{
+    PseudoTerminal terminal;
+
+    if (!terminal.isReady())
+    {
+        FAIL_TEST("could not open a pseudo-terminal");
+        return;
+    }
+
+    const std::string plugin =
+        "Plugins/pomodoro" + PluginManager::librarySuffix();
+
+    if (!std::filesystem::exists(plugin))
+    {
+        FAIL_TEST("the pomodoro plugin was not built: " + plugin);
+        return;
+    }
+
+    /*
+    No zones, so the cycle is Clock, Stopwatch, Timer, then the plugin: three
+    presses of M. This is the end-to-end claim the loader exists to support --
+    that code the application never compiled ends up on screen and answers
+    the keyboard.
+    */
+    const std::string path = TestFramework::writeTempFile(
+        "loop-plugin.ini",
+        "RefreshInterval=50\n"
+        "Logging=Disabled\n"
+        "Alarms=false\n"
+        "Plugins=true\n");
+
+    Application application;
+
+    CHECK_TRUE(application.initialize(path));
+    CHECK_EQ(application.plugins().count(), static_cast<std::size_t>(1));
+
+    terminal.startCapture();
+
+    Typist typist(
+        [&terminal]()
+        {
+            pause(120);
+
+            for (int press = 0; press < 3; ++press)
+            {
+                terminal.sendKeys("m");
+                pause(120);
+            }
+
+            // Space belongs to the plugin here, and starts its interval.
+            terminal.sendKeys(" ");
+            pause(150);
+
+            // N is a key no built-in mode uses, so it can only have been
+            // handled by the plugin.
+            terminal.sendKeys("n");
+            pause(150);
+
+            quit(terminal);
+        });
+
+    application.run();
+
+    typist.join();
+
+    const std::string drawn = terminal.stopCapture();
+
+    CHECK_TRUE(application.mode() == Application::Mode::Plugin);
+
+    // The plugin's own readout and footer reached the screen.
+    CHECK_CONTAINS(drawn, "25:00");
+    CHECK_CONTAINS(drawn, "Work");
+    CHECK_CONTAINS(drawn, "[N] Next");
+
+    // The status bar names the plugin rather than the word "Plugin", which
+    // is what makes two of them tellable apart.
+    CHECK_CONTAINS(drawn, "Pomodoro");
+
+    // Space was handled by the plugin: it started counting down.
+    CHECK_CONTAINS(drawn, "Running");
+
+    // And N advanced it to the break, which nothing built in would do.
+    CHECK_CONTAINS(drawn, "Break");
 }
 
 #else // _WIN32

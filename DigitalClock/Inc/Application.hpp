@@ -29,6 +29,7 @@
 #include "Display.hpp"
 #include "Logger.hpp"
 #include "Notifier.hpp"
+#include "PluginManager.hpp"
 #include "Stopwatch.hpp"
 #include "ResourceManager.hpp"
 #include "ThemeManager.hpp"
@@ -56,7 +57,8 @@ public:
         Clock,     ///< Time and date (the default).
         Stopwatch, ///< Elapsed time with laps.
         Timer,     ///< Countdown to zero.
-        World      ///< Local time plus the configured zones.
+        World,     ///< Local time plus the configured zones.
+        Plugin     ///< A mode supplied by a plugin (KI-006).
     };
 
     /** Exit status returned on a normal shutdown. */
@@ -183,6 +185,19 @@ public:
      * @return std::string Name such as "Stopwatch".
      */
     static std::string modeName(Mode mode);
+
+    /**
+     * @brief Returns the loaded plugins.
+     * @return PluginManager& The plugin manager.
+     */
+    PluginManager &plugins();
+
+    /**
+     * @brief Returns the plugin currently on screen, or null.
+     *
+     * Null whenever the mode is not Plugin, or no plugin is loaded.
+     */
+    const DigitalClockPlugin *activePlugin() const;
 
     /**
      * @brief Returns the alarm manager.
@@ -347,6 +362,11 @@ private:
     void configureZones();
 
     /**
+     * @brief Loads plugins from the configured directory.
+     */
+    void configurePlugins();
+
+    /**
      * @brief Handles a keystroke.
      *
      * @param key Character read from the console.
@@ -380,6 +400,7 @@ private:
     Stopwatch elapsedTimer;      ///< Stopwatch state.
     CountdownTimer countdown;    ///< Countdown timer state.
     WorldClock zones;            ///< Additional time zones.
+    PluginManager pluginManager; ///< Plugin-supplied modes.
     Notifier alertNotifier;      ///< Composes the alarm alert panel.
     Display display;             ///< Presentation layer.
 
@@ -387,6 +408,7 @@ private:
     bool alarmsEnabled; ///< Whether alarm checking is active.
     bool alertRaised;   ///< Whether this frame raised the alert.
 
+    std::size_t currentPlugin;   ///< Which plugin the Plugin mode shows.
     std::string configPath;      ///< File given to initialize(), for reload.
     std::size_t unknownKeys;     ///< Unrecognised keys in the loaded file.
     std::int64_t messageUntilMs; ///< When the status message expires, or 0.

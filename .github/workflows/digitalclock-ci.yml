@@ -220,8 +220,24 @@ jobs:
             make
           fi
 
+      # `make test` builds the plugins too: the suite loads a real one and
+      # two deliberately broken fixtures, so a build without them would
+      # skip exactly the cases that matter.
       - name: Run test suite
         run: make test
+
+      - name: Confirm the bundled plugin was built and is loaded
+        run: |
+          test -f Plugins/pomodoro.so \
+            || { echo "::error::the pomodoro plugin was not built"; exit 1; }
+
+          ./Build/DigitalClock --once > /dev/null
+
+          grep -q "Loaded 1 plugin" Logs/application.log \
+            || { echo "::error::the plugin was not loaded at startup"; \
+                 tail -20 Logs/application.log; exit 1; }
+
+          echo "Plugin built and loaded."
 
       - name: Smoke test the application
         run: ./Build/DigitalClock --once > /dev/null

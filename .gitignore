@@ -9,3 +9,8 @@
 build/
 cmake-build-*/
 CMakeUserPresets.json
+
+# Left behind by the fuseblk (NTFS) mount this repository sits on when a
+# file is deleted while still open -- a build artifact of the filesystem
+# rather than of the project, and never something to commit.
+.fuse_hidden*
