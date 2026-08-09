@@ -1,0 +1,182 @@
+        -:    0:Source:/run/media/mahakal108/Servers/Skills/C Langagues/Projects/DigitalClock/Src/Logger.cpp
+        -:    0:Graph:../Obj/Logger.gcno
+        -:    0:Data:../Obj/Logger.gcda
+        -:    0:Runs:1
+        -:    1:#include "Logger.hpp"
+        -:    2:
+        -:    3:#include <filesystem>
+        -:    4:#include <iostream>
+        -:    5:
+        -:    6:#include "Utility.hpp"
+        -:    7:
+       28:    8:Logger::Logger()
+       28:    9:    : consoleOutput(false),
+       28:   10:      minimumLevel(Level::INFO)
+        -:   11:{
+       28:   12:}
+        -:   13:
+       28:   14:Logger::~Logger()
+        -:   15:{
+       28:   16:    close();
+       28:   17:}
+        -:   18:
+       28:   19:bool Logger::initialize(const std::string &fileName)
+        -:   20:{
+       28:   21:    if (fileName.empty())
+        1:   22:        return false;
+        -:   23:
+       27:   24:    std::lock_guard<std::mutex> lock(mutex);
+        -:   25:
+       27:   26:    if (file.is_open())
+        -:   27:    {
+    #####:   28:        file.flush();
+    #####:   29:        file.close();
+        -:   30:    }
+        -:   31:
+        -:   32:    /*
+        -:   33:    Create the parent directory when the configured path points somewhere that
+        -:   34:    does not exist yet. A failure here is not fatal -- the open below simply
+        -:   35:    fails and the application runs without logging (TC-024).
+        -:   36:    */
+       27:   37:    const std::filesystem::path path(fileName);
+        -:   38:
+       27:   39:    if (path.has_parent_path())
+        -:   40:    {
+       27:   41:        std::error_code code;
+       27:   42:        std::filesystem::create_directories(path.parent_path(), code);
+        -:   43:    }
+        -:   44:
+       27:   45:    file.open(fileName, std::ios::app);
+        -:   46:
+       27:   47:    if (!file.is_open())
+        2:   48:        return false;
+        -:   49:
+       25:   50:    writeSessionHeader();
+        -:   51:
+       25:   52:    return true;
+       27:   53:}
+        -:   54:
+       75:   55:void Logger::close()
+        -:   56:{
+       75:   57:    std::lock_guard<std::mutex> lock(mutex);
+        -:   58:
+       75:   59:    if (file.is_open())
+        -:   60:    {
+       25:   61:        file.flush();
+       25:   62:        file.close();
+        -:   63:    }
+       75:   64:}
+        -:   65:
+      380:   66:void Logger::log(Level level, const std::string &message)
+        -:   67:{
+      380:   68:    if (static_cast<int>(level) < static_cast<int>(minimumLevel))
+       23:   69:        return;
+        -:   70:
+      357:   71:    std::lock_guard<std::mutex> lock(mutex);
+        -:   72:
+      357:   73:    const std::string entry =
+      714:   74:        "[" + Utility::currentDateTime() + "] " +
+     1428:   75:        "[" + levelToString(level) + "] " +
+      357:   76:        message;
+        -:   77:
+      357:   78:    if (file.is_open())
+        -:   79:    {
+      112:   80:        file << entry << '\n';
+      112:   81:        file.flush();
+        -:   82:    }
+        -:   83:
+      357:   84:    if (consoleOutput)
+    #####:   85:        std::cout << entry << '\n';
+      357:   86:}
+        -:   87:
+      345:   88:void Logger::info(const std::string &message)
+        -:   89:{
+      345:   90:    log(Level::INFO, message);
+      345:   91:}
+        -:   92:
+        7:   93:void Logger::warning(const std::string &message)
+        -:   94:{
+        7:   95:    log(Level::WARNING, message);
+        7:   96:}
+        -:   97:
+        4:   98:void Logger::error(const std::string &message)
+        -:   99:{
+        4:  100:    log(Level::ERROR, message);
+        4:  101:}
+        -:  102:
+       24:  103:void Logger::debug(const std::string &message)
+        -:  104:{
+       24:  105:    log(Level::DEBUG, message);
+       24:  106:}
+        -:  107:
+        4:  108:void Logger::setConsoleOutput(bool enabled)
+        -:  109:{
+        4:  110:    consoleOutput = enabled;
+        4:  111:}
+        -:  112:
+        7:  113:void Logger::setMinimumLevel(Level level)
+        -:  114:{
+        7:  115:    minimumLevel = level;
+        7:  116:}
+        -:  117:
+       10:  118:bool Logger::isOpen() const
+        -:  119:{
+       10:  120:    std::lock_guard<std::mutex> lock(mutex);
+        -:  121:
+       20:  122:    return file.is_open();
+       10:  123:}
+        -:  124:
+      361:  125:std::string Logger::levelToString(Level level)
+        -:  126:{
+      361:  127:    switch (level)
+        -:  128:    {
+        3:  129:    case Level::DEBUG:
+        6:  130:        return "DEBUG";
+        -:  131:
+      345:  132:    case Level::INFO:
+      690:  133:        return "INFO";
+        -:  134:
+        8:  135:    case Level::WARNING:
+       16:  136:        return "WARNING";
+        -:  137:
+        5:  138:    case Level::ERROR:
+       10:  139:        return "ERROR";
+        -:  140:    }
+        -:  141:
+    #####:  142:    return "UNKNOWN";
+        -:  143:}
+        -:  144:
+        9:  145:Logger::Level Logger::levelFromString(const std::string &text,
+        -:  146:                                      Level defaultLevel)
+        -:  147:{
+        9:  148:    const std::string value = Utility::toUpper(Utility::trim(text));
+        -:  149:
+        9:  150:    if (value == "DEBUG")
+        1:  151:        return Level::DEBUG;
+        -:  152:
+        8:  153:    if (value == "INFO")
+        5:  154:        return Level::INFO;
+        -:  155:
+        3:  156:    if (value == "WARNING" || value == "WARN")
+        1:  157:        return Level::WARNING;
+        -:  158:
+        2:  159:    if (value == "ERROR")
+        1:  160:        return Level::ERROR;
+        -:  161:
+        1:  162:    return defaultLevel;
+        9:  163:}
+        -:  164:
+       25:  165:void Logger::writeSessionHeader()
+        -:  166:{
+        -:  167:    // Caller already holds the mutex.
+       25:  168:    if (!file.is_open())
+    #####:  169:        return;
+        -:  170:
+        -:  171:    file << '\n'
+        -:  172:         << "============================================================\n"
+        -:  173:         << "NEW LOGGING SESSION\n"
+       25:  174:         << "Started : " << Utility::currentDateTime() << '\n'
+       25:  175:         << "============================================================\n";
+        -:  176:
+       25:  177:    file.flush();
+        -:  178:}

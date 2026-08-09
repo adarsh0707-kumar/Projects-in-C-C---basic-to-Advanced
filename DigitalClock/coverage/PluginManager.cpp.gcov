@@ -1,0 +1,345 @@
+        -:    0:Source:/run/media/mahakal108/Servers/Skills/C Langagues/Projects/DigitalClock/Src/PluginManager.cpp
+        -:    0:Graph:../Obj/PluginManager.gcno
+        -:    0:Data:../Obj/PluginManager.gcda
+        -:    0:Runs:1
+        -:    1:#include "PluginManager.hpp"
+        -:    2:
+        -:    3:#include <algorithm>
+        -:    4:#include <filesystem>
+        -:    5:
+        -:    6:#if defined(_WIN32)
+        -:    7:#include <windows.h>
+        -:    8:#else
+        -:    9:#include <dlfcn.h>
+        -:   10:#endif
+        -:   11:
+        -:   12:namespace
+        -:   13:{
+        -:   14:    /**
+        -:   15:     * @brief Opens a shared library, or returns null.
+        -:   16:     */
+       25:   17:    void *openLibrary(const std::string &path)
+        -:   18:    {
+        -:   19:#if defined(_WIN32)
+        -:   20:        /*
+        -:   21:        Without this, a LoadLibrary that fails can raise a modal error
+        -:   22:        dialog -- "bad image", a missing dependency -- and on a machine
+        -:   23:        with nobody to dismiss it the process simply stops. That is not
+        -:   24:        hypothetical: the Windows CI job hung indefinitely on the test
+        -:   25:        that deliberately tries to load a text file, while every other
+        -:   26:        platform finished in seconds.
+        -:   27:
+        -:   28:        The previous mode is restored, because this is process-wide and
+        -:   29:        the application has no business changing it permanently.
+        -:   30:        */
+        -:   31:        const UINT previousMode =
+        -:   32:            SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX);
+        -:   33:
+        -:   34:        void *handle = static_cast<void *>(LoadLibraryA(path.c_str()));
+        -:   35:
+        -:   36:        SetErrorMode(previousMode);
+        -:   37:
+        -:   38:        return handle;
+        -:   39:#else
+        -:   40:        /*
+        -:   41:        RTLD_LOCAL so a plugin's symbols do not join the global namespace,
+        -:   42:        where two plugins defining the same name would silently resolve to
+        -:   43:        whichever loaded first.
+        -:   44:        */
+       25:   45:        return dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
+        -:   46:#endif
+        -:   47:    }
+        -:   48:
+        -:   49:    /**
+        -:   50:     * @brief Looks up a symbol, or returns null.
+        -:   51:     */
+       23:   52:    void *findSymbol(void *handle, const char *name)
+        -:   53:    {
+        -:   54:#if defined(_WIN32)
+        -:   55:        return reinterpret_cast<void *>(
+        -:   56:            GetProcAddress(static_cast<HMODULE>(handle), name));
+        -:   57:#else
+       23:   58:        return dlsym(handle, name);
+        -:   59:#endif
+        -:   60:    }
+        -:   61:
+        -:   62:    /**
+        -:   63:     * @brief Closes a library.
+        -:   64:     */
+       23:   65:    void closeLibrary(void *handle)
+        -:   66:    {
+        -:   67:#if defined(_WIN32)
+        -:   68:        FreeLibrary(static_cast<HMODULE>(handle));
+        -:   69:#else
+       23:   70:        dlclose(handle);
+        -:   71:#endif
+       23:   72:    }
+        -:   73:
+        -:   74:    /**
+        -:   75:     * @brief Describes why the last open or lookup failed.
+        -:   76:     */
+        2:   77:    std::string lastError()
+        -:   78:    {
+        -:   79:#if defined(_WIN32)
+        -:   80:        /*
+        -:   81:        The code, not just "it failed". A generic message cost real time
+        -:   82:        once: two plugins were being refused for a missing export and the
+        -:   83:        rejection said nothing that pointed there.
+        -:   84:        */
+        -:   85:        const DWORD code = GetLastError();
+        -:   86:
+        -:   87:        char *text = nullptr;
+        -:   88:
+        -:   89:        const DWORD length = FormatMessageA(
+        -:   90:            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+        -:   91:                FORMAT_MESSAGE_IGNORE_INSERTS,
+        -:   92:            nullptr, code, 0, reinterpret_cast<char *>(&text), 0, nullptr);
+        -:   93:
+        -:   94:        std::string message = "error " + std::to_string(code);
+        -:   95:
+        -:   96:        if (length > 0 && text != nullptr)
+        -:   97:        {
+        -:   98:            std::string described(text, length);
+        -:   99:
+        -:  100:            // FormatMessage ends its text with a newline.
+        -:  101:            while (!described.empty() &&
+        -:  102:                   (described.back() == '\n' || described.back() == '\r'))
+        -:  103:            {
+        -:  104:                described.pop_back();
+        -:  105:            }
+        -:  106:
+        -:  107:            message += ": " + described;
+        -:  108:        }
+        -:  109:
+        -:  110:        if (text != nullptr)
+        -:  111:            LocalFree(text);
+        -:  112:
+        -:  113:        return message;
+        -:  114:#else
+        2:  115:        const char *message = dlerror();
+        -:  116:
+       4*:  117:        return (message != nullptr) ? message : "unknown error";
+        -:  118:#endif
+        -:  119:    }
+        -:  120:}
+        -:  121:
+        -:  122:const std::size_t PluginManager::MAX_PLUGINS = 16;
+        -:  123:
+       27:  124:PluginManager::PluginManager() = default;
+        -:  125:
+       27:  126:PluginManager::~PluginManager()
+        -:  127:{
+       27:  128:    unloadAll();
+       27:  129:}
+        -:  130:
+       66:  131:bool PluginManager::isSupported()
+        -:  132:{
+        -:  133:#if defined(_WIN32) || defined(__unix__) || defined(__APPLE__)
+       66:  134:    return true;
+        -:  135:#else
+        -:  136:    return false;
+        -:  137:#endif
+        -:  138:}
+        -:  139:
+       44:  140:std::string PluginManager::librarySuffix()
+        -:  141:{
+        -:  142:#if defined(_WIN32)
+        -:  143:    return ".dll";
+        -:  144:#elif defined(__APPLE__)
+        -:  145:    return ".dylib";
+        -:  146:#else
+       88:  147:    return ".so";
+        -:  148:#endif
+        -:  149:}
+        -:  150:
+       21:  151:std::size_t PluginManager::loadDirectory(const std::string &directory,
+        -:  152:                                         const DigitalClockHost &host)
+        -:  153:{
+       21:  154:    if (!isSupported())
+        -:  155:    {
+    #####:  156:        refused.push_back(
+    #####:  157:            "plugins are not supported on this platform");
+        -:  158:
+    #####:  159:        return 0;
+        -:  160:    }
+        -:  161:
+       21:  162:    std::error_code code;
+        -:  163:
+       21:  164:    if (!std::filesystem::is_directory(directory, code))
+        -:  165:    {
+        -:  166:        // Not an error: an installation with no plugins has no directory.
+        1:  167:        return 0;
+        -:  168:    }
+        -:  169:
+        -:  170:    // Sorted, so the order plugins appear in the mode cycle is the same on
+        -:  171:    // every machine rather than whatever the filesystem returns.
+       20:  172:    std::vector<std::string> candidates;
+        -:  173:
+       20:  174:    for (const auto &entry :
+       60:  175:         std::filesystem::directory_iterator(directory, code))
+        -:  176:    {
+      40*:  177:        if (!entry.is_regular_file(code))
+    #####:  178:            continue;
+        -:  179:
+       40:  180:        if (entry.path().extension().string() != librarySuffix())
+       20:  181:            continue;
+        -:  182:
+       20:  183:        candidates.push_back(entry.path().string());
+       20:  184:    }
+        -:  185:
+       20:  186:    std::sort(candidates.begin(), candidates.end());
+        -:  187:
+       20:  188:    std::size_t added = 0;
+        -:  189:
+       60:  190:    for (const std::string &path : candidates)
+        -:  191:    {
+       20:  192:        if (loaded.size() >= MAX_PLUGINS)
+        -:  193:        {
+    #####:  194:            refused.push_back(
+    #####:  195:                "too many plugins; '" + path + "' and any after it "
+    #####:  196:                "were not loaded");
+    #####:  197:            break;
+        -:  198:        }
+        -:  199:
+       20:  200:        if (loadPlugin(path, host))
+       20:  201:            ++added;
+        -:  202:    }
+        -:  203:
+       20:  204:    return added;
+       20:  205:}
+        -:  206:
+       25:  207:bool PluginManager::loadPlugin(const std::string &path,
+        -:  208:                               const DigitalClockHost &host)
+        -:  209:{
+       25:  210:    if (!isSupported())
+    #####:  211:        return false;
+        -:  212:
+       25:  213:    void *handle = openLibrary(path);
+        -:  214:
+       25:  215:    if (handle == nullptr)
+        -:  216:    {
+        2:  217:        refused.push_back("'" + path + "': " + lastError());
+        2:  218:        return false;
+        -:  219:    }
+        -:  220:
+       23:  221:    void *symbol = findSymbol(handle, DIGITALCLOCK_PLUGIN_INIT_SYMBOL);
+        -:  222:
+       23:  223:    if (symbol == nullptr)
+        -:  224:    {
+        -:  225:        /*
+        -:  226:        A shared library that happens to be in the directory but is not a
+        -:  227:        plugin lands here. Refusing by name is the point: the alternative is
+        -:  228:        guessing at an entry point and calling something arbitrary.
+        -:  229:        */
+        2:  230:        refused.push_back(
+        2:  231:            "'" + path + "': no " +
+        4:  232:            std::string(DIGITALCLOCK_PLUGIN_INIT_SYMBOL) + " symbol");
+        -:  233:
+        1:  234:        closeLibrary(handle);
+        -:  235:
+        1:  236:        return false;
+        -:  237:    }
+        -:  238:
+       22:  239:    DigitalClockPluginInit initialise =
+        -:  240:        reinterpret_cast<DigitalClockPluginInit>(symbol);
+        -:  241:
+       22:  242:    const DigitalClockPlugin *plugin = initialise(&host);
+        -:  243:
+       22:  244:    if (plugin == nullptr)
+        -:  245:    {
+        -:  246:        // A plugin may decline: an unmet requirement of its own is its
+        -:  247:        // business, and saying no is better than half-working.
+    #####:  248:        refused.push_back("'" + path + "': declined to initialise");
+    #####:  249:        closeLibrary(handle);
+    #####:  250:        return false;
+        -:  251:    }
+        -:  252:
+       22:  253:    if (plugin->abiVersion != DIGITALCLOCK_PLUGIN_ABI)
+        -:  254:    {
+        1:  255:        refused.push_back(
+        2:  256:            "'" + path + "': built for plugin ABI " +
+        4:  257:            std::to_string(plugin->abiVersion) + ", this build expects " +
+        3:  258:            std::to_string(DIGITALCLOCK_PLUGIN_ABI));
+        -:  259:
+        1:  260:        closeLibrary(handle);
+        -:  261:
+        1:  262:        return false;
+        -:  263:    }
+        -:  264:
+       21:  265:    if (plugin->name == nullptr || plugin->name[0] == '\0' ||
+       21:  266:        plugin->render == nullptr)
+        -:  267:    {
+    #####:  268:        refused.push_back(
+    #####:  269:            "'" + path + "': a plugin must supply a name and a render "
+    #####:  270:            "function");
+        -:  271:
+    #####:  272:        closeLibrary(handle);
+        -:  273:
+    #####:  274:        return false;
+        -:  275:    }
+        -:  276:
+       21:  277:    Loaded entry;
+       21:  278:    entry.handle = handle;
+       21:  279:    entry.plugin = plugin;
+       21:  280:    entry.path = path;
+        -:  281:
+       21:  282:    loaded.push_back(entry);
+        -:  283:
+       21:  284:    return true;
+       21:  285:}
+        -:  286:
+       52:  287:std::size_t PluginManager::count() const
+        -:  288:{
+       52:  289:    return loaded.size();
+        -:  290:}
+        -:  291:
+       58:  292:const DigitalClockPlugin *PluginManager::at(std::size_t index) const
+        -:  293:{
+       58:  294:    if (index >= loaded.size())
+        2:  295:        return nullptr;
+        -:  296:
+       56:  297:    return loaded[index].plugin;
+        -:  298:}
+        -:  299:
+       23:  300:std::string PluginManager::nameAt(std::size_t index) const
+        -:  301:{
+       23:  302:    const DigitalClockPlugin *plugin = at(index);
+        -:  303:
+       23:  304:    if (plugin == nullptr || plugin->name == nullptr)
+        2:  305:        return "";
+        -:  306:
+       44:  307:    std::string name(plugin->name);
+        -:  308:
+       22:  309:    if (name.size() > DIGITALCLOCK_PLUGIN_NAME_MAX)
+    #####:  310:        name.resize(DIGITALCLOCK_PLUGIN_NAME_MAX);
+        -:  311:
+       22:  312:    return name;
+       22:  313:}
+        -:  314:
+       51:  315:void PluginManager::unloadAll()
+        -:  316:{
+        -:  317:    /*
+        -:  318:    Shut every plugin down before closing any library. A plugin's shutdown()
+        -:  319:    lives in its own library, so closing as we go would be fine -- but a
+        -:  320:    plugin that kept a pointer into another would not be, and the ordering
+        -:  321:    costs nothing.
+        -:  322:    */
+      123:  323:    for (const Loaded &entry : loaded)
+        -:  324:    {
+       21:  325:        if (entry.plugin != nullptr && entry.plugin->shutdown != nullptr)
+       21:  326:            entry.plugin->shutdown();
+        -:  327:    }
+        -:  328:
+      123:  329:    for (const Loaded &entry : loaded)
+        -:  330:    {
+       21:  331:        if (entry.handle != nullptr)
+       21:  332:            closeLibrary(entry.handle);
+        -:  333:    }
+        -:  334:
+       51:  335:    loaded.clear();
+       51:  336:}
+        -:  337:
+       24:  338:const std::vector<std::string> &PluginManager::rejections() const
+        -:  339:{
+       24:  340:    return refused;
+        -:  341:}

@@ -1,0 +1,123 @@
+        -:    0:Source:/run/media/mahakal108/Servers/Skills/C Langagues/Projects/DigitalClock/Src/WorldClock.cpp
+        -:    0:Graph:../Obj/WorldClock.gcno
+        -:    0:Data:../Obj/WorldClock.gcda
+        -:    0:Runs:1
+        -:    1:#include "WorldClock.hpp"
+        -:    2:
+        -:    3:#include <algorithm>
+        -:    4:#include <sstream>
+        -:    5:
+        -:    6:#include "Utility.hpp"
+        -:    7:
+        -:    8:const std::size_t WorldClock::MAX_ZONES = 8;
+        -:    9:
+       27:   10:WorldClock::WorldClock()
+       27:   11:    : invalidEntries(0)
+        -:   12:{
+       27:   13:}
+        -:   14:
+        8:   15:bool WorldClock::load(const std::string &value)
+        -:   16:{
+        8:   17:    clear();
+        -:   18:
+        8:   19:    std::istringstream stream(value);
+        8:   20:    std::string entry;
+        -:   21:
+       34:   22:    while (std::getline(stream, entry, ','))
+        -:   23:    {
+       27:   24:        const std::string trimmed = Utility::trim(entry);
+        -:   25:
+       27:   26:        if (trimmed.empty())
+        1:   27:            continue;
+        -:   28:
+       26:   29:        TimeZone zone;
+        -:   30:
+       26:   31:        if (!TimeZone::parse(trimmed, zone))
+        -:   32:        {
+        -:   33:            // One bad entry must not discard the rest of the list.
+        5:   34:            ++invalidEntries;
+        5:   35:            continue;
+        -:   36:        }
+        -:   37:
+       21:   38:        if (!add(zone))
+        1:   39:            break;
+       53:   40:    }
+        -:   41:
+       16:   42:    return !zones.empty();
+        8:   43:}
+        -:   44:
+       21:   45:bool WorldClock::add(const TimeZone &zone)
+        -:   46:{
+       21:   47:    if (zones.size() >= MAX_ZONES)
+        1:   48:        return false;
+        -:   49:
+       20:   50:    zones.push_back(zone);
+        -:   51:
+       20:   52:    return true;
+        -:   53:}
+        -:   54:
+        8:   55:void WorldClock::clear()
+        -:   56:{
+        8:   57:    zones.clear();
+        8:   58:    invalidEntries = 0;
+        8:   59:}
+        -:   60:
+       10:   61:std::size_t WorldClock::count() const
+        -:   62:{
+       10:   63:    return zones.size();
+        -:   64:}
+        -:   65:
+        3:   66:std::size_t WorldClock::invalidCount() const
+        -:   67:{
+        3:   68:    return invalidEntries;
+        -:   69:}
+        -:   70:
+        2:   71:std::size_t WorldClock::unresolvedCount() const
+        -:   72:{
+        -:   73:    return static_cast<std::size_t>(
+        2:   74:        std::count_if(
+        -:   75:            zones.begin(),
+        -:   76:            zones.end(),
+        5:   77:            [](const TimeZone &zone)
+        7:   78:            { return !zone.resolves(); }));
+        -:   79:}
+        -:   80:
+        5:   81:const TimeZone &WorldClock::at(std::size_t index) const
+        -:   82:{
+        5:   83:    return zones.at(index);
+        -:   84:}
+        -:   85:
+        6:   86:std::vector<std::string> WorldClock::rows(std::time_t utc, bool hour12) const
+        -:   87:{
+        6:   88:    std::vector<std::string> result;
+        -:   89:
+        6:   90:    if (zones.empty())
+        1:   91:        return result;
+        -:   92:
+        -:   93:    // Pad labels to a common width so the times form a column.
+        5:   94:    std::size_t labelWidth = 0;
+        -:   95:
+       22:   96:    for (const TimeZone &zone : zones)
+       12:   97:        labelWidth = std::max(labelWidth, zone.label().size());
+        -:   98:
+       22:   99:    for (const TimeZone &zone : zones)
+        -:  100:    {
+       12:  101:        std::string row = zone.label();
+       12:  102:        row.append(labelWidth - zone.label().size(), ' ');
+        -:  103:
+       12:  104:        row += "  " + zone.formatTime(utc, hour12);
+       12:  105:        row += "  (UTC" + zone.formatOffset(utc) + ")";
+        -:  106:
+        -:  107:        /*
+        -:  108:        A named zone the platform cannot resolve falls back to UTC. Saying so
+        -:  109:        is the whole point: showing UTC under a "Tokyo" label would be a
+        -:  110:        wrong answer presented as a right one.
+        -:  111:        */
+       12:  112:        if (!zone.resolves())
+    #####:  113:            row += "  [unavailable on this platform]";
+        -:  114:
+       12:  115:        result.push_back(row);
+       12:  116:    }
+        -:  117:
+        5:  118:    return result;
+    =====:  119:}

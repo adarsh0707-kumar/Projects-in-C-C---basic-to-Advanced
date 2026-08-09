@@ -1,0 +1,213 @@
+        -:    0:Source:/usr/include/c++/16/bits/predefined_ops.h
+        -:    0:Graph:../Obj/Screen.gcno
+        -:    0:Data:../Obj/Screen.gcda
+        -:    0:Runs:1
+        -:    1:// Default predicates for internal use -*- C++ -*-
+        -:    2:
+        -:    3:// Copyright (C) 2013-2026 Free Software Foundation, Inc.
+        -:    4://
+        -:    5:// This file is part of the GNU ISO C++ Library.  This library is free
+        -:    6:// software; you can redistribute it and/or modify it under the
+        -:    7:// terms of the GNU General Public License as published by the
+        -:    8:// Free Software Foundation; either version 3, or (at your option)
+        -:    9:// any later version.
+        -:   10:
+        -:   11:// This library is distributed in the hope that it will be useful,
+        -:   12:// but WITHOUT ANY WARRANTY; without even the implied warranty of
+        -:   13:// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        -:   14:// GNU General Public License for more details.
+        -:   15:
+        -:   16:// Under Section 7 of GPL version 3, you are granted additional
+        -:   17:// permissions described in the GCC Runtime Library Exception, version
+        -:   18:// 3.1, as published by the Free Software Foundation.
+        -:   19:
+        -:   20:// You should have received a copy of the GNU General Public License and
+        -:   21:// a copy of the GCC Runtime Library Exception along with this program;
+        -:   22:// see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
+        -:   23:// <http://www.gnu.org/licenses/>.
+        -:   24:
+        -:   25:/** @file predefined_ops.h
+        -:   26: *  This is an internal header file, included by other library headers.
+        -:   27: *  You should not attempt to use it directly. @headername{algorithm}
+        -:   28: */
+        -:   29:
+        -:   30:#ifndef _GLIBCXX_PREDEFINED_OPS_H
+        -:   31:#define _GLIBCXX_PREDEFINED_OPS_H	1
+        -:   32:
+        -:   33:#include <bits/stl_function.h> // less<void>, equal_to<void>
+        -:   34:#if __cplusplus >= 201103L
+        -:   35:# include <type_traits>        // is_empty, is_scalar, __conditional_t, __or_
+        -:   36:#else
+        -:   37:# include <ext/type_traits.h>  // __conditional_type
+        -:   38:#endif
+        -:   39:
+        -:   40:namespace __gnu_cxx
+        -:   41:{
+        -:   42:namespace __ops
+        -:   43:{
+        -:   44:  // These two explicit specializations are always defined by libstdc++,
+        -:   45:  // even when __cpp_lib_transparent_operators is not defined.
+        -:   46:  typedef std::equal_to<void> equal_to;
+        -:   47:  typedef std::less<void> less;
+        -:   48:
+        -:   49:#if __cplusplus >= 201103L
+        -:   50:
+        -:   51:  template<typename _Fn>
+        -:   52:    using __by_ref_or_value_fn
+        -:   53:      = std::__conditional_t<std::__or_<std::is_empty<_Fn>,
+        -:   54:					std::is_scalar<_Fn>>::value,
+        -:   55:			     _Fn, _Fn&>;
+        -:   56:
+        -:   57:  // More generic replacements for the deprecated utilities
+        -:   58:  // std::bind1st, std::bind2nd, and std::not1.
+        -:   59:  // These aren't fully "transparent" like std::less<void> because they
+        -:   60:  // do not use perfect forwarding, everything is treated as an lvalue.
+        -:   61:
+        -:   62:  template<typename _Func, typename _Value, bool _Val_2nd = false>
+        -:   63:    struct _Comp_with_val
+        -:   64:    {
+        -:   65:      using _Fn = __by_ref_or_value_fn<_Func>;
+        -:   66:
+        -:   67:      explicit constexpr
+      424:   68:      _Comp_with_val(_Fn __f, const _Value& __v)
+      424:   69:      : _M_f(__f), _M_val(__v) { }
+        -:   70:
+        -:   71:      [[__no_unique_address__]] _Fn _M_f;
+        -:   72:      const _Value& _M_val;
+        -:   73:
+        -:   74:      template<typename _Tp>
+        -:   75:	_GLIBCXX14_CONSTEXPR bool
+     2224:   76:	operator()(_Tp&& __arg)
+        -:   77:	{
+        -:   78:#pragma GCC diagnostic push
+        -:   79:#pragma GCC diagnostic ignored "-Wc++17-extensions"
+        -:   80:	  if constexpr (_Val_2nd)
+     2224:   81:	    return _M_f(__arg, _M_val);
+        -:   82:	  else
+        -:   83:	    return _M_f(_M_val, __arg);
+        -:   84:#pragma GCC diagnostic pop
+        -:   85:	}
+        -:   86:    };
+        -:   87:
+        -:   88:  template<typename _Func, typename _Value>
+        -:   89:    using _Comp_with_val_1st = _Comp_with_val<_Func, _Value, false>;
+        -:   90:  template<typename _Func, typename _Value>
+        -:   91:    using _Comp_with_val_2nd = _Comp_with_val<_Func, _Value, true>;
+        -:   92:
+        -:   93:    template<typename _Func>
+        -:   94:    struct _Unary_negate
+        -:   95:    {
+        -:   96:      using _Fn = __by_ref_or_value_fn<_Func>;
+        -:   97:
+        -:   98:      explicit constexpr
+        -:   99:      _Unary_negate(_Fn __f) : _M_f(__f) { }
+        -:  100:
+        -:  101:      [[__no_unique_address__]] _Fn _M_f;
+        -:  102:
+        -:  103:      template<typename _Tp>
+        -:  104:	_GLIBCXX14_CONSTEXPR bool
+        -:  105:	operator()(_Tp&& __arg) { return !_M_f(__arg); }
+        -:  106:    };
+        -:  107:
+        -:  108:  template<typename _Func>
+        -:  109:    constexpr _Unary_negate<_Func>
+        -:  110:    not1(_Func& __f)
+        -:  111:    { return _Unary_negate<_Func>(__f); }
+        -:  112:
+        -:  113:#else // <= C++11
+        -:  114:
+        -:  115:  template<typename _Fn>
+        -:  116:    struct __by_ref_or_value_fn
+        -:  117:    : __conditional_type<__is_empty(_Fn), _Fn, _Fn&>
+        -:  118:    { };
+        -:  119:
+        -:  120:  template<typename _Fn>
+        -:  121:    struct __by_ref_or_value_fn<_Fn*>
+        -:  122:    { typedef _Fn* __type; };
+        -:  123:
+        -:  124:  // We don't use std::binder1st, std::binder2nd, or std::unary_negate here
+        -:  125:  // because they require adaptable function objects, i.e. types with nested
+        -:  126:  // result_type and argument_type/first_argument_type/second_argument_type.
+        -:  127:
+        -:  128:  template<typename _Func, typename _Value>
+        -:  129:    struct _Comp_with_val_1st
+        -:  130:    {
+        -:  131:      typedef typename __by_ref_or_value_fn<_Func>::__type _Fn;
+        -:  132:
+        -:  133:      explicit
+        -:  134:      _Comp_with_val_1st(_Fn __f, const _Value& __v)
+        -:  135:      : _M_f(__f), _M_val(__v) { }
+        -:  136:
+        -:  137:      _Fn _M_f;
+        -:  138:      const _Value& _M_val;
+        -:  139:
+        -:  140:      template<typename _Tp>
+        -:  141:	bool operator()(_Tp& __arg) { return _M_f(_M_val, __arg); }
+        -:  142:      template<typename _Tp>
+        -:  143:	bool operator()(const _Tp& __arg) { return _M_f(_M_val, __arg); }
+        -:  144:    };
+        -:  145:
+        -:  146:  template<typename _Func, typename _Value>
+        -:  147:    struct _Comp_with_val_2nd
+        -:  148:    {
+        -:  149:      typedef typename __by_ref_or_value_fn<_Func>::__type _Fn;
+        -:  150:
+        -:  151:      explicit
+        -:  152:      _Comp_with_val_2nd(_Fn __f, const _Value& __v)
+        -:  153:      : _M_f(__f), _M_val(__v) { }
+        -:  154:
+        -:  155:      _Fn _M_f;
+        -:  156:      const _Value& _M_val;
+        -:  157:
+        -:  158:      template<typename _Tp>
+        -:  159:	bool operator()(_Tp& __arg) { return _M_f(__arg, _M_val); }
+        -:  160:      template<typename _Tp>
+        -:  161:	bool operator()(const _Tp& __arg) { return _M_f(__arg, _M_val); }
+        -:  162:    };
+        -:  163:
+        -:  164:  template<typename _Func>
+        -:  165:    struct _Unary_negate_1 // N.B. different name for C++98 to satisfy ODR
+        -:  166:    {
+        -:  167:      typedef typename __by_ref_or_value_fn<_Func>::__type _Fn;
+        -:  168:
+        -:  169:      explicit _Unary_negate_1(_Fn __f) : _M_f(__f) { }
+        -:  170:
+        -:  171:      _Fn _M_f;
+        -:  172:
+        -:  173:      template<typename _Tp>
+        -:  174:	bool
+        -:  175:	operator()(_Tp& __arg) { return !_M_f(__arg); }
+        -:  176:      template<typename _Tp>
+        -:  177:	bool
+        -:  178:	operator()(const _Tp& __arg) { return !_M_f(__arg); }
+        -:  179:    };
+        -:  180:
+        -:  181:  template<typename _Func>
+        -:  182:    inline _Unary_negate_1<_Func>
+        -:  183:    not1(_Func& __f)
+        -:  184:    { return _Unary_negate_1<_Func>(__f); }
+        -:  185:#endif
+        -:  186:
+        -:  187:  // N.B. these functions take lvalue references because we want to avoid
+        -:  188:  // returning a call wrapper that has a dangling reference to a prvalue.
+        -:  189:
+        -:  190:  template<typename _Func, typename _Value>
+        -:  191:    _GLIBCXX_CONSTEXPR inline _Comp_with_val_1st<_Func, _Value>
+        -:  192:    bind1st(_Func& __f, const _Value& __val)
+        -:  193:    { return _Comp_with_val_1st<_Func, _Value>(__f, __val); }
+        -:  194:
+        -:  195:  template<typename _Func, typename _Value>
+        -:  196:    _GLIBCXX_CONSTEXPR inline _Comp_with_val_2nd<_Func, _Value>
+        -:  197:    bind2nd(_Func& __f, const _Value& __val)
+        -:  198:    { return _Comp_with_val_2nd<_Func, _Value>(__f, __val); }
+        -:  199:
+        -:  200:  // Equivalent to bind2nd(equal_to{}, val)
+        -:  201:  template<typename _Value>
+        -:  202:    _GLIBCXX_CONSTEXPR inline _Comp_with_val_2nd<equal_to, _Value>
+      424:  203:    __equal_to(const _Value& __val)
+      424:  204:    { return _Comp_with_val_2nd<equal_to, _Value>(equal_to(), __val); }
+        -:  205:
+        -:  206:} // namespace __ops
+        -:  207:} // namespace __gnu_cxx
+        -:  208:
+        -:  209:#endif

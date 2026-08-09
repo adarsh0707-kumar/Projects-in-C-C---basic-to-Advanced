@@ -1,0 +1,236 @@
+        -:    0:Source:/usr/include/c++/16/new
+        -:    0:Graph:../Obj/WorldClock.gcno
+        -:    0:Data:../Obj/WorldClock.gcda
+        -:    0:Runs:1
+        -:    1:// The -*- C++ -*- dynamic memory management header.
+        -:    2:
+        -:    3:// Copyright (C) 1994-2026 Free Software Foundation, Inc.
+        -:    4:
+        -:    5:// This file is part of GCC.
+        -:    6://
+        -:    7:// GCC is free software; you can redistribute it and/or modify
+        -:    8:// it under the terms of the GNU General Public License as published by
+        -:    9:// the Free Software Foundation; either version 3, or (at your option)
+        -:   10:// any later version.
+        -:   11:// 
+        -:   12:// GCC is distributed in the hope that it will be useful,
+        -:   13:// but WITHOUT ANY WARRANTY; without even the implied warranty of
+        -:   14:// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        -:   15:// GNU General Public License for more details.
+        -:   16:// 
+        -:   17:// Under Section 7 of GPL version 3, you are granted additional
+        -:   18:// permissions described in the GCC Runtime Library Exception, version
+        -:   19:// 3.1, as published by the Free Software Foundation.
+        -:   20:
+        -:   21:// You should have received a copy of the GNU General Public License and
+        -:   22:// a copy of the GCC Runtime Library Exception along with this program;
+        -:   23:// see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
+        -:   24:// <http://www.gnu.org/licenses/>.
+        -:   25:
+        -:   26:/** @file new
+        -:   27: *  This is a Standard C++ Library header.
+        -:   28: *
+        -:   29: *  The header @c new defines several functions to manage dynamic memory and
+        -:   30: *  handling memory allocation errors; see
+        -:   31: *  https://gcc.gnu.org/onlinedocs/libstdc++/manual/dynamic_memory.html
+        -:   32: *  for more.
+        -:   33: */
+        -:   34:
+        -:   35:#ifndef _NEW
+        -:   36:#define _NEW
+        -:   37:
+        -:   38:#ifdef _GLIBCXX_SYSHDR
+        -:   39:#pragma GCC system_header
+        -:   40:#endif
+        -:   41:
+        -:   42:#include <bits/c++config.h>
+        -:   43:#include <bits/exception.h>
+        -:   44:
+        -:   45:#define __glibcxx_want_launder
+        -:   46:#define __glibcxx_want_hardware_interference_size
+        -:   47:#define __glibcxx_want_destroying_delete
+        -:   48:#define __glibcxx_want_constexpr_new
+        -:   49:#include <bits/version.h>
+        -:   50:#include <bits/new_except.h> // std::bad_alloc, std::bad_array_new_length
+        -:   51:
+        -:   52:#pragma GCC diagnostic push
+        -:   53:#pragma GCC diagnostic ignored "-Wc++11-extensions" // scoped enum
+        -:   54:
+        -:   55:#pragma GCC visibility push(default)
+        -:   56:
+        -:   57:extern "C++" {
+        -:   58:
+        -:   59:namespace std 
+        -:   60:{
+        -:   61:#if __cpp_aligned_new
+        -:   62:  enum class align_val_t: size_t {};
+        -:   63:#endif
+        -:   64:
+        -:   65:  struct nothrow_t
+        -:   66:  {
+        -:   67:#if __cplusplus >= 201103L
+        -:   68:    explicit nothrow_t() = default;
+        -:   69:#endif
+        -:   70:  };
+        -:   71:
+        -:   72:  extern const nothrow_t nothrow;
+        -:   73:
+        -:   74:  /** If you write your own error handler to be called by @c new, it must
+        -:   75:   *  be of this type.  */
+        -:   76:  typedef void (*new_handler)();
+        -:   77:
+        -:   78:  /// Takes a replacement handler as the argument, returns the
+        -:   79:  /// previous handler.
+        -:   80:  new_handler set_new_handler(new_handler) throw();
+        -:   81:
+        -:   82:#if __cplusplus >= 201103L
+        -:   83:  /// Return the current new handler.
+        -:   84:  new_handler get_new_handler() noexcept;
+        -:   85:#endif
+        -:   86:} // namespace std
+        -:   87:
+        -:   88://@{
+        -:   89:/** These are replaceable signatures:
+        -:   90: *  - normal single new and delete (no arguments, throw @c bad_alloc on error)
+        -:   91: *  - normal array new and delete (same)
+        -:   92: *  - @c nothrow single new and delete (take a @c nothrow argument, return
+        -:   93: *    @c NULL on error)
+        -:   94: *  - @c nothrow array new and delete (same)
+        -:   95: *
+        -:   96: *  Placement new and delete signatures (take a memory address argument,
+        -:   97: *  does nothing) may not be replaced by a user's program.
+        -:   98:*/
+        -:   99:_GLIBCXX_NODISCARD void* operator new(std::size_t)
+        -:  100:  _GLIBCXX_TXN_SAFE _GLIBCXX_THROW (std::bad_alloc)
+        -:  101:  __attribute__((__externally_visible__, __malloc__));
+        -:  102:_GLIBCXX_NODISCARD void* operator new[](std::size_t)
+        -:  103:  _GLIBCXX_TXN_SAFE _GLIBCXX_THROW (std::bad_alloc)
+        -:  104:  __attribute__((__externally_visible__, __malloc__));
+        -:  105:void operator delete(void*) _GLIBCXX_TXN_SAFE _GLIBCXX_USE_NOEXCEPT
+        -:  106:  __attribute__((__externally_visible__));
+        -:  107:void operator delete[](void*) _GLIBCXX_TXN_SAFE _GLIBCXX_USE_NOEXCEPT
+        -:  108:  __attribute__((__externally_visible__));
+        -:  109:#if __cpp_sized_deallocation
+        -:  110:void operator delete(void*, std::size_t)
+        -:  111:  _GLIBCXX_TXN_SAFE _GLIBCXX_USE_NOEXCEPT
+        -:  112:  __attribute__((__externally_visible__));
+        -:  113:void operator delete[](void*, std::size_t)
+        -:  114:  _GLIBCXX_TXN_SAFE _GLIBCXX_USE_NOEXCEPT
+        -:  115:  __attribute__((__externally_visible__));
+        -:  116:#endif
+        -:  117:_GLIBCXX_NODISCARD void* operator new(std::size_t, const std::nothrow_t&)
+        -:  118:  _GLIBCXX_TXN_SAFE _GLIBCXX_USE_NOEXCEPT
+        -:  119:  __attribute__((__externally_visible__, __alloc_size__ (1), __malloc__));
+        -:  120:_GLIBCXX_NODISCARD void* operator new[](std::size_t, const std::nothrow_t&)
+        -:  121:  _GLIBCXX_TXN_SAFE _GLIBCXX_USE_NOEXCEPT
+        -:  122:  __attribute__((__externally_visible__, __alloc_size__ (1), __malloc__));
+        -:  123:void operator delete(void*, const std::nothrow_t&)
+        -:  124:  _GLIBCXX_TXN_SAFE _GLIBCXX_USE_NOEXCEPT
+        -:  125:  __attribute__((__externally_visible__));
+        -:  126:void operator delete[](void*, const std::nothrow_t&)
+        -:  127:  _GLIBCXX_TXN_SAFE _GLIBCXX_USE_NOEXCEPT
+        -:  128:  __attribute__((__externally_visible__));
+        -:  129:#if __cpp_aligned_new
+        -:  130:_GLIBCXX_NODISCARD void* operator new(std::size_t, std::align_val_t)
+        -:  131:  _GLIBCXX_TXN_SAFE
+        -:  132:  __attribute__((__externally_visible__, __alloc_size__ (1), __alloc_align__ (2),  __malloc__));
+        -:  133:_GLIBCXX_NODISCARD void* operator new(std::size_t, std::align_val_t, const std::nothrow_t&)
+        -:  134:  _GLIBCXX_TXN_SAFE _GLIBCXX_USE_NOEXCEPT
+        -:  135:  __attribute__((__externally_visible__, __alloc_size__ (1), __alloc_align__ (2), __malloc__));
+        -:  136:void operator delete(void*, std::align_val_t) _GLIBCXX_TXN_SAFE
+        -:  137:  _GLIBCXX_USE_NOEXCEPT __attribute__((__externally_visible__));
+        -:  138:void operator delete(void*, std::align_val_t, const std::nothrow_t&)
+        -:  139:  _GLIBCXX_TXN_SAFE
+        -:  140:  _GLIBCXX_USE_NOEXCEPT __attribute__((__externally_visible__));
+        -:  141:_GLIBCXX_NODISCARD void* operator new[](std::size_t, std::align_val_t)
+        -:  142:  _GLIBCXX_TXN_SAFE
+        -:  143:  __attribute__((__externally_visible__, __alloc_size__ (1), __alloc_align__ (2), __malloc__));
+        -:  144:_GLIBCXX_NODISCARD void* operator new[](std::size_t, std::align_val_t, const std::nothrow_t&)
+        -:  145:  _GLIBCXX_TXN_SAFE _GLIBCXX_USE_NOEXCEPT
+        -:  146:  __attribute__((__externally_visible__, __alloc_size__ (1), __alloc_align__ (2), __malloc__));
+        -:  147:void operator delete[](void*, std::align_val_t) _GLIBCXX_TXN_SAFE
+        -:  148:  _GLIBCXX_USE_NOEXCEPT __attribute__((__externally_visible__));
+        -:  149:void operator delete[](void*, std::align_val_t, const std::nothrow_t&)
+        -:  150:  _GLIBCXX_TXN_SAFE
+        -:  151:  _GLIBCXX_USE_NOEXCEPT __attribute__((__externally_visible__));
+        -:  152:#if __cpp_sized_deallocation
+        -:  153:void operator delete(void*, std::size_t, std::align_val_t) _GLIBCXX_TXN_SAFE
+        -:  154:  _GLIBCXX_USE_NOEXCEPT __attribute__((__externally_visible__));
+        -:  155:void operator delete[](void*, std::size_t, std::align_val_t) _GLIBCXX_TXN_SAFE
+        -:  156:  _GLIBCXX_USE_NOEXCEPT __attribute__((__externally_visible__));
+        -:  157:#endif // __cpp_sized_deallocation
+        -:  158:#endif // __cpp_aligned_new
+        -:  159:
+        -:  160:#if __cpp_lib_constexpr_new >= 202406L
+        -:  161:# define _GLIBCXX_PLACEMENT_CONSTEXPR constexpr
+        -:  162:#else
+        -:  163:# define _GLIBCXX_PLACEMENT_CONSTEXPR inline
+        -:  164:#endif
+        -:  165:
+        -:  166:// Default placement versions of operator new.
+        -:  167:_GLIBCXX_NODISCARD _GLIBCXX_PLACEMENT_CONSTEXPR
+    #####:  168:void* operator new(std::size_t, void* __p)
+        -:  169:  _GLIBCXX_TXN_SAFE _GLIBCXX_USE_NOEXCEPT
+    #####:  170:{ return __p; }
+        -:  171:_GLIBCXX_NODISCARD _GLIBCXX_PLACEMENT_CONSTEXPR
+        -:  172:void* operator new[](std::size_t, void* __p)
+        -:  173:  _GLIBCXX_TXN_SAFE _GLIBCXX_USE_NOEXCEPT
+        -:  174:{ return __p; }
+        -:  175:
+        -:  176:// Default placement versions of operator delete.
+    #####:  177:_GLIBCXX_PLACEMENT_CONSTEXPR void operator delete  (void*, void*)
+        -:  178:  _GLIBCXX_TXN_SAFE _GLIBCXX_USE_NOEXCEPT
+    #####:  179:{ }
+        -:  180:_GLIBCXX_PLACEMENT_CONSTEXPR void operator delete[](void*, void*)
+        -:  181:  _GLIBCXX_TXN_SAFE _GLIBCXX_USE_NOEXCEPT
+        -:  182:{ }
+        -:  183:
+        -:  184:#undef _GLIBCXX_PLACEMENT_CONSTEXPR
+        -:  185:
+        -:  186://@}
+        -:  187:} // extern "C++"
+        -:  188:
+        -:  189:namespace std
+        -:  190:{
+        -:  191:#ifdef __cpp_lib_launder // C++ >= 17 && HAVE_BUILTIN_LAUNDER
+        -:  192:  /// Pointer optimization barrier [ptr.launder]
+        -:  193:  template<typename _Tp>
+        -:  194:    [[nodiscard]] constexpr _Tp*
+        -:  195:    launder(_Tp* __p) noexcept
+        -:  196:    {
+        -:  197:      if constexpr (__is_same(const volatile _Tp, const volatile void))
+        -:  198:	static_assert(!__is_same(const volatile _Tp, const volatile void),
+        -:  199:		      "std::launder argument must not be a void pointer");
+        -:  200:#if _GLIBCXX_USE_BUILTIN_TRAIT(__is_function)
+        -:  201:      else if constexpr (__is_function(_Tp))
+        -:  202:	static_assert(!__is_function(_Tp),
+        -:  203:		      "std::launder argument must not be a function pointer");
+        -:  204:#endif
+        -:  205:      else
+        -:  206:	return __builtin_launder(__p);
+        -:  207:      return nullptr;
+        -:  208:    }
+        -:  209:#endif // __cpp_lib_launder
+        -:  210:
+        -:  211:#ifdef __cpp_lib_hardware_interference_size // C++ >= 17 && defined(gcc_dest_sz)
+        -:  212:  inline constexpr size_t hardware_destructive_interference_size = __GCC_DESTRUCTIVE_SIZE;
+        -:  213:  inline constexpr size_t hardware_constructive_interference_size = __GCC_CONSTRUCTIVE_SIZE;
+        -:  214:#endif // __cpp_lib_hardware_interference_size
+        -:  215:
+        -:  216:// Emitted despite the FTM potentially being undefined.
+        -:  217:#if __cplusplus >= 202002L
+        -:  218:  /// Tag type used to declare a class-specific operator delete that can
+        -:  219:  /// invoke the destructor before deallocating the memory.
+        -:  220:  struct destroying_delete_t
+        -:  221:  {
+        -:  222:    explicit destroying_delete_t() = default;
+        -:  223:  };
+        -:  224:  /// Tag variable of type destroying_delete_t.
+        -:  225:  inline constexpr destroying_delete_t destroying_delete{};
+        -:  226:#endif // C++20
+        -:  227:}
+        -:  228:
+        -:  229:#pragma GCC visibility pop
+        -:  230:#pragma GCC diagnostic pop
+        -:  231:
+        -:  232:#endif

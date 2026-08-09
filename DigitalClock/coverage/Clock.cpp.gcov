@@ -1,0 +1,123 @@
+        -:    0:Source:/run/media/mahakal108/Servers/Skills/C Langagues/Projects/DigitalClock/Src/Clock.cpp
+        -:    0:Graph:../Obj/Clock.gcno
+        -:    0:Data:../Obj/Clock.gcda
+        -:    0:Runs:1
+        -:    1:#include "Clock.hpp"
+        -:    2:
+        -:    3:#include <chrono>
+        -:    4:
+        -:    5:#include "Utility.hpp"
+        -:    6:
+       78:    7:Clock::Clock()
+       78:    8:    : hour(0),
+       78:    9:      minute(0),
+       78:   10:      second(0),
+       78:   11:      valid(false)
+        -:   12:{
+       78:   13:    update();
+       78:   14:}
+        -:   15:
+      269:   16:bool Clock::update()
+        -:   17:{
+      269:   18:    const auto now = std::chrono::system_clock::now();
+      269:   19:    const std::time_t raw = std::chrono::system_clock::to_time_t(now);
+        -:   20:
+      269:   21:    std::tm local{};
+        -:   22:
+        -:   23:#ifdef _WIN32
+        -:   24:    const bool converted = (localtime_s(&local, &raw) == 0);
+        -:   25:#else
+      269:   26:    const bool converted = (localtime_r(&raw, &local) != nullptr);
+        -:   27:#endif
+        -:   28:
+      269:   29:    if (!converted)
+        -:   30:    {
+        -:   31:        // Keep the previous snapshot rather than showing a bogus time.
+    #####:   32:        valid = false;
+    #####:   33:        return false;
+        -:   34:    }
+        -:   35:
+      269:   36:    hour = local.tm_hour;
+      269:   37:    minute = local.tm_min;
+      269:   38:    second = local.tm_sec;
+      269:   39:    valid = true;
+        -:   40:
+      269:   41:    return true;
+        -:   42:}
+        -:   43:
+        3:   44:std::string Clock::getCurrentTime() const
+        -:   45:{
+        3:   46:    return getTime24();
+        -:   47:}
+        -:   48:
+      243:   49:int Clock::getHour() const
+        -:   50:{
+      243:   51:    return hour;
+        -:   52:}
+        -:   53:
+       22:   54:int Clock::getHour12() const
+        -:   55:{
+       22:   56:    const int converted = hour % 12;
+        -:   57:
+       22:   58:    return (converted == 0) ? 12 : converted;
+        -:   59:}
+        -:   60:
+      249:   61:int Clock::getMinute() const
+        -:   62:{
+      249:   63:    return minute;
+        -:   64:}
+        -:   65:
+       78:   66:int Clock::getSecond() const
+        -:   67:{
+       78:   68:    return second;
+        -:   69:}
+        -:   70:
+       22:   71:bool Clock::isPM() const
+        -:   72:{
+       22:   73:    return hour >= 12;
+        -:   74:}
+        -:   75:
+       18:   76:std::string Clock::getMeridiem() const
+        -:   77:{
+       36:   78:    return isPM() ? "PM" : "AM";
+        -:   79:}
+        -:   80:
+       14:   81:std::string Clock::getTime24() const
+        -:   82:{
+       28:   83:    return Utility::padZero(hour) + ":" +
+       56:   84:           Utility::padZero(minute) + ":" +
+       42:   85:           Utility::padZero(second);
+        -:   86:}
+        -:   87:
+        7:   88:std::string Clock::getTime12() const
+        -:   89:{
+       14:   90:    return Utility::padZero(getHour12()) + ":" +
+       28:   91:           Utility::padZero(minute) + ":" +
+       28:   92:           Utility::padZero(second) + " " +
+       21:   93:           getMeridiem();
+        -:   94:}
+        -:   95:
+       68:   96:bool Clock::setTime(int newHour, int newMinute, int newSecond)
+        -:   97:{
+       68:   98:    if (newHour < 0 || newHour > 23)
+        2:   99:        return false;
+        -:  100:
+       66:  101:    if (newMinute < 0 || newMinute > 59)
+        1:  102:        return false;
+        -:  103:
+        -:  104:    // 60 is permitted so that leap seconds reported by the OS are accepted.
+       65:  105:    if (newSecond < 0 || newSecond > 60)
+        1:  106:        return false;
+        -:  107:
+       64:  108:    hour = newHour;
+       64:  109:    minute = newMinute;
+       64:  110:    second = newSecond;
+       64:  111:    valid = true;
+        -:  112:
+       64:  113:    return true;
+        -:  114:}
+        -:  115:
+        2:  116:bool Clock::isValid() const
+        -:  117:{
+        2:  118:    return valid;
+        -:  119:}

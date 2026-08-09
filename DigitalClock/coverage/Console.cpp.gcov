@@ -1,0 +1,304 @@
+        -:    0:Source:/run/media/mahakal108/Servers/Skills/C Langagues/Projects/DigitalClock/Src/Console.cpp
+        -:    0:Graph:../Obj/Console.gcno
+        -:    0:Data:../Obj/Console.gcda
+        -:    0:Runs:1
+        -:    1:#include "Console.hpp"
+        -:    2:
+        -:    3:#include <iostream>
+        -:    4:#include <string>
+        -:    5:
+        -:    6:#include "Utility.hpp"
+        -:    7:
+        -:    8:#ifdef _WIN32
+        -:    9:#include <conio.h>
+        -:   10:#include <io.h>
+        -:   11:#include <windows.h>
+        -:   12:#else
+        -:   13:#include <sys/ioctl.h>
+        -:   14:#include <termios.h>
+        -:   15:#include <unistd.h>
+        -:   16:#endif
+        -:   17:
+        -:   18:namespace
+        -:   19:{
+        -:   20:#ifndef _WIN32
+        -:   21:    /** Terminal attributes saved by enableRawInput(). */
+        -:   22:    termios savedTerminalState{};
+        -:   23:#endif
+        -:   24:
+        -:   25:    /** Width reported when the real terminal size is unavailable. */
+        -:   26:    const int DEFAULT_WIDTH = 80;
+        -:   27:
+        -:   28:    /** Height reported when the real terminal size is unavailable. */
+        -:   29:    const int DEFAULT_HEIGHT = 24;
+        -:   30:
+        -:   31:    /**
+        -:   32:     * @brief Reports whether standard output is attached to a terminal.
+        -:   33:     */
+       31:   34:    bool stdoutIsTerminal()
+        -:   35:    {
+        -:   36:#ifdef _WIN32
+        -:   37:        return _isatty(_fileno(stdout)) != 0;
+        -:   38:#else
+       31:   39:        return isatty(STDOUT_FILENO) != 0;
+        -:   40:#endif
+        -:   41:    }
+        -:   42:
+        -:   43:    /**
+        -:   44:     * @brief Reports whether standard input is attached to a terminal.
+        -:   45:     */
+       23:   46:    bool stdinIsTerminal()
+        -:   47:    {
+        -:   48:#ifdef _WIN32
+        -:   49:        return _isatty(_fileno(stdin)) != 0;
+        -:   50:#else
+       23:   51:        return isatty(STDIN_FILENO) != 0;
+        -:   52:#endif
+        -:   53:    }
+        -:   54:
+        -:   55:    /**
+        -:   56:     * @brief Probes whether colour output is appropriate.
+        -:   57:     *
+        -:   58:     * Honours the NO_COLOR convention and refuses colour for the "dumb"
+        -:   59:     * terminal type or when output is redirected.
+        -:   60:     */
+       32:   61:    bool detectColorSupport()
+        -:   62:    {
+        -:   63:        // NO_COLOR is honoured when merely present, even if empty, which is
+        -:   64:        // what the convention specifies.
+       64:   65:        if (Utility::hasEnvironment("NO_COLOR"))
+        1:   66:            return false;
+        -:   67:
+       31:   68:        if (!stdoutIsTerminal())
+       14:   69:            return false;
+        -:   70:
+       17:   71:        std::string term;
+        -:   72:
+      51*:   73:        if (Utility::environment("TERM", term) && term == "dumb")
+    #####:   74:            return false;
+        -:   75:
+       17:   76:        return true;
+       17:   77:    }
+        -:   78:}
+        -:   79:
+       32:   80:Console::Console()
+       32:   81:    : initialized(false),
+       32:   82:      rawInputActive(false),
+       32:   83:      colorCapable(detectColorSupport())
+        -:   84:{
+       32:   85:}
+        -:   86:
+       32:   87:Console::~Console()
+        -:   88:{
+       32:   89:    shutdown();
+       32:   90:}
+        -:   91:
+       23:   92:void Console::initialize()
+        -:   93:{
+       23:   94:    if (initialized)
+    #####:   95:        return;
+        -:   96:
+        -:   97:#ifdef _WIN32
+        -:   98:    /*
+        -:   99:    Windows 10 and later can interpret ANSI escape sequences, but the console
+        -:  100:    mode flag has to be requested explicitly.
+        -:  101:    */
+        -:  102:    const HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
+        -:  103:
+        -:  104:    if (output != INVALID_HANDLE_VALUE)
+        -:  105:    {
+        -:  106:        DWORD mode = 0;
+        -:  107:
+        -:  108:        if (GetConsoleMode(output, &mode))
+        -:  109:        {
+        -:  110:            SetConsoleMode(
+        -:  111:                output,
+        -:  112:                mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+        -:  113:        }
+        -:  114:    }
+        -:  115:#endif
+        -:  116:
+       23:  117:    hideCursor();
+       23:  118:    enableRawInput();
+        -:  119:
+       23:  120:    initialized = true;
+        -:  121:
+       23:  122:    refresh();
+        -:  123:}
+        -:  124:
+       57:  125:void Console::shutdown()
+        -:  126:{
+       57:  127:    if (!initialized)
+       34:  128:        return;
+        -:  129:
+       23:  130:    restoreInput();
+       23:  131:    showCursor();
+        -:  132:
+        -:  133:    // Leave the cursor on a fresh line so the shell prompt is not overwritten.
+       23:  134:    std::cout << '\n';
+        -:  135:
+       23:  136:    refresh();
+        -:  137:
+       23:  138:    initialized = false;
+        -:  139:}
+        -:  140:
+       24:  141:void Console::clear()
+        -:  142:{
+        -:  143:    // 2J clears the screen, H returns the cursor to the home position.
+       24:  144:    std::cout << "\033[2J\033[H";
+       24:  145:}
+        -:  146:
+        1:  147:void Console::home()
+        -:  148:{
+        1:  149:    std::cout << "\033[H";
+        1:  150:}
+        -:  151:
+      217:  152:void Console::refresh()
+        -:  153:{
+      217:  154:    std::cout.flush();
+      217:  155:}
+        -:  156:
+        4:  157:void Console::setCursor(int row, int column)
+        -:  158:{
+        4:  159:    if (row < 1)
+        2:  160:        row = 1;
+        -:  161:
+        4:  162:    if (column < 1)
+        2:  163:        column = 1;
+        -:  164:
+        4:  165:    std::cout << "\033[" << row << ";" << column << "H";
+        4:  166:}
+        -:  167:
+      168:  168:void Console::print(const std::string &text)
+        -:  169:{
+      168:  170:    std::cout << text;
+      168:  171:}
+        -:  172:
+        1:  173:void Console::printLine(const std::string &text)
+        -:  174:{
+        1:  175:    std::cout << text << '\n';
+        1:  176:}
+        -:  177:
+       24:  178:void Console::hideCursor()
+        -:  179:{
+       24:  180:    std::cout << "\033[?25l";
+       24:  181:}
+        -:  182:
+       24:  183:void Console::showCursor()
+        -:  184:{
+       24:  185:    std::cout << "\033[?25h";
+       24:  186:}
+        -:  187:
+       24:  188:bool Console::supportsColor() const
+        -:  189:{
+       24:  190:    return colorCapable;
+        -:  191:}
+        -:  192:
+       25:  193:bool Console::isInitialized() const
+        -:  194:{
+       25:  195:    return initialized;
+        -:  196:}
+        -:  197:
+      190:  198:int Console::width() const
+        -:  199:{
+        -:  200:#ifdef _WIN32
+        -:  201:    CONSOLE_SCREEN_BUFFER_INFO info;
+        -:  202:
+        -:  203:    const HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
+        -:  204:
+        -:  205:    if (output != INVALID_HANDLE_VALUE &&
+        -:  206:        GetConsoleScreenBufferInfo(output, &info))
+        -:  207:    {
+        -:  208:        return info.srWindow.Right - info.srWindow.Left + 1;
+        -:  209:    }
+        -:  210:#else
+      190:  211:    winsize size{};
+        -:  212:
+     190*:  213:    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &size) == 0 && size.ws_col > 0)
+    #####:  214:        return static_cast<int>(size.ws_col);
+        -:  215:#endif
+        -:  216:
+      190:  217:    return DEFAULT_WIDTH;
+        -:  218:}
+        -:  219:
+      190:  220:int Console::height() const
+        -:  221:{
+        -:  222:#ifdef _WIN32
+        -:  223:    CONSOLE_SCREEN_BUFFER_INFO info;
+        -:  224:
+        -:  225:    const HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
+        -:  226:
+        -:  227:    if (output != INVALID_HANDLE_VALUE &&
+        -:  228:        GetConsoleScreenBufferInfo(output, &info))
+        -:  229:    {
+        -:  230:        return info.srWindow.Bottom - info.srWindow.Top + 1;
+        -:  231:    }
+        -:  232:#else
+      190:  233:    winsize size{};
+        -:  234:
+     190*:  235:    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &size) == 0 && size.ws_row > 0)
+    #####:  236:        return static_cast<int>(size.ws_row);
+        -:  237:#endif
+        -:  238:
+      190:  239:    return DEFAULT_HEIGHT;
+        -:  240:}
+        -:  241:
+       23:  242:void Console::enableRawInput()
+        -:  243:{
+        -:  244:#ifndef _WIN32
+       23:  245:    if (!stdinIsTerminal())
+       10:  246:        return;
+        -:  247:
+       13:  248:    if (tcgetattr(STDIN_FILENO, &savedTerminalState) != 0)
+    #####:  249:        return;
+        -:  250:
+       13:  251:    termios raw = savedTerminalState;
+        -:  252:
+        -:  253:    // Disable line buffering and echo so keystrokes arrive immediately.
+       13:  254:    raw.c_lflag &= static_cast<tcflag_t>(~(ICANON | ECHO));
+        -:  255:
+        -:  256:    // VMIN 0 with VTIME 0 makes read() return at once when nothing is ready.
+       13:  257:    raw.c_cc[VMIN] = 0;
+       13:  258:    raw.c_cc[VTIME] = 0;
+        -:  259:
+       13:  260:    if (tcsetattr(STDIN_FILENO, TCSANOW, &raw) == 0)
+       13:  261:        rawInputActive = true;
+        -:  262:#endif
+        -:  263:}
+        -:  264:
+       23:  265:void Console::restoreInput()
+        -:  266:{
+        -:  267:#ifndef _WIN32
+       23:  268:    if (!rawInputActive)
+       10:  269:        return;
+        -:  270:
+       13:  271:    tcsetattr(STDIN_FILENO, TCSANOW, &savedTerminalState);
+        -:  272:
+       13:  273:    rawInputActive = false;
+        -:  274:#endif
+        -:  275:}
+        -:  276:
+      288:  277:int Console::readKey()
+        -:  278:{
+        -:  279:#ifdef _WIN32
+        -:  280:    if (!stdinIsTerminal())
+        -:  281:        return -1;
+        -:  282:
+        -:  283:    if (_kbhit() == 0)
+        -:  284:        return -1;
+        -:  285:
+        -:  286:    return _getch();
+        -:  287:#else
+      288:  288:    if (!rawInputActive)
+        2:  289:        return -1;
+        -:  290:
+      286:  291:    char character = 0;
+        -:  292:
+      286:  293:    const ssize_t count = read(STDIN_FILENO, &character, 1);
+        -:  294:
+      286:  295:    if (count != 1)
+      245:  296:        return -1;
+        -:  297:
+       41:  298:    return static_cast<unsigned char>(character);
+        -:  299:#endif
+        -:  300:}

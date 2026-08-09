@@ -474,7 +474,7 @@ make coverage                  # per-file line coverage
 ```
 
 Coverage is measured with `gcov`, which ships with GCC, so there is nothing
-extra to install. The total is **93.70%**; CI enforces a 92% floor.
+extra to install. The total is **92.86%**; CI enforces a 92% floor.
 
 131 tests, covering TC-001 through TC-086 from
 [`Docs/Testing_Report.md`](Docs/Testing_Report.md) plus supporting unit tests

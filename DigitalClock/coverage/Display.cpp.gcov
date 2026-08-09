@@ -1,0 +1,132 @@
+        -:    0:Source:/run/media/mahakal108/Servers/Skills/C Langagues/Projects/DigitalClock/Src/Display.cpp
+        -:    0:Graph:../Obj/Display.gcno
+        -:    0:Data:../Obj/Display.gcda
+        -:    0:Runs:1
+        -:    1:#include "Display.hpp"
+        -:    2:
+       26:    3:Display::Display()
+       26:    4:    : initialized(false)
+        -:    5:{
+       26:    6:    layout.attach(terminal);
+       26:    7:}
+        -:    8:
+       26:    9:Display::~Display()
+        -:   10:{
+       26:   11:    shutdown();
+       26:   12:}
+        -:   13:
+       22:   14:void Display::initialize(ThemeManager &theme)
+        -:   15:{
+        -:   16:    // Redirected output must not contain escape sequences.
+       22:   17:    theme.setColorEnabled(terminal.supportsColor());
+       22:   18:    theme.applyTheme();
+        -:   19:
+       22:   20:    layout.attach(theme);
+        -:   21:
+       22:   22:    terminal.initialize();
+       22:   23:    terminal.clear();
+        -:   24:
+       22:   25:    layout.resize(terminal.width(), terminal.height());
+        -:   26:
+       22:   27:    initialized = true;
+       22:   28:}
+        -:   29:
+      166:   30:void Display::renderClock(const std::string &time)
+        -:   31:{
+      166:   32:    layout.setTime(time);
+      166:   33:}
+        -:   34:
+      166:   35:void Display::renderDate(const std::string &date)
+        -:   36:{
+      166:   37:    layout.setDate(date);
+      166:   38:}
+        -:   39:
+      167:   40:void Display::renderScreen()
+        -:   41:{
+        -:   42:    // Follow the terminal if the user resized the window between frames.
+      167:   43:    layout.resize(terminal.width(), terminal.height());
+        -:   44:
+      167:   45:    layout.setStatusLines(status.lines());
+      167:   46:    layout.draw();
+      167:   47:}
+        -:   48:
+        1:   49:void Display::render()
+        -:   50:{
+        1:   51:    renderScreen();
+        1:   52:}
+        -:   53:
+        1:   54:void Display::update()
+        -:   55:{
+        1:   56:    renderScreen();
+        1:   57:}
+        -:   58:
+        1:   59:void Display::refresh()
+        -:   60:{
+        1:   61:    terminal.refresh();
+        1:   62:}
+        -:   63:
+        1:   64:void Display::clear()
+        -:   65:{
+        1:   66:    terminal.clear();
+        1:   67:    terminal.refresh();
+        1:   68:}
+        -:   69:
+        5:   70:void Display::setMessage(const std::string &text)
+        -:   71:{
+        5:   72:    status.setMessage(text);
+        5:   73:}
+        -:   74:
+      165:   75:void Display::setStatusField(const std::string &name, const std::string &value)
+        -:   76:{
+      165:   77:    status.setField(name, value);
+      165:   78:}
+        -:   79:
+      164:   80:void Display::showNotification(const std::vector<std::string> &lines)
+        -:   81:{
+      164:   82:    layout.setNotification(lines);
+      164:   83:}
+        -:   84:
+        4:   85:void Display::clearNotification()
+        -:   86:{
+        4:   87:    layout.setNotification({});
+        4:   88:}
+        -:   89:
+      164:   90:void Display::showInfoLines(const std::vector<std::string> &lines)
+        -:   91:{
+      164:   92:    layout.setInfoLines(lines);
+      164:   93:}
+        -:   94:
+       22:   95:bool Display::loadBanner(const std::string &fileName)
+        -:   96:{
+       22:   97:    return layout.banner().load(fileName);
+        -:   98:}
+        -:   99:
+       49:  100:void Display::shutdown()
+        -:  101:{
+       49:  102:    if (!initialized)
+       27:  103:        return;
+        -:  104:
+       22:  105:    terminal.shutdown();
+        -:  106:
+       22:  107:    initialized = false;
+        -:  108:}
+        -:  109:
+      283:  110:int Display::readKey()
+        -:  111:{
+      283:  112:    return terminal.readKey();
+        -:  113:}
+        -:  114:
+       22:  115:Console &Display::console()
+        -:  116:{
+       22:  117:    return terminal;
+        -:  118:}
+        -:  119:
+      210:  120:Screen &Display::screen()
+        -:  121:{
+      210:  122:    return layout;
+        -:  123:}
+        -:  124:
+        2:  125:StatusBar &Display::statusBar()
+        -:  126:{
+        2:  127:    return status;
+        -:  128:}

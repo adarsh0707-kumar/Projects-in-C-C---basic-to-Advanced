@@ -2222,17 +2222,18 @@ step, which runs the application with `--once` on a real console.
 ## Measured line coverage
 
 Line coverage is measured with `gcov` and reported by `make coverage`. The
-figures below are from the run on 2026-08-08 at v1.4.0, and a CI job
+figures below are from the run on 2026-08-09 at v2.1.0, and a CI job
 reproduces them on every change to `DigitalClock/`.
 
 | Coverage | Lines | File |
 |---------:|------:|------|
+| 84.21% | 114 | `PluginManager.cpp` |
 | 87.36% | 277 | `Alarm.cpp` |
+| 88.54% | 602 | `Application.cpp` |
 | 89.68% | 155 | `AlarmManager.cpp` |
 | 89.85% | 197 | `TimeZone.cpp` |
-| 90.60% | 521 | `Application.cpp` |
-| 93.33% | 60 | `ResourceManager.cpp` |
 | 93.59% | 78 | `Notifier.cpp` |
+| 94.59% | 74 | `ResourceManager.cpp` |
 | 94.64% | 168 | `ThemeManager.cpp` |
 | 94.74% | 95 | `Logger.cpp` |
 | 95.15% | 103 | `Console.cpp` |
@@ -2249,7 +2250,7 @@ reproduces them on every change to `DigitalClock/`.
 | 100.00% | 45 | `Banner.cpp` |
 | 100.00% | 70 | `Display.cpp` |
 | 100.00% | 81 | `Utility.cpp` |
-| **93.70%** | **2761** | **TOTAL** (2587 covered) |
+| **92.86%** | **2970** | **TOTAL** (2758 covered) |
 
 CI enforces a floor of 92%. The threshold guards against backsliding rather
 than demanding a number: it sits just below the current total, so a change
@@ -2267,9 +2268,9 @@ now closed:
 | `Theme.cpp` | 50.50% | **98.02%** | Exhaustive colour and style table test (UT-062) |
 | `Application.cpp` | 55.71% | **90.60%** | The refresh loop driven through a pseudo-terminal (TC-066 - TC-072) |
 
-The total moved from 83.03% to 86.25% to 92.81%, and stands at **93.70%**
-after the v1.4.0 features and the presentation-layer tests that followed
-them (TC-082 to TC-085).
+The total moved from 83.03% to 86.25% to 92.81%, and stands at **92.86%**
+after the v1.4.0 features, the presentation-layer tests that followed them
+(TC-082 to TC-085), and the v2.1.0 plugin loader.
 
 `StatusBar.cpp` and `Display.cpp` were the last two below 85%, at 79.66% and
 81.43%. What was uncovered turned out to be documented API that nothing in

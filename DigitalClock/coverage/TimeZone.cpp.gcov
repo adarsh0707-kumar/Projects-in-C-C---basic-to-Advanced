@@ -1,0 +1,437 @@
+        -:    0:Source:/run/media/mahakal108/Servers/Skills/C Langagues/Projects/DigitalClock/Src/TimeZone.cpp
+        -:    0:Graph:../Obj/TimeZone.gcno
+        -:    0:Data:../Obj/TimeZone.gcda
+        -:    0:Runs:1
+        -:    1:#include "TimeZone.hpp"
+        -:    2:
+        -:    3:#include <cstdlib>
+        -:    4:#include <mutex>
+        -:    5:
+        -:    6:#include "Utility.hpp"
+        -:    7:
+        -:    8:namespace
+        -:    9:{
+        -:   10:    /**
+        -:   11:     * Setting TZ mutates process-global state, so the swap has to be
+        -:   12:     * serialised even though the application renders on one thread. Tests
+        -:   13:     * and any future worker would otherwise be able to interleave.
+        -:   14:     */
+        7:   15:    std::mutex &zoneMutex()
+        -:   16:    {
+        -:   17:        static std::mutex mutex;
+        7:   18:        return mutex;
+        -:   19:    }
+        -:   20:
+        -:   21:    /**
+        -:   22:     * @brief Resolves a UTC instant through the platform timezone database.
+        -:   23:     *
+        -:   24:     * Swaps TZ, converts, and restores TZ. This is the only mechanism C++17
+        -:   25:     * offers for "what is the time in another named zone": the standard
+        -:   26:     * library has no timezone type before C++20.
+        -:   27:     *
+        -:   28:     * @param name Zone name, such as "Asia/Kolkata".
+        -:   29:     * @param utc  Instant to convert.
+        -:   30:     * @param out  Receives the broken-down local time.
+        -:   31:     * @return true if the conversion succeeded.
+        -:   32:     */
+        7:   33:    bool resolveNamed(const std::string &name, std::time_t utc, std::tm &out)
+        -:   34:    {
+        -:   35:#ifdef _WIN32
+        -:   36:        /*
+        -:   37:        The Windows CRT accepts only POSIX-style TZ strings such as
+        -:   38:        "EST5EDT", not IANA names, and silently treats anything it does not
+        -:   39:        understand as UTC. Reporting failure is better than displaying UTC
+        -:   40:        under a New York label.
+        -:   41:        */
+        -:   42:        (void)name;
+        -:   43:        (void)utc;
+        -:   44:        (void)out;
+        -:   45:
+        -:   46:        return false;
+        -:   47:#else
+        7:   48:        std::lock_guard<std::mutex> lock(zoneMutex());
+        -:   49:
+        7:   50:        const char *previous = std::getenv("TZ");
+      14*:   51:        const std::string saved = (previous != nullptr) ? previous : "";
+        7:   52:        const bool hadTz = (previous != nullptr);
+        -:   53:
+        7:   54:        setenv("TZ", name.c_str(), 1);
+        7:   55:        tzset();
+        -:   56:
+        7:   57:        std::tm converted{};
+        7:   58:        const bool ok = (localtime_r(&utc, &converted) != nullptr);
+        -:   59:
+        7:   60:        if (hadTz)
+    #####:   61:            setenv("TZ", saved.c_str(), 1);
+        -:   62:        else
+        7:   63:            unsetenv("TZ");
+        -:   64:
+        7:   65:        tzset();
+        -:   66:
+        7:   67:        if (!ok)
+    #####:   68:            return false;
+        -:   69:
+        7:   70:        out = converted;
+        -:   71:
+        7:   72:        return true;
+        -:   73:#endif
+        7:   74:    }
+        -:   75:
+        -:   76:    /**
+        -:   77:     * @brief Reports whether the platform recognises a zone name.
+        -:   78:     *
+        -:   79:     * An unknown name is treated as UTC by POSIX, so a name is accepted only
+        -:   80:     * when it either produces a non-zero offset or is one of the spellings
+        -:   81:     * that legitimately mean UTC. That leaves a narrow false-positive band:
+        -:   82:     * a genuinely zero-offset zone such as Europe/London in winter cannot be
+        -:   83:     * distinguished from an unrecognised name. Reporting such a zone as
+        -:   84:     * resolved is the safe direction to be wrong in -- the displayed time is
+        -:   85:     * correct either way.
+        -:   86:     */
+        2:   87:    bool namedZoneResolves(const std::string &name)
+        -:   88:    {
+        -:   89:#ifdef _WIN32
+        -:   90:        (void)name;
+        -:   91:        return false;
+        -:   92:#else
+        2:   93:        const std::string upper = Utility::toUpper(name);
+        -:   94:
+        4:   95:        if (upper == "UTC" || upper == "GMT" || upper == "UCT" ||
+       4*:   96:            upper == "ZULU" || upper == "ETC/UTC" || upper == "ETC/GMT")
+        -:   97:        {
+    #####:   98:            return true;
+        -:   99:        }
+        -:  100:
+        -:  101:        // A name with no '/' and no digits is unlikely to be a real zone id.
+        2:  102:        const std::time_t probe = std::time(nullptr);
+        -:  103:
+        2:  104:        std::tm local{};
+        -:  105:
+        2:  106:        if (!resolveNamed(name, probe, local))
+    #####:  107:            return false;
+        -:  108:
+        2:  109:        std::tm utc{};
+        -:  110:
+        2:  111:        if (gmtime_r(&probe, &utc) == nullptr)
+    #####:  112:            return false;
+        -:  113:
+        2:  114:        const int localMinutes = local.tm_hour * 60 + local.tm_min;
+        2:  115:        const int utcMinutes = utc.tm_hour * 60 + utc.tm_min;
+        -:  116:
+        2:  117:        return localMinutes != utcMinutes;
+        -:  118:#endif
+        2:  119:    }
+        -:  120:}
+        -:  121:
+        -:  122:const int TimeZone::MAX_OFFSET_MINUTES = 14 * 60;
+        -:  123:const int TimeZone::MIN_OFFSET_MINUTES = -12 * 60;
+        -:  124:
+       70:  125:TimeZone::TimeZone()
+       70:  126:    : zoneKind(Kind::FixedOffset),
+       70:  127:      fixedMinutes(0),
+      140:  128:      spec("UTC")
+        -:  129:{
+       70:  130:}
+        -:  131:
+       32:  132:bool TimeZone::setFixedOffset(int minutes)
+        -:  133:{
+       32:  134:    if (minutes < MIN_OFFSET_MINUTES || minutes > MAX_OFFSET_MINUTES)
+        2:  135:        return false;
+        -:  136:
+       30:  137:    zoneKind = Kind::FixedOffset;
+       30:  138:    fixedMinutes = minutes;
+       30:  139:    zoneName.clear();
+        -:  140:
+       30:  141:    return true;
+        -:  142:}
+        -:  143:
+        6:  144:bool TimeZone::setNamedZone(const std::string &name)
+        -:  145:{
+        6:  146:    const std::string trimmed = Utility::trim(name);
+        -:  147:
+        6:  148:    if (trimmed.empty())
+        2:  149:        return false;
+        -:  150:
+        4:  151:    zoneKind = Kind::Named;
+        4:  152:    zoneName = trimmed;
+        4:  153:    fixedMinutes = 0;
+        -:  154:
+        4:  155:    return true;
+        6:  156:}
+        -:  157:
+       25:  158:void TimeZone::setLabel(const std::string &label)
+        -:  159:{
+       25:  160:    zoneLabel = Utility::trim(label);
+       25:  161:}
+        -:  162:
+       45:  163:std::string TimeZone::label() const
+        -:  164:{
+       45:  165:    if (!zoneLabel.empty())
+       35:  166:        return zoneLabel;
+        -:  167:
+       10:  168:    if (zoneKind == Kind::Named)
+        1:  169:        return zoneName;
+        -:  170:
+        9:  171:    return spec;
+        -:  172:}
+        -:  173:
+        5:  174:TimeZone::Kind TimeZone::kind() const
+        -:  175:{
+        5:  176:    return zoneKind;
+        -:  177:}
+        -:  178:
+        1:  179:std::string TimeZone::name() const
+        -:  180:{
+        1:  181:    return zoneName;
+        -:  182:}
+        -:  183:
+       22:  184:bool TimeZone::resolves() const
+        -:  185:{
+       22:  186:    if (zoneKind == Kind::FixedOffset)
+       20:  187:        return true;
+        -:  188:
+        2:  189:    return namedZoneResolves(zoneName);
+        -:  190:}
+        -:  191:
+       26:  192:bool TimeZone::localTime(std::time_t utc, std::tm &out) const
+        -:  193:{
+       26:  194:    if (zoneKind == Kind::Named)
+        -:  195:    {
+        5:  196:        if (resolveNamed(zoneName, utc, out))
+        5:  197:            return true;
+        -:  198:
+        -:  199:        // Fall through to UTC so the caller still has something to render.
+    #####:  200:        std::tm fallback{};
+        -:  201:
+        -:  202:#ifdef _WIN32
+        -:  203:        if (gmtime_s(&fallback, &utc) != 0)
+        -:  204:            return false;
+        -:  205:#else
+    #####:  206:        if (gmtime_r(&utc, &fallback) == nullptr)
+    #####:  207:            return false;
+        -:  208:#endif
+        -:  209:
+    #####:  210:        out = fallback;
+        -:  211:
+    #####:  212:        return false;
+        -:  213:    }
+        -:  214:
+        -:  215:    // A fixed offset is arithmetic on the UTC instant, which keeps it exact
+        -:  216:    // and identical on every platform.
+       21:  217:    const std::time_t shifted =
+       21:  218:        utc + static_cast<std::time_t>(fixedMinutes) * 60;
+        -:  219:
+       21:  220:    std::tm converted{};
+        -:  221:
+        -:  222:#ifdef _WIN32
+        -:  223:    if (gmtime_s(&converted, &shifted) != 0)
+        -:  224:        return false;
+        -:  225:#else
+       21:  226:    if (gmtime_r(&shifted, &converted) == nullptr)
+    #####:  227:        return false;
+        -:  228:#endif
+        -:  229:
+       21:  230:    out = converted;
+        -:  231:
+       21:  232:    return true;
+        -:  233:}
+        -:  234:
+       20:  235:int TimeZone::offsetMinutes(std::time_t utc) const
+        -:  236:{
+       20:  237:    if (zoneKind == Kind::FixedOffset)
+       18:  238:        return fixedMinutes;
+        -:  239:
+        2:  240:    std::tm local{};
+        -:  241:
+        2:  242:    if (!localTime(utc, local))
+    #####:  243:        return 0;
+        -:  244:
+        2:  245:    std::tm utcTime{};
+        -:  246:
+        -:  247:#ifdef _WIN32
+        -:  248:    if (gmtime_s(&utcTime, &utc) != 0)
+        -:  249:        return 0;
+        -:  250:#else
+        2:  251:    if (gmtime_r(&utc, &utcTime) == nullptr)
+    #####:  252:        return 0;
+        -:  253:#endif
+        -:  254:
+        2:  255:    const int localMinutes =
+        2:  256:        local.tm_yday * 24 * 60 + local.tm_hour * 60 + local.tm_min;
+        2:  257:    const int utcMinutes =
+        2:  258:        utcTime.tm_yday * 24 * 60 + utcTime.tm_hour * 60 + utcTime.tm_min;
+        -:  259:
+        2:  260:    int difference = localMinutes - utcMinutes;
+        -:  261:
+        -:  262:    // A year boundary makes tm_yday jump by a whole year rather than one day.
+        2:  263:    if (difference > 16 * 60)
+    #####:  264:        difference -= 365 * 24 * 60;
+        2:  265:    else if (difference < -16 * 60)
+    #####:  266:        difference += 365 * 24 * 60;
+        -:  267:
+        2:  268:    return difference;
+        -:  269:}
+        -:  270:
+       19:  271:std::string TimeZone::formatTime(std::time_t utc, bool hour12) const
+        -:  272:{
+       19:  273:    std::tm local{};
+        -:  274:
+        -:  275:    // A zone that cannot be resolved still renders, as UTC, and the caller
+        -:  276:    // is expected to have reported it via resolves().
+       19:  277:    localTime(utc, local);
+        -:  278:
+       19:  279:    if (!hour12)
+        -:  280:    {
+       24:  281:        return Utility::padZero(local.tm_hour) + ":" +
+       36:  282:               Utility::padZero(local.tm_min);
+        -:  283:    }
+        -:  284:
+        7:  285:    const int hour = local.tm_hour % 12;
+        -:  286:
+       14:  287:    return Utility::padZero(hour == 0 ? 12 : hour) + ":" +
+       21:  288:           Utility::padZero(local.tm_min) +
+       14:  289:           (local.tm_hour >= 12 ? " PM" : " AM");
+        -:  290:}
+        -:  291:
+       15:  292:std::string TimeZone::formatOffset(std::time_t utc) const
+        -:  293:{
+       15:  294:    const int minutes = offsetMinutes(utc);
+       15:  295:    const int magnitude = (minutes < 0) ? -minutes : minutes;
+        -:  296:
+       30:  297:    return std::string(minutes < 0 ? "-" : "+") +
+       60:  298:           Utility::padZero(magnitude / 60) + ":" +
+       45:  299:           Utility::padZero(magnitude % 60);
+        -:  300:}
+        -:  301:
+       50:  302:bool TimeZone::parseOffset(const std::string &text, int &minutes)
+        -:  303:{
+       50:  304:    std::string value = Utility::toUpper(Utility::trim(text));
+        -:  305:
+       50:  306:    if (value.empty())
+        2:  307:        return false;
+        -:  308:
+        -:  309:    // "UTC" alone, or a "UTC" prefix on a signed offset.
+       48:  310:    if (value == "UTC" || value == "GMT" || value == "Z")
+        -:  311:    {
+       17:  312:        minutes = 0;
+       17:  313:        return true;
+        -:  314:    }
+        -:  315:
+       31:  316:    if (value.rfind("UTC", 0) == 0)
+        2:  317:        value = value.substr(3);
+       29:  318:    else if (value.rfind("GMT", 0) == 0)
+    #####:  319:        value = value.substr(3);
+        -:  320:
+       31:  321:    value = Utility::trim(value);
+        -:  322:
+       31:  323:    if (value.empty())
+        -:  324:    {
+    #####:  325:        minutes = 0;
+    #####:  326:        return true;
+        -:  327:    }
+        -:  328:
+       31:  329:    int sign = 1;
+        -:  330:
+       31:  331:    if (value[0] == '+')
+        -:  332:    {
+       18:  333:        value = value.substr(1);
+        -:  334:    }
+       13:  335:    else if (value[0] == '-')
+        -:  336:    {
+        7:  337:        sign = -1;
+        7:  338:        value = value.substr(1);
+        -:  339:    }
+        -:  340:    else
+        -:  341:    {
+        -:  342:        // An offset must carry a sign; a bare number is too ambiguous to
+        -:  343:        // guess at.
+        6:  344:        return false;
+        -:  345:    }
+        -:  346:
+       25:  347:    if (value.empty())
+        1:  348:        return false;
+        -:  349:
+       24:  350:    int hours = 0;
+       24:  351:    int mins = 0;
+        -:  352:
+       24:  353:    const std::size_t colon = value.find(':');
+        -:  354:
+       24:  355:    if (colon == std::string::npos)
+        -:  356:    {
+        2:  357:        hours = Utility::toInt(value, -1);
+        -:  358:
+        2:  359:        if (hours < 0)
+        1:  360:            return false;
+        -:  361:    }
+        -:  362:    else
+        -:  363:    {
+       22:  364:        const std::string hourPart = value.substr(0, colon);
+       22:  365:        const std::string minutePart = value.substr(colon + 1);
+        -:  366:
+       22:  367:        if (hourPart.empty() || minutePart.empty())
+        2:  368:            return false;
+        -:  369:
+       20:  370:        hours = Utility::toInt(hourPart, -1);
+       20:  371:        mins = Utility::toInt(minutePart, -1);
+        -:  372:
+       20:  373:        if (hours < 0 || mins < 0 || mins > 59)
+        1:  374:            return false;
+       44:  375:    }
+        -:  376:
+       20:  377:    const int total = sign * (hours * 60 + mins);
+        -:  378:
+       20:  379:    if (total < MIN_OFFSET_MINUTES || total > MAX_OFFSET_MINUTES)
+        5:  380:        return false;
+        -:  381:
+       15:  382:    minutes = total;
+        -:  383:
+       15:  384:    return true;
+       50:  385:}
+        -:  386:
+       35:  387:bool TimeZone::parse(const std::string &text, TimeZone &zone)
+        -:  388:{
+       35:  389:    const std::string source = Utility::trim(text);
+        -:  390:
+       35:  391:    if (source.empty())
+        2:  392:        return false;
+        -:  393:
+       33:  394:    std::string specification = source;
+       33:  395:    std::string label;
+        -:  396:
+       33:  397:    const std::size_t pipe = source.find('|');
+        -:  398:
+       33:  399:    if (pipe != std::string::npos)
+        -:  400:    {
+       12:  401:        specification = Utility::trim(source.substr(0, pipe));
+       12:  402:        label = Utility::trim(source.substr(pipe + 1));
+        -:  403:    }
+        -:  404:
+       33:  405:    if (specification.empty())
+        1:  406:        return false;
+        -:  407:
+       32:  408:    TimeZone parsed;
+       32:  409:    parsed.spec = specification;
+        -:  410:
+        -:  411:    // A '/' marks an IANA zone id; everything else is treated as an offset.
+       32:  412:    if (specification.find('/') != std::string::npos)
+        -:  413:    {
+        2:  414:        if (!parsed.setNamedZone(specification))
+    #####:  415:            return false;
+        -:  416:    }
+        -:  417:    else
+        -:  418:    {
+       30:  419:        int minutes = 0;
+        -:  420:
+       30:  421:        if (!parseOffset(specification, minutes))
+        7:  422:            return false;
+        -:  423:
+       23:  424:        if (!parsed.setFixedOffset(minutes))
+    #####:  425:            return false;
+        -:  426:    }
+        -:  427:
+       25:  428:    parsed.setLabel(label);
+        -:  429:
+       25:  430:    zone = parsed;
+        -:  431:
+       25:  432:    return true;
+       35:  433:}

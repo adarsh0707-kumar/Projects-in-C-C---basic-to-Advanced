@@ -1,0 +1,245 @@
+        -:    0:Source:/run/media/mahakal108/Servers/Skills/C Langagues/Projects/DigitalClock/Src/ConfigurationManager.cpp
+        -:    0:Graph:../Obj/ConfigurationManager.gcno
+        -:    0:Data:../Obj/ConfigurationManager.gcda
+        -:    0:Runs:1
+        -:    1:#include "ConfigurationManager.hpp"
+        -:    2:
+        -:    3:#include <filesystem>
+        -:    4:#include <fstream>
+        -:    5:#include <unordered_set>
+        -:    6:
+        -:    7:#include "Utility.hpp"
+        -:    8:
+       95:    9:ConfigurationManager::ConfigurationManager() = default;
+        -:   10:
+     3090:   11:std::string ConfigurationManager::normalize(const std::string &key)
+        -:   12:{
+     6180:   13:    return Utility::toUpper(Utility::trim(key));
+        -:   14:}
+        -:   15:
+       96:   16:bool ConfigurationManager::load(const std::string &filePath)
+        -:   17:{
+       96:   18:    clear();
+        -:   19:
+       96:   20:    std::ifstream file(filePath);
+        -:   21:
+       96:   22:    if (!file)
+        2:   23:        return false;
+        -:   24:
+       94:   25:    loadedPath = filePath;
+        -:   26:
+       94:   27:    std::string section;
+       94:   28:    std::string line;
+        -:   29:
+     1691:   30:    while (std::getline(file, line))
+        -:   31:    {
+     1597:   32:        line = Utility::trim(line);
+        -:   33:
+     1597:   34:        if (line.empty())
+     1037:   35:            continue;
+        -:   36:
+     1419:   37:        if (line[0] == '#' || line[0] == ';')
+      855:   38:            continue;
+        -:   39:
+        -:   40:        // [Section] header.
+      564:   41:        if (line.front() == '[' && line.back() == ']')
+        -:   42:        {
+        2:   43:            section = Utility::trim(line.substr(1, line.size() - 2));
+        2:   44:            continue;
+        -:   45:        }
+        -:   46:
+      562:   47:        const std::size_t separator = line.find('=');
+        -:   48:
+        -:   49:        // A line without '=' is malformed; skip it rather than fail the load.
+      562:   50:        if (separator == std::string::npos)
+        1:   51:            continue;
+        -:   52:
+      561:   53:        const std::string key = Utility::trim(line.substr(0, separator));
+      561:   54:        const std::string value = Utility::trim(line.substr(separator + 1));
+        -:   55:
+      561:   56:        if (key.empty())
+        1:   57:            continue;
+        -:   58:
+      560:   59:        setValue(key, value);
+        -:   60:
+        -:   61:        // Sectioned keys are also reachable as "Section.Key".
+      560:   62:        if (!section.empty())
+        3:   63:            setValue(section + "." + key, value);
+     1122:   64:    }
+        -:   65:
+       94:   66:    return true;
+       96:   67:}
+        -:   68:
+      402:   69:std::string ConfigurationManager::getValue(const std::string &key) const
+        -:   70:{
+      402:   71:    const auto entry = settings.find(normalize(key));
+        -:   72:
+      402:   73:    if (entry == settings.end())
+        2:   74:        return "";
+        -:   75:
+      401:   76:    return entry->second;
+        -:   77:}
+        -:   78:
+      204:   79:std::string ConfigurationManager::getValue(
+        -:   80:    const std::string &key,
+        -:   81:    const std::string &defaultValue) const
+        -:   82:{
+      204:   83:    const auto entry = settings.find(normalize(key));
+        -:   84:
+      204:   85:    if (entry == settings.end() || entry->second.empty())
+      157:   86:        return defaultValue;
+        -:   87:
+       47:   88:    return entry->second;
+        -:   89:}
+        -:   90:
+       60:   91:int ConfigurationManager::getInt(const std::string &key,
+        -:   92:                                 int defaultValue,
+        -:   93:                                 int minimum,
+        -:   94:                                 int maximum) const
+        -:   95:{
+       60:   96:    const auto entry = settings.find(normalize(key));
+        -:   97:
+       60:   98:    if (entry == settings.end())
+       25:   99:        return defaultValue;
+        -:  100:
+       35:  101:    const int parsed = Utility::toInt(entry->second, defaultValue);
+        -:  102:
+        -:  103:    // Out-of-range values are rejected in favour of the default (TC-022).
+       35:  104:    if (parsed < minimum || parsed > maximum)
+        4:  105:        return defaultValue;
+        -:  106:
+       31:  107:    return parsed;
+        -:  108:}
+        -:  109:
+      101:  110:bool ConfigurationManager::getBool(const std::string &key,
+        -:  111:                                   bool defaultValue) const
+        -:  112:{
+      101:  113:    const auto entry = settings.find(normalize(key));
+        -:  114:
+      101:  115:    if (entry == settings.end())
+       45:  116:        return defaultValue;
+        -:  117:
+       56:  118:    return Utility::toBool(entry->second, defaultValue);
+        -:  119:}
+        -:  120:
+      566:  121:bool ConfigurationManager::setValue(const std::string &key,
+        -:  122:                                    const std::string &value)
+        -:  123:{
+      566:  124:    const std::string normalized = normalize(key);
+        -:  125:
+      566:  126:    if (normalized.empty())
+        1:  127:        return false;
+        -:  128:
+      565:  129:    if (settings.find(normalized) == settings.end())
+        -:  130:    {
+      563:  131:        insertionOrder.push_back(normalized);
+      563:  132:        originalKeys[normalized] = Utility::trim(key);
+        -:  133:    }
+        -:  134:
+      565:  135:    settings[normalized] = value;
+        -:  136:
+      565:  137:    return true;
+      566:  138:}
+        -:  139:
+     1281:  140:bool ConfigurationManager::hasValue(const std::string &key) const
+        -:  141:{
+     1281:  142:    return settings.find(normalize(key)) != settings.end();
+        -:  143:}
+        -:  144:
+        2:  145:bool ConfigurationManager::save() const
+        -:  146:{
+        2:  147:    if (loadedPath.empty())
+        1:  148:        return false;
+        -:  149:
+        1:  150:    return saveAs(loadedPath);
+        -:  151:}
+        -:  152:
+        1:  153:bool ConfigurationManager::saveAs(const std::string &filePath) const
+        -:  154:{
+        1:  155:    if (filePath.empty())
+    #####:  156:        return false;
+        -:  157:
+        1:  158:    const std::filesystem::path path(filePath);
+        -:  159:
+        1:  160:    if (path.has_parent_path())
+        -:  161:    {
+        1:  162:        std::error_code code;
+        1:  163:        std::filesystem::create_directories(path.parent_path(), code);
+        -:  164:    }
+        -:  165:
+        1:  166:    std::ofstream file(filePath, std::ios::trunc);
+        -:  167:
+        1:  168:    if (!file)
+    #####:  169:        return false;
+        -:  170:
+        -:  171:    file << "# Digital Clock Configuration\n"
+        -:  172:         << "# Written by ConfigurationManager on "
+        1:  173:         << Utility::currentDateTime()
+        1:  174:         << "\n\n";
+        -:  175:
+        5:  176:    for (const std::string &normalized : insertionOrder)
+        -:  177:    {
+        -:  178:        // Composite "Section.Key" aliases are derived on load, not stored
+        -:  179:        // settings in their own right, so they are not written back.
+       3*:  180:        if (normalized.find('.') != std::string::npos)
+    #####:  181:            continue;
+        -:  182:
+        3:  183:        const auto value = settings.find(normalized);
+        -:  184:
+       3*:  185:        if (value == settings.end())
+    #####:  186:            continue;
+        -:  187:
+        3:  188:        const auto original = originalKeys.find(normalized);
+        -:  189:
+        3:  190:        const std::string name =
+       3*:  191:            (original != originalKeys.end()) ? original->second : normalized;
+        -:  192:
+        3:  193:        file << name << "=" << value->second << '\n';
+        3:  194:    }
+        -:  195:
+        1:  196:    return file.good();
+        1:  197:}
+        -:  198:
+       96:  199:void ConfigurationManager::clear()
+        -:  200:{
+       96:  201:    settings.clear();
+       96:  202:    originalKeys.clear();
+       96:  203:    insertionOrder.clear();
+       96:  204:    loadedPath.clear();
+       96:  205:}
+        -:  206:
+        4:  207:std::size_t ConfigurationManager::size() const
+        -:  208:{
+        4:  209:    return settings.size();
+        -:  210:}
+        -:  211:
+        1:  212:const std::string &ConfigurationManager::filePath() const
+        -:  213:{
+        1:  214:    return loadedPath;
+        -:  215:}
+        -:  216:
+       28:  217:std::vector<std::string> ConfigurationManager::unknownKeys(
+        -:  218:    const std::vector<std::string> &recognised) const
+        -:  219:{
+       28:  220:    std::unordered_set<std::string> known;
+        -:  221:
+      532:  222:    for (const std::string &key : recognised)
+      476:  223:        known.insert(normalize(key));
+        -:  224:
+       28:  225:    std::vector<std::string> unknown;
+        -:  226:
+        -:  227:    // insertionOrder preserves file order, so the warnings read top to bottom.
+      215:  228:    for (const std::string &key : insertionOrder)
+        -:  229:    {
+      159:  230:        if (known.find(key) != known.end())
+      156:  231:            continue;
+        -:  232:
+        3:  233:        const auto original = originalKeys.find(key);
+        -:  234:
+        -:  235:        // Report the spelling the user typed, not the normalised form.
+       6*:  236:        unknown.push_back(
+        9:  237:            (original != originalKeys.end()) ? original->second : key);
+        -:  238:    }
+        -:  239:
+       28:  240:    return unknown;
+       28:  241:}
