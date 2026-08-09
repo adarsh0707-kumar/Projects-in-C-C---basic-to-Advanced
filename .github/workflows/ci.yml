@@ -137,6 +137,68 @@ jobs:
       - name: Build instrumented, run the suite and report
         run: make coverage THRESHOLD=78
 
+  # Input that simply runs out.
+  #
+  # Every smoke test in this workflow ends with menu option 12, so the
+  # calculator always exited before the stream did -- and the one thing
+  # that never got exercised was the stream ending on its own. It hung:
+  # `while (getchar() != '\n');` does not terminate at EOF, and neither
+  # did the menu, which read EOF as a bad choice and said so forever.
+  #
+  # Ctrl+D at the prompt did the same thing. Two of the three projects
+  # here have now had this exact defect, so it gets its own job.
+  no-hang:
+    name: Exhausted input terminates
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Build
+        run: make
+
+      - name: Input that ends without choosing Exit
+        run: |
+          # No trailing "12": the stream just stops. The timeout is a hang
+          # detector, not a performance budget -- the old build would still
+          # be spinning.
+          printf '1\n2+3*4\n' | timeout 30 ./calculator > out.txt
+
+          cat out.txt
+
+          grep -q "14" out.txt \
+            || { echo "::error::did not evaluate before the input ran out"; exit 1; }
+
+          grep -q "No more input" out.txt \
+            || { echo "::error::did not report the closed stream"; exit 1; }
+
+      - name: Nothing but rubbish, then nothing
+        run: |
+          printf 'zz\n' | timeout 30 ./calculator > junk.txt
+
+          grep -q "Invalid choice" junk.txt \
+            || { echo "::error::bad menu input was not reported"; exit 1; }
+
+      - name: Immediate end of input
+        run: |
+          : | timeout 30 ./calculator > empty.txt
+          echo "Closed stream handled."
+
+      - name: Recovery still works
+        run: |
+          # Refusing bad input must not mean giving up on the session.
+          printf 'zz\n1\n2+2\n12\n' | timeout 30 ./calculator > recover.txt
+
+          grep -q "Invalid choice" recover.txt \
+            || { echo "::error::bad input was not reported"; exit 1; }
+
+          grep -q ": 4" recover.txt \
+            || { echo "::error::did not carry on after bad input"; exit 1; }
+
+          echo "Recovered from bad input and finished cleanly."
+
   sanitizers:
     name: Sanitizer checks (${{ matrix.build }})
     runs-on: ubuntu-latest

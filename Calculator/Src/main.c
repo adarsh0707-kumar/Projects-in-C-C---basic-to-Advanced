@@ -32,6 +32,34 @@
  * too long -- in which case the rest of it is drained so the next prompt
  * starts clean.
  */
+/*
+ * Drops the rest of the current input line.
+ *
+ * The obvious spelling, `while (getchar() != '\n');`, does not terminate at
+ * end of input: getchar() returns EOF forever and the loop spins. Every one
+ * of the eight places this used to appear inherited that, so piping the
+ * calculator any input that did not end with menu option 12 hung it,
+ * pegging a core. Pressing Ctrl+D did the same.
+ *
+ * CI never saw it because the smoke test's input ends with "12" and the
+ * program exits before the stream ever runs dry.
+ *
+ * Returns 0 when the input has ended, so callers can stop rather than ask
+ * a closed stream for more.
+ */
+static int discardLine(void)
+{
+    int discarded;
+
+    while ((discarded = getchar()) != '\n')
+    {
+        if (discarded == EOF)
+            return 0;
+    }
+
+    return 1;
+}
+
 static int readLine(char buffer[], size_t size)
 {
     if (fgets(buffer, (int)size, stdin) == NULL)
@@ -94,16 +122,35 @@ int main(void)
 
         printf("\nChoice: ");
 
+        /*
+        EOF is not a bad choice, it is no more choices. Treating the two
+        alike is what turned a closed stream into an endless loop: scanf
+        keeps returning EOF, so "Invalid choice!" printed forever.
+        */
+        if (feof(stdin))
+        {
+            printf("\nNo more input. Goodbye!\n");
+            break;
+        }
+
         if (scanf("%d", &choice) != 1)
         {
-            while (getchar() != '\n')
-                ; // discard invalid input
+            if (feof(stdin))
+            {
+                printf("\nNo more input. Goodbye!\n");
+                break;
+            }
+
+            discardLine();
             printf("Invalid choice!\n");
             continue;
         }
 
-        while (getchar() != '\n')
-            ; // discard remaining characters
+        if (!discardLine())
+        {
+            /* The choice was read, but nothing follows it. Honour the
+               choice; the next pass will find the stream closed. */
+        }
 
         switch (choice)
         {
@@ -396,15 +443,12 @@ int main(void)
 
                 if (scanf("%d", &memChoice) != 1)
                 {
-                    while (getchar() != '\n')
-                        ;
+                    discardLine();
                     printf("Invalid choice!\n");
                     continue;
                 }
 
-                while (getchar() != '\n')
-                    ;
-
+                discardLine();
                 switch (memChoice)
                 {
                 case 1:
@@ -419,14 +463,12 @@ int main(void)
                     printf("Enter value: ");
                     if (scanf("%lf", &value) != 1)
                     {
-                        while (getchar() != '\n')
-                            ;
+                        discardLine();
                         printf("Invalid number!\n");
                         continue;
                     }
 
-                    while (getchar() != '\n')
-                        ;
+                    discardLine();
                     memoryAdd(value);
                     break;
 
@@ -434,14 +476,12 @@ int main(void)
                     printf("Enter value: ");
                     if (scanf("%lf", &value) != 1)
                     {
-                        while (getchar() != '\n')
-                            ;
+                        discardLine();
                         printf("Invalid number!\n");
                         continue;
                     }
 
-                    while (getchar() != '\n')
-                        ;
+                    discardLine();
                     memorySubtract(value);
                     break;
 
