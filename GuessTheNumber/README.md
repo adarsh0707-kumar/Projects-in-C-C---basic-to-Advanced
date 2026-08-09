@@ -123,4 +123,4 @@ a wrong return value.
 
 ## License
 
-MIT — see the repository root.
+MIT — see [LICENSE](LICENSE).

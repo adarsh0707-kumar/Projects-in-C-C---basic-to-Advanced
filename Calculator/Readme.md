@@ -4,7 +4,7 @@
 ![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-green)
 ![Compiler](https://img.shields.io/badge/Compiler-GCC%2FG%2B%2B-orange)
 ![Build](https://img.shields.io/badge/Build-Make-red)
-![Tests](<https://img.shields.io/badge/Tests-486%20passing-brightgreen>)
+![Tests](<https://img.shields.io/badge/Tests-493%20passing-brightgreen>)
 ![CI](https://github.com/adarsh0707-kumar/Projects-in-C-C---basic-to-Advanced/actions/workflows/ci.yml/badge.svg)
 ![License](https://img.shields.io/badge/License-MIT-brightgreen)
 [![Release](https://img.shields.io/github/v/release/adarsh0707-kumar/Projects-in-C-C---basic-to-Advanced?filter=calculator-v*&label=download)](https://github.com/adarsh0707-kumar/Projects-in-C-C---basic-to-Advanced/releases/latest)
