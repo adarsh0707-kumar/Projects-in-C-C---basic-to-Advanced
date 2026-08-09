@@ -1,0 +1,161 @@
+        -:    0:Source:/run/media/mahakal108/Servers/Skills/C Langagues/Projects/DigitalClock/Src/Notifier.cpp
+        -:    0:Graph:../Obj/Notifier.gcno
+        -:    0:Data:../Obj/Notifier.gcda
+        -:    0:Runs:1
+        -:    1:#include "Notifier.hpp"
+        -:    2:
+        -:    3:#include <algorithm>
+        -:    4:#include <iostream>
+        -:    5:
+        -:    6:namespace
+        -:    7:{
+        -:    8:    /** Width of the alert panel when the layout allows it. */
+        -:    9:    const int PREFERRED_WIDTH = 46;
+        -:   10:
+        -:   11:    /** Narrowest panel that still reads correctly. */
+        -:   12:    const int MINIMUM_WIDTH = 24;
+        -:   13:
+        -:   14:    /**
+        -:   15:     * @brief Pads or truncates text to exactly @p width characters.
+        -:   16:     */
+       68:   17:    std::string fit(const std::string &text, std::size_t width)
+        -:   18:    {
+       68:   19:        if (text.size() >= width)
+    #####:   20:            return text.substr(0, width);
+        -:   21:
+      204:   22:        return text + std::string(width - text.size(), ' ');
+        -:   23:    }
+        -:   24:}
+        -:   25:
+       27:   26:Notifier::Notifier()
+       27:   27:    : active(false),
+       27:   28:      bell(true),
+       27:   29:      bells(0)
+        -:   30:{
+       27:   31:}
+        -:   32:
+        5:   33:void Notifier::notify(const Alarm &alarm, int snoozeMinutes)
+        -:   34:{
+        5:   35:    notify(
+       10:   36:        "ALARM  " + alarm.timeString(),
+       10:   37:        alarm.getLabel(),
+       10:   38:        "[S] Snooze " + std::to_string(snoozeMinutes) + "m   [D] Dismiss");
+        -:   39:
+        -:   40:    // Keep the structured time available to callers that ask for it.
+        5:   41:    alarmTime = alarm.timeString();
+        5:   42:}
+        -:   43:
+        6:   44:void Notifier::notify(const std::string &heading,
+        -:   45:                      const std::string &detail,
+        -:   46:                      const std::string &keyHint)
+        -:   47:{
+        6:   48:    active = true;
+        6:   49:    title = heading;
+        6:   50:    alarmLabel = detail;
+        6:   51:    alarmTime.clear();
+        6:   52:    hint = keyHint;
+        -:   53:
+        6:   54:    ring();
+        6:   55:}
+        -:   56:
+       17:   57:void Notifier::pulse()
+        -:   58:{
+       17:   59:    if (!active)
+        1:   60:        return;
+        -:   61:
+       16:   62:    ring();
+        -:   63:}
+        -:   64:
+       22:   65:void Notifier::ring()
+        -:   66:{
+       22:   67:    if (!bell)
+       19:   68:        return;
+        -:   69:
+        -:   70:    // BEL. Terminals that have the audible bell disabled usually flash instead.
+        3:   71:    std::cout << '\a';
+        -:   72:
+        3:   73:    ++bells;
+        -:   74:}
+        -:   75:
+        5:   76:void Notifier::clear()
+        -:   77:{
+        5:   78:    active = false;
+        5:   79:    title.clear();
+        5:   80:    alarmTime.clear();
+        5:   81:    alarmLabel.clear();
+        5:   82:    hint.clear();
+        5:   83:}
+        -:   84:
+      169:   85:bool Notifier::isActive() const
+        -:   86:{
+      169:   87:    return active;
+        -:   88:}
+        -:   89:
+        1:   90:std::string Notifier::label() const
+        -:   91:{
+        1:   92:    return alarmLabel;
+        -:   93:}
+        -:   94:
+        1:   95:std::string Notifier::time() const
+        -:   96:{
+        1:   97:    return alarmTime;
+        -:   98:}
+        -:   99:
+    #####:  100:std::string Notifier::heading() const
+        -:  101:{
+    #####:  102:    return title;
+        -:  103:}
+        -:  104:
+       28:  105:void Notifier::setBellEnabled(bool enabled)
+        -:  106:{
+       28:  107:    bell = enabled;
+       28:  108:}
+        -:  109:
+    #####:  110:bool Notifier::bellEnabled() const
+        -:  111:{
+    #####:  112:    return bell;
+        -:  113:}
+        -:  114:
+        3:  115:int Notifier::bellCount() const
+        -:  116:{
+        3:  117:    return bells;
+        -:  118:}
+        -:  119:
+      167:  120:std::vector<std::string> Notifier::lines(int width) const
+        -:  121:{
+      167:  122:    std::vector<std::string> panel;
+        -:  123:
+      167:  124:    if (!active)
+      150:  125:        return panel;
+        -:  126:
+        -:  127:    // Fit the panel to the layout, leaving a margin, without going too narrow.
+       17:  128:    int panelWidth = std::min(PREFERRED_WIDTH, width - 4);
+       17:  129:    panelWidth = std::max(panelWidth, MINIMUM_WIDTH);
+        -:  130:
+       17:  131:    const std::size_t inner = static_cast<std::size_t>(panelWidth) - 4;
+        -:  132:
+       17:  133:    const std::string border =
+       17:  134:        "+" + std::string(static_cast<std::size_t>(panelWidth) - 2, '-') + "+";
+        -:  135:
+       17:  136:    const int indent = std::max(0, (width - panelWidth) / 2);
+       34:  137:    const std::string pad(static_cast<std::size_t>(indent), ' ');
+        -:  138:
+       85:  139:    auto row = [&](const std::string &text)
+        -:  140:    {
+       68:  141:        panel.push_back(pad + "| " + fit(text, inner) + " |");
+       68:  142:    };
+        -:  143:
+       17:  144:    panel.push_back(pad + border);
+        -:  145:
+       17:  146:    row(title);
+        -:  147:
+       17:  148:    if (!alarmLabel.empty())
+       17:  149:        row(alarmLabel);
+        -:  150:
+       17:  151:    row("");
+       17:  152:    row(hint);
+        -:  153:
+       17:  154:    panel.push_back(pad + border);
+        -:  155:
+       17:  156:    return panel;
+       17:  157:}

@@ -1,0 +1,170 @@
+        -:    0:Source:/usr/include/c++/16/ext/aligned_buffer.h
+        -:    0:Graph:../Obj/ThemeManager.gcno
+        -:    0:Data:../Obj/ThemeManager.gcda
+        -:    0:Runs:1
+        -:    1:// Aligned memory buffer -*- C++ -*-
+        -:    2:
+        -:    3:// Copyright (C) 2013-2026 Free Software Foundation, Inc.
+        -:    4://
+        -:    5:// This file is part of the GNU ISO C++ Library.  This library is free
+        -:    6:// software; you can redistribute it and/or modify it under the
+        -:    7:// terms of the GNU General Public License as published by the
+        -:    8:// Free Software Foundation; either version 3, or (at your option)
+        -:    9:// any later version.
+        -:   10:
+        -:   11:// This library is distributed in the hope that it will be useful,
+        -:   12:// but WITHOUT ANY WARRANTY; without even the implied warranty of
+        -:   13:// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        -:   14:// GNU General Public License for more details.
+        -:   15:
+        -:   16:// Under Section 7 of GPL version 3, you are granted additional
+        -:   17:// permissions described in the GCC Runtime Library Exception, version
+        -:   18:// 3.1, as published by the Free Software Foundation.
+        -:   19:
+        -:   20:// You should have received a copy of the GNU General Public License and
+        -:   21:// a copy of the GCC Runtime Library Exception along with this program;
+        -:   22:// see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
+        -:   23:// <http://www.gnu.org/licenses/>.
+        -:   24:
+        -:   25:/** @file ext/aligned_buffer.h
+        -:   26: *  This file is a GNU extension to the Standard C++ Library.
+        -:   27: */
+        -:   28:
+        -:   29:#ifndef _ALIGNED_BUFFER_H
+        -:   30:#define _ALIGNED_BUFFER_H 1
+        -:   31:
+        -:   32:#ifdef _GLIBCXX_SYSHDR
+        -:   33:#pragma GCC system_header
+        -:   34:#endif
+        -:   35:
+        -:   36:#if __cplusplus >= 201103L
+        -:   37:# include <type_traits>
+        -:   38:#else
+        -:   39:# include <bits/c++0x_warning.h>
+        -:   40:#endif
+        -:   41:
+        -:   42:namespace __gnu_cxx
+        -:   43:{
+        -:   44:  // A utility type containing a POD object that can hold an object of type
+        -:   45:  // _Tp initialized via placement new or allocator_traits::construct.
+        -:   46:  // Intended for use as a data member subobject, use __aligned_buffer for
+        -:   47:  // complete objects.
+        -:   48:  template<typename _Tp>
+        -:   49:    struct __aligned_membuf
+        -:   50:    {
+        -:   51:      // Target macro ADJUST_FIELD_ALIGN can produce different alignment for
+        -:   52:      // types when used as class members. __aligned_membuf is intended
+        -:   53:      // for use as a class member, so align the buffer as for a class member.
+        -:   54:      // Since GCC 8 we can just use alignas(_Tp) to get the right alignment.
+        -:   55:#ifdef __EDG__
+        -:   56:      // The EDG front end does not implement the PR c++/69560 alignof change.
+        -:   57:      struct _Tp2 { _Tp _M_t; };
+        -:   58:      alignas(__alignof__(_Tp2::_M_t))
+        -:   59:#else
+        -:   60:      alignas(_Tp)
+        -:   61:#endif
+        -:   62:	unsigned char _M_storage[sizeof(_Tp)];
+        -:   63:
+        -:   64:      __aligned_membuf() = default;
+        -:   65:
+        -:   66:      // Can be used to avoid value-initialization zeroing _M_storage.
+        -:   67:      __aligned_membuf(std::nullptr_t) { }
+        -:   68:
+        -:   69:      void*
+    #####:   70:      _M_addr() noexcept
+    #####:   71:      { return static_cast<void*>(&_M_storage); }
+------------------
+_ZN9__gnu_cxx16__aligned_membufISt4pairIKN12ThemeManager7ElementESt6vectorIN5Theme5StyleESaIS7_EEEE7_M_addrEv:
+    #####:   70:      _M_addr() noexcept
+    #####:   71:      { return static_cast<void*>(&_M_storage); }
+------------------
+_ZN9__gnu_cxx16__aligned_membufISt4pairIKN12ThemeManager7ElementEN5Theme5ColorEEE7_M_addrEv:
+    #####:   70:      _M_addr() noexcept
+    #####:   71:      { return static_cast<void*>(&_M_storage); }
+------------------
+        -:   72:
+        -:   73:      const void*
+    35564:   74:      _M_addr() const noexcept
+    35564:   75:      { return static_cast<const void*>(&_M_storage); }
+------------------
+_ZNK9__gnu_cxx16__aligned_membufISt4pairIKN12ThemeManager7ElementESt6vectorIN5Theme5StyleESaIS7_EEEE7_M_addrEv:
+    14489:   74:      _M_addr() const noexcept
+    14489:   75:      { return static_cast<const void*>(&_M_storage); }
+------------------
+_ZNK9__gnu_cxx16__aligned_membufISt4pairIKN12ThemeManager7ElementEN5Theme5ColorEEE7_M_addrEv:
+    21075:   74:      _M_addr() const noexcept
+    21075:   75:      { return static_cast<const void*>(&_M_storage); }
+------------------
+        -:   76:
+        -:   77:      _Tp*
+    #####:   78:      _M_ptr() noexcept
+    #####:   79:      { return static_cast<_Tp*>(_M_addr()); }
+------------------
+_ZN9__gnu_cxx16__aligned_membufISt4pairIKN12ThemeManager7ElementESt6vectorIN5Theme5StyleESaIS7_EEEE6_M_ptrEv:
+    #####:   78:      _M_ptr() noexcept
+    #####:   79:      { return static_cast<_Tp*>(_M_addr()); }
+------------------
+_ZN9__gnu_cxx16__aligned_membufISt4pairIKN12ThemeManager7ElementEN5Theme5ColorEEE6_M_ptrEv:
+    #####:   78:      _M_ptr() noexcept
+    #####:   79:      { return static_cast<_Tp*>(_M_addr()); }
+------------------
+        -:   80:
+        -:   81:      const _Tp*
+    35564:   82:      _M_ptr() const noexcept
+    35564:   83:      { return static_cast<const _Tp*>(_M_addr()); }
+------------------
+_ZNK9__gnu_cxx16__aligned_membufISt4pairIKN12ThemeManager7ElementESt6vectorIN5Theme5StyleESaIS7_EEEE6_M_ptrEv:
+    14489:   82:      _M_ptr() const noexcept
+    14489:   83:      { return static_cast<const _Tp*>(_M_addr()); }
+------------------
+_ZNK9__gnu_cxx16__aligned_membufISt4pairIKN12ThemeManager7ElementEN5Theme5ColorEEE6_M_ptrEv:
+    21075:   82:      _M_ptr() const noexcept
+    21075:   83:      { return static_cast<const _Tp*>(_M_addr()); }
+------------------
+        -:   84:    };
+        -:   85:
+        -:   86:#if _GLIBCXX_INLINE_VERSION
+        -:   87:  template<typename _Tp>
+        -:   88:    using __aligned_buffer = __aligned_membuf<_Tp>;
+        -:   89:#else
+        -:   90:  // Similar to __aligned_membuf but aligned for complete objects, not members.
+        -:   91:  // This type is used in <forward_list>, <future>, <bits/shared_ptr_base.h>
+        -:   92:  // and <bits/hashtable_policy.h>, but ideally they would use __aligned_membuf
+        -:   93:  // instead, as it has smaller size for some types on some targets.
+        -:   94:  // This type is still used to avoid an ABI change.
+        -:   95:  template<typename _Tp>
+        -:   96:    struct __aligned_buffer
+        -:   97:    {
+        -:   98:      // Using __alignof__ gives the alignment for a complete object.
+        -:   99:      alignas(__alignof__(_Tp)) unsigned char _M_storage[sizeof(_Tp)];
+        -:  100:
+        -:  101:      __aligned_buffer() = default;
+        -:  102:
+        -:  103:      // Can be used to avoid value-initialization
+        -:  104:      __aligned_buffer(std::nullptr_t) { }
+        -:  105:
+        -:  106:      void*
+    #####:  107:      _M_addr() noexcept
+        -:  108:      {
+    #####:  109:        return static_cast<void*>(&_M_storage);
+        -:  110:      }
+        -:  111:
+        -:  112:      const void*
+        -:  113:      _M_addr() const noexcept
+        -:  114:      {
+        -:  115:        return static_cast<const void*>(&_M_storage);
+        -:  116:      }
+        -:  117:
+        -:  118:      _Tp*
+    #####:  119:      _M_ptr() noexcept
+    #####:  120:      { return static_cast<_Tp*>(_M_addr()); }
+        -:  121:
+        -:  122:      const _Tp*
+        -:  123:      _M_ptr() const noexcept
+        -:  124:      { return static_cast<const _Tp*>(_M_addr()); }
+        -:  125:    };
+        -:  126:#endif
+        -:  127:
+        -:  128:} // namespace
+        -:  129:
+        -:  130:#endif /* _ALIGNED_BUFFER_H */

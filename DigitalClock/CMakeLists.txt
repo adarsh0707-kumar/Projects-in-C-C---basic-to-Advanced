@@ -121,7 +121,22 @@ function(digitalclock_add_plugin target source destination)
         C_STANDARD 11
         C_STANDARD_REQUIRED ON
         LIBRARY_OUTPUT_DIRECTORY "${destination}"
+        RUNTIME_OUTPUT_DIRECTORY "${destination}"
     )
+
+    # Multi-config generators -- Visual Studio, Xcode -- append the
+    # configuration name to the output directory, so the plain property
+    # above put the plugins in Build/Release/ while the tests looked in
+    # Build/. That is exactly how the Windows job failed: three cases
+    # reporting "the fixture was not built".
+    foreach(configuration IN LISTS CMAKE_CONFIGURATION_TYPES)
+        string(TOUPPER "${configuration}" CONFIGURATION_UPPER)
+
+        set_target_properties(${target} PROPERTIES
+            LIBRARY_OUTPUT_DIRECTORY_${CONFIGURATION_UPPER} "${destination}"
+            RUNTIME_OUTPUT_DIRECTORY_${CONFIGURATION_UPPER} "${destination}"
+        )
+    endforeach()
 endfunction()
 
 # The bundled example: a Pomodoro mode.

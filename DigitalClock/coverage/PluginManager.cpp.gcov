@@ -1,0 +1,294 @@
+        -:    0:Source:/run/media/mahakal108/Servers/Skills/C Langagues/Projects/DigitalClock/Src/PluginManager.cpp
+        -:    0:Graph:../Obj/PluginManager.gcno
+        -:    0:Data:../Obj/PluginManager.gcda
+        -:    0:Runs:1
+        -:    1:#include "PluginManager.hpp"
+        -:    2:
+        -:    3:#include <algorithm>
+        -:    4:#include <filesystem>
+        -:    5:
+        -:    6:#if defined(_WIN32)
+        -:    7:#include <windows.h>
+        -:    8:#else
+        -:    9:#include <dlfcn.h>
+        -:   10:#endif
+        -:   11:
+        -:   12:namespace
+        -:   13:{
+        -:   14:    /**
+        -:   15:     * @brief Opens a shared library, or returns null.
+        -:   16:     */
+       25:   17:    void *openLibrary(const std::string &path)
+        -:   18:    {
+        -:   19:#if defined(_WIN32)
+        -:   20:        return static_cast<void *>(LoadLibraryA(path.c_str()));
+        -:   21:#else
+        -:   22:        /*
+        -:   23:        RTLD_LOCAL so a plugin's symbols do not join the global namespace,
+        -:   24:        where two plugins defining the same name would silently resolve to
+        -:   25:        whichever loaded first.
+        -:   26:        */
+       25:   27:        return dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
+        -:   28:#endif
+        -:   29:    }
+        -:   30:
+        -:   31:    /**
+        -:   32:     * @brief Looks up a symbol, or returns null.
+        -:   33:     */
+       23:   34:    void *findSymbol(void *handle, const char *name)
+        -:   35:    {
+        -:   36:#if defined(_WIN32)
+        -:   37:        return reinterpret_cast<void *>(
+        -:   38:            GetProcAddress(static_cast<HMODULE>(handle), name));
+        -:   39:#else
+       23:   40:        return dlsym(handle, name);
+        -:   41:#endif
+        -:   42:    }
+        -:   43:
+        -:   44:    /**
+        -:   45:     * @brief Closes a library.
+        -:   46:     */
+       23:   47:    void closeLibrary(void *handle)
+        -:   48:    {
+        -:   49:#if defined(_WIN32)
+        -:   50:        FreeLibrary(static_cast<HMODULE>(handle));
+        -:   51:#else
+       23:   52:        dlclose(handle);
+        -:   53:#endif
+       23:   54:    }
+        -:   55:
+        -:   56:    /**
+        -:   57:     * @brief Describes why the last open or lookup failed.
+        -:   58:     */
+        2:   59:    std::string lastError()
+        -:   60:    {
+        -:   61:#if defined(_WIN32)
+        -:   62:        return "the library could not be loaded";
+        -:   63:#else
+        2:   64:        const char *message = dlerror();
+        -:   65:
+       4*:   66:        return (message != nullptr) ? message : "unknown error";
+        -:   67:#endif
+        -:   68:    }
+        -:   69:}
+        -:   70:
+        -:   71:const std::size_t PluginManager::MAX_PLUGINS = 16;
+        -:   72:
+       27:   73:PluginManager::PluginManager() = default;
+        -:   74:
+       27:   75:PluginManager::~PluginManager()
+        -:   76:{
+       27:   77:    unloadAll();
+       27:   78:}
+        -:   79:
+       66:   80:bool PluginManager::isSupported()
+        -:   81:{
+        -:   82:#if defined(_WIN32) || defined(__unix__) || defined(__APPLE__)
+       66:   83:    return true;
+        -:   84:#else
+        -:   85:    return false;
+        -:   86:#endif
+        -:   87:}
+        -:   88:
+       64:   89:std::string PluginManager::librarySuffix()
+        -:   90:{
+        -:   91:#if defined(_WIN32)
+        -:   92:    return ".dll";
+        -:   93:#elif defined(__APPLE__)
+        -:   94:    return ".dylib";
+        -:   95:#else
+      128:   96:    return ".so";
+        -:   97:#endif
+        -:   98:}
+        -:   99:
+       21:  100:std::size_t PluginManager::loadDirectory(const std::string &directory,
+        -:  101:                                         const DigitalClockHost &host)
+        -:  102:{
+       21:  103:    if (!isSupported())
+        -:  104:    {
+    #####:  105:        refused.push_back(
+    #####:  106:            "plugins are not supported on this platform");
+        -:  107:
+    #####:  108:        return 0;
+        -:  109:    }
+        -:  110:
+       21:  111:    std::error_code code;
+        -:  112:
+       21:  113:    if (!std::filesystem::is_directory(directory, code))
+        -:  114:    {
+        -:  115:        // Not an error: an installation with no plugins has no directory.
+        1:  116:        return 0;
+        -:  117:    }
+        -:  118:
+        -:  119:    // Sorted, so the order plugins appear in the mode cycle is the same on
+        -:  120:    // every machine rather than whatever the filesystem returns.
+       20:  121:    std::vector<std::string> candidates;
+        -:  122:
+       20:  123:    for (const auto &entry :
+       80:  124:         std::filesystem::directory_iterator(directory, code))
+        -:  125:    {
+      60*:  126:        if (!entry.is_regular_file(code))
+    #####:  127:            continue;
+        -:  128:
+       60:  129:        if (entry.path().extension().string() != librarySuffix())
+       40:  130:            continue;
+        -:  131:
+       20:  132:        candidates.push_back(entry.path().string());
+       20:  133:    }
+        -:  134:
+       20:  135:    std::sort(candidates.begin(), candidates.end());
+        -:  136:
+       20:  137:    std::size_t added = 0;
+        -:  138:
+       60:  139:    for (const std::string &path : candidates)
+        -:  140:    {
+       20:  141:        if (loaded.size() >= MAX_PLUGINS)
+        -:  142:        {
+    #####:  143:            refused.push_back(
+    #####:  144:                "too many plugins; '" + path + "' and any after it "
+    #####:  145:                "were not loaded");
+    #####:  146:            break;
+        -:  147:        }
+        -:  148:
+       20:  149:        if (loadPlugin(path, host))
+       20:  150:            ++added;
+        -:  151:    }
+        -:  152:
+       20:  153:    return added;
+       20:  154:}
+        -:  155:
+       25:  156:bool PluginManager::loadPlugin(const std::string &path,
+        -:  157:                               const DigitalClockHost &host)
+        -:  158:{
+       25:  159:    if (!isSupported())
+    #####:  160:        return false;
+        -:  161:
+       25:  162:    void *handle = openLibrary(path);
+        -:  163:
+       25:  164:    if (handle == nullptr)
+        -:  165:    {
+        2:  166:        refused.push_back("'" + path + "': " + lastError());
+        2:  167:        return false;
+        -:  168:    }
+        -:  169:
+       23:  170:    void *symbol = findSymbol(handle, DIGITALCLOCK_PLUGIN_INIT_SYMBOL);
+        -:  171:
+       23:  172:    if (symbol == nullptr)
+        -:  173:    {
+        -:  174:        /*
+        -:  175:        A shared library that happens to be in the directory but is not a
+        -:  176:        plugin lands here. Refusing by name is the point: the alternative is
+        -:  177:        guessing at an entry point and calling something arbitrary.
+        -:  178:        */
+        2:  179:        refused.push_back(
+        2:  180:            "'" + path + "': no " +
+        4:  181:            std::string(DIGITALCLOCK_PLUGIN_INIT_SYMBOL) + " symbol");
+        -:  182:
+        1:  183:        closeLibrary(handle);
+        -:  184:
+        1:  185:        return false;
+        -:  186:    }
+        -:  187:
+       22:  188:    DigitalClockPluginInit initialise =
+        -:  189:        reinterpret_cast<DigitalClockPluginInit>(symbol);
+        -:  190:
+       22:  191:    const DigitalClockPlugin *plugin = initialise(&host);
+        -:  192:
+       22:  193:    if (plugin == nullptr)
+        -:  194:    {
+        -:  195:        // A plugin may decline: an unmet requirement of its own is its
+        -:  196:        // business, and saying no is better than half-working.
+    #####:  197:        refused.push_back("'" + path + "': declined to initialise");
+    #####:  198:        closeLibrary(handle);
+    #####:  199:        return false;
+        -:  200:    }
+        -:  201:
+       22:  202:    if (plugin->abiVersion != DIGITALCLOCK_PLUGIN_ABI)
+        -:  203:    {
+        1:  204:        refused.push_back(
+        2:  205:            "'" + path + "': built for plugin ABI " +
+        4:  206:            std::to_string(plugin->abiVersion) + ", this build expects " +
+        3:  207:            std::to_string(DIGITALCLOCK_PLUGIN_ABI));
+        -:  208:
+        1:  209:        closeLibrary(handle);
+        -:  210:
+        1:  211:        return false;
+        -:  212:    }
+        -:  213:
+       21:  214:    if (plugin->name == nullptr || plugin->name[0] == '\0' ||
+       21:  215:        plugin->render == nullptr)
+        -:  216:    {
+    #####:  217:        refused.push_back(
+    #####:  218:            "'" + path + "': a plugin must supply a name and a render "
+    #####:  219:            "function");
+        -:  220:
+    #####:  221:        closeLibrary(handle);
+        -:  222:
+    #####:  223:        return false;
+        -:  224:    }
+        -:  225:
+       21:  226:    Loaded entry;
+       21:  227:    entry.handle = handle;
+       21:  228:    entry.plugin = plugin;
+       21:  229:    entry.path = path;
+        -:  230:
+       21:  231:    loaded.push_back(entry);
+        -:  232:
+       21:  233:    return true;
+       21:  234:}
+        -:  235:
+       52:  236:std::size_t PluginManager::count() const
+        -:  237:{
+       52:  238:    return loaded.size();
+        -:  239:}
+        -:  240:
+       58:  241:const DigitalClockPlugin *PluginManager::at(std::size_t index) const
+        -:  242:{
+       58:  243:    if (index >= loaded.size())
+        2:  244:        return nullptr;
+        -:  245:
+       56:  246:    return loaded[index].plugin;
+        -:  247:}
+        -:  248:
+       23:  249:std::string PluginManager::nameAt(std::size_t index) const
+        -:  250:{
+       23:  251:    const DigitalClockPlugin *plugin = at(index);
+        -:  252:
+       23:  253:    if (plugin == nullptr || plugin->name == nullptr)
+        2:  254:        return "";
+        -:  255:
+       44:  256:    std::string name(plugin->name);
+        -:  257:
+       22:  258:    if (name.size() > DIGITALCLOCK_PLUGIN_NAME_MAX)
+    #####:  259:        name.resize(DIGITALCLOCK_PLUGIN_NAME_MAX);
+        -:  260:
+       22:  261:    return name;
+       22:  262:}
+        -:  263:
+       51:  264:void PluginManager::unloadAll()
+        -:  265:{
+        -:  266:    /*
+        -:  267:    Shut every plugin down before closing any library. A plugin's shutdown()
+        -:  268:    lives in its own library, so closing as we go would be fine -- but a
+        -:  269:    plugin that kept a pointer into another would not be, and the ordering
+        -:  270:    costs nothing.
+        -:  271:    */
+      123:  272:    for (const Loaded &entry : loaded)
+        -:  273:    {
+       21:  274:        if (entry.plugin != nullptr && entry.plugin->shutdown != nullptr)
+       21:  275:            entry.plugin->shutdown();
+        -:  276:    }
+        -:  277:
+      123:  278:    for (const Loaded &entry : loaded)
+        -:  279:    {
+       21:  280:        if (entry.handle != nullptr)
+       21:  281:            closeLibrary(entry.handle);
+        -:  282:    }
+        -:  283:
+       51:  284:    loaded.clear();
+       51:  285:}
+        -:  286:
+       24:  287:const std::vector<std::string> &PluginManager::rejections() const
+        -:  288:{
+       24:  289:    return refused;
+        -:  290:}

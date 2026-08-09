@@ -1,0 +1,1268 @@
+        -:    0:Source:/run/media/mahakal108/Servers/Skills/C Langagues/Projects/DigitalClock/Src/Application.cpp
+        -:    0:Graph:../Obj/Application.gcno
+        -:    0:Data:../Obj/Application.gcda
+        -:    0:Runs:1
+        -:    1:#include "Application.hpp"
+        -:    2:
+        -:    3:#include <atomic>
+        -:    4:#include <chrono>
+        -:    5:#include <csignal>
+        -:    6:#include <thread>
+        -:    7:
+        -:    8:#include "TimeZone.hpp"
+        -:    9:#include "Utility.hpp"
+        -:   10:#include "Version.hpp"
+        -:   11:
+        -:   12:namespace
+        -:   13:{
+        -:   14:    /**
+        -:   15:     * Set from the signal handler, polled by the refresh loop. Only
+        -:   16:     * assignment to an atomic flag is performed here, which is all a signal
+        -:   17:     * handler is permitted to do safely.
+        -:   18:     */
+        -:   19:    std::atomic<bool> terminationRequested(false);
+        -:   20:
+        -:   21:    /** Default refresh interval when the configuration does not supply one. */
+        -:   22:    const int DEFAULT_INTERVAL = 1000;
+        -:   23:
+        -:   24:    /** Fastest accepted refresh interval, in milliseconds. */
+        -:   25:    const int MINIMUM_INTERVAL = 50;
+        -:   26:
+        -:   27:    /** Slowest accepted refresh interval, in milliseconds (one minute). */
+        -:   28:    const int MAXIMUM_INTERVAL = 60000;
+        -:   29:
+        -:   30:    /** Granularity of the sleep loop, so quit keys stay responsive. */
+        -:   31:    const int POLL_SLICE_MS = 40;
+        -:   32:
+        -:   33:    /** How long a status message stays on screen before clearing itself. */
+        -:   34:    const std::int64_t MESSAGE_DURATION_MS = 3000;
+        -:   35:
+        -:   36:    /**
+        -:   37:     * @brief Records a termination request.
+        -:   38:     * @param signalNumber Signal that was raised.
+        -:   39:     */
+        1:   40:    extern "C" void handleSignal(int signalNumber)
+        -:   41:    {
+        -:   42:        (void)signalNumber;
+        -:   43:
+        1:   44:        terminationRequested = true;
+        1:   45:    }
+        -:   46:
+        -:   47:    /**
+        -:   48:     * @brief Renders a refresh interval for the status bar.
+        -:   49:     * @param milliseconds Interval in milliseconds.
+        -:   50:     * @return std::string Human-readable description.
+        -:   51:     */
+       24:   52:    std::string describeInterval(int milliseconds)
+        -:   53:    {
+       24:   54:        if (milliseconds == 1000)
+       18:   55:            return "1 Second";
+        -:   56:
+       15:   57:        if (milliseconds % 1000 == 0)
+    #####:   58:            return std::to_string(milliseconds / 1000) + " Seconds";
+        -:   59:
+       30:   60:        return std::to_string(milliseconds) + " ms";
+        -:   61:    }
+        -:   62:}
+        -:   63:
+        -:   64:const int Application::EXIT_OK = 0;
+        -:   65:const int Application::EXIT_STARTUP_FAILED = 1;
+        -:   66:
+       23:   67:Application::Application()
+       23:   68:    : interval(DEFAULT_INTERVAL),
+       23:   69:      alarmsEnabled(true),
+       23:   70:      alertRaised(false),
+       23:   71:      currentPlugin(0),
+       23:   72:      unknownKeys(0),
+       23:   73:      messageUntilMs(0),
+       23:   74:      currentMode(Mode::Clock),
+       23:   75:      running(false),
+       23:   76:      initialized(false)
+        -:   77:{
+       23:   78:}
+        -:   79:
+       23:   80:Application::~Application()
+        -:   81:{
+       23:   82:    shutdown();
+       23:   83:}
+        -:   84:
+        1:   85:std::string Application::defaultConfigPath()
+        -:   86:{
+        2:   87:    return "Config/config.ini";
+        -:   88:}
+        -:   89:
+       23:   90:void Application::installSignalHandlers()
+        -:   91:{
+       23:   92:    terminationRequested = false;
+        -:   93:
+       23:   94:    std::signal(SIGINT, handleSignal);
+       23:   95:    std::signal(SIGTERM, handleSignal);
+       23:   96:}
+        -:   97:
+        3:   98:bool Application::signalReceived()
+        -:   99:{
+        3:  100:    return terminationRequested.load();
+        -:  101:}
+        -:  102:
+       22:  103:bool Application::initialize(const std::string &path)
+        -:  104:{
+       22:  105:    installSignalHandlers();
+        -:  106:
+        -:  107:    // Kept so reloadConfiguration() knows which file to re-read.
+       22:  108:    configPath = path;
+        -:  109:
+        -:  110:    /*
+        -:  111:    Stage 1 - Logger.
+        -:  112:
+        -:  113:    Opened at the default location first so that any problem loading the
+        -:  114:    configuration itself can be recorded. configureLogging() reopens it later
+        -:  115:    if the configuration names a different file.
+        -:  116:    */
+       44:  117:    const bool logOpened = logger.initialize("Logs/application.log");
+        -:  118:
+       22:  119:    logger.info(
+       44:  120:        std::string(Version::NAME) + " v" + Version::VERSION + " starting.");
+        -:  121:
+        -:  122:    // Stage 2 - Configuration.
+       22:  123:    const std::string resolvedConfig = resources.exists(configPath)
+       22:  124:                                           ? resources.resolve(configPath)
+       22:  125:                                           : configPath;
+        -:  126:
+       22:  127:    if (config.load(resolvedConfig))
+        -:  128:    {
+       21:  129:        logger.info("Configuration loaded from " + resolvedConfig + ".");
+        -:  130:    }
+        -:  131:    else
+        -:  132:    {
+        -:  133:        // A missing configuration is not fatal; defaults apply (TC-010).
+        1:  134:        logger.warning(
+        2:  135:            "Configuration file '" + configPath +
+        1:  136:            "' could not be read. Using default settings.");
+        -:  137:    }
+        -:  138:
+       22:  139:    configureLogging();
+        -:  140:
+      22*:  141:    if (!logOpened && logger.isOpen())
+    #####:  142:        logger.warning("Default log file was unavailable at startup.");
+        -:  143:
+       22:  144:    validateConfiguration();
+        -:  145:
+       44:  146:    interval = config.getInt(
+       44:  147:        "RefreshInterval",
+        -:  148:        DEFAULT_INTERVAL,
+        -:  149:        MINIMUM_INTERVAL,
+        -:  150:        MAXIMUM_INTERVAL);
+        -:  151:
+      107:  152:    if (config.hasValue("RefreshInterval") &&
+       79:  153:        interval != Utility::toInt(config.getValue("RefreshInterval"), interval))
+        -:  154:    {
+        -:  155:        // The configured value was rejected by validation (TC-022).
+        1:  156:        logger.warning(
+        3:  157:            "Refresh interval '" + config.getValue("RefreshInterval") +
+        4:  158:            "' is invalid. Using " + std::to_string(interval) + " ms.");
+        -:  159:    }
+        -:  160:
+       22:  161:    configureFormats();
+        -:  162:
+        -:  163:    // Stage 3 - Resources.
+       22:  164:    const std::string bannerPath =
+       88:  165:        config.getValue("Banner", "Resources/banner.txt");
+        -:  166:
+       22:  167:    if (!display.loadBanner(bannerPath))
+        -:  168:    {
+        -:  169:        // A missing banner is not fatal; the built-in artwork is used (TC-017).
+    #####:  170:        logger.warning(
+    #####:  171:            "Banner resource '" + bannerPath +
+    #####:  172:            "' was not found. Using the built-in banner.");
+        -:  173:    }
+        -:  174:    else
+        -:  175:    {
+       22:  176:        logger.info("Banner loaded from " + bannerPath + ".");
+        -:  177:    }
+        -:  178:
+        -:  179:    // Stage 4 - Theme.
+       22:  180:    configureTheme();
+        -:  181:
+        -:  182:    // Stage 4b - Alarms (v1.1.0) and the timer (v1.2.0).
+       22:  183:    configureAlarms();
+       22:  184:    configureTimer();
+       22:  185:    configureZones();
+       22:  186:    configurePlugins();
+        -:  187:
+        -:  188:    // Stages 5 and 7 - Console and Display.
+       22:  189:    display.initialize(theme);
+        -:  190:
+       22:  191:    if (!display.console().isInitialized())
+        -:  192:    {
+    #####:  193:        logger.error("Console could not be initialized.");
+    #####:  194:        return false;
+        -:  195:    }
+        -:  196:
+       22:  197:    if (!theme.isColorEnabled())
+       30:  198:        logger.info("Colour output disabled; terminal does not support it.");
+        -:  199:
+        -:  200:    // Stage 6 - Core objects.
+       22:  201:    if (!clock.update())
+    #####:  202:        logger.error("System time could not be read at startup.");
+        -:  203:
+       22:  204:    if (!date.update())
+    #####:  205:        logger.error("System date could not be read at startup.");
+        -:  206:
+       22:  207:    configureStatusBar();
+        -:  208:
+       22:  209:    logger.info(
+       44:  210:        "Refresh interval: " + std::to_string(interval) + " ms.");
+        -:  211:
+       44:  212:    logger.info("Initialization complete.");
+        -:  213:
+       22:  214:    initialized = true;
+        -:  215:
+       22:  216:    return true;
+       22:  217:}
+        -:  218:
+       28:  219:std::vector<std::string> Application::recognisedKeys()
+        -:  220:{
+        -:  221:    return {
+        -:  222:        "TimeFormat",
+        -:  223:        "DateFormat",
+        -:  224:        "Theme",
+        -:  225:        "RefreshInterval",
+        -:  226:        "Banner",
+        -:  227:        "TimeZones",
+        -:  228:        "Alarms",
+        -:  229:        "AlarmFile",
+        -:  230:        "SnoozeMinutes",
+        -:  231:        "AlarmBell",
+        -:  232:        "TimerDuration",
+        -:  233:        "Logging",
+        -:  234:        "LogFile",
+        -:  235:        "LogLevel",
+        -:  236:        "ConsoleLog",
+        -:  237:        "Plugins",
+       84:  238:        "PluginDirectory"};
+        -:  239:}
+        -:  240:
+       24:  241:void Application::validateConfiguration()
+        -:  242:{
+       24:  243:    const std::vector<std::string> unrecognised =
+       24:  244:        config.unknownKeys(recognisedKeys());
+        -:  245:
+       24:  246:    unknownKeys = unrecognised.size();
+        -:  247:
+        -:  248:    /*
+        -:  249:    Worth reporting rather than ignoring. An unrecognised key is almost always
+        -:  250:    a typo, and its effect is that the default silently applies: "Them=Light"
+        -:  251:    looks like a working configuration right up until the theme does not
+        -:  252:    change, with nothing anywhere to say why.
+        -:  253:    */
+       49:  254:    for (const std::string &key : unrecognised)
+        -:  255:    {
+        1:  256:        logger.warning(
+        2:  257:            "Configuration key '" + key +
+        1:  258:            "' is not recognised and has no effect.");
+        -:  259:    }
+       24:  260:}
+        -:  261:
+        1:  262:std::size_t Application::unknownKeyCount() const
+        -:  263:{
+        1:  264:    return unknownKeys;
+        -:  265:}
+        -:  266:
+        4:  267:void Application::setTransientMessage(const std::string &text,
+        -:  268:                                      std::int64_t nowMs)
+        -:  269:{
+        4:  270:    display.setMessage(text);
+        -:  271:
+        4:  272:    messageUntilMs = nowMs + MESSAGE_DURATION_MS;
+        4:  273:}
+        -:  274:
+        1:  275:std::string Application::cycleTheme()
+        -:  276:{
+        1:  277:    const std::string name = theme.cycleTheme();
+        -:  278:
+        2:  279:    display.setStatusField("Theme", name);
+        1:  280:    setTransientMessage("Theme: " + name, monotonicNow());
+        -:  281:
+        1:  282:    logger.info("Theme changed to " + name + ".");
+        -:  283:
+        1:  284:    return name;
+    =====:  285:}
+        -:  286:
+        1:  287:bool Application::toggleTimeFormat()
+        -:  288:{
+        -:  289:    const bool wasTwelve =
+        1:  290:        formatter.timeFormat() == TimeFormatter::TimeFormat::Hour12;
+        -:  291:
+       1*:  292:    formatter.setTimeFormat(
+        -:  293:        wasTwelve ? TimeFormatter::TimeFormat::Hour24
+        -:  294:                  : TimeFormatter::TimeFormat::Hour12);
+        -:  295:
+        1:  296:    const bool nowTwelve = !wasTwelve;
+        -:  297:
+        2:  298:    setTransientMessage(
+       2*:  299:        nowTwelve ? "12-hour clock" : "24-hour clock", monotonicNow());
+        -:  300:
+        1:  301:    logger.debug(
+        2:  302:        std::string("Clock format switched to ") +
+       2*:  303:        (nowTwelve ? "12-hour." : "24-hour."));
+        -:  304:
+        1:  305:    return nowTwelve;
+        -:  306:}
+        -:  307:
+        2:  308:bool Application::reloadConfiguration()
+        -:  309:{
+        2:  310:    if (!initialized)
+    #####:  311:        return false;
+        -:  312:
+        2:  313:    const std::string resolved = resources.exists(configPath)
+        2:  314:                                     ? resources.resolve(configPath)
+       2*:  315:                                     : configPath;
+        -:  316:
+        2:  317:    if (!config.load(resolved))
+        -:  318:    {
+    #####:  319:        logger.warning(
+    #####:  320:            "Configuration '" + configPath + "' could not be re-read.");
+        -:  321:
+    #####:  322:        setTransientMessage("Reload failed: " + configPath, monotonicNow());
+        -:  323:
+    #####:  324:        return false;
+        -:  325:    }
+        -:  326:
+        2:  327:    configureLogging();
+        2:  328:    validateConfiguration();
+        -:  329:
+        4:  330:    interval = config.getInt(
+        4:  331:        "RefreshInterval",
+        -:  332:        DEFAULT_INTERVAL,
+        -:  333:        MINIMUM_INTERVAL,
+        -:  334:        MAXIMUM_INTERVAL);
+        -:  335:
+        2:  336:    configureFormats();
+        2:  337:    configureTheme();
+        2:  338:    configureAlarms();
+        2:  339:    configureTimer();
+        2:  340:    configureZones();
+        -:  341:
+        -:  342:    /*
+        -:  343:    World mode has nothing to show if the zones were removed, and the mode
+        -:  344:    cycle would no longer offer a way out of it.
+        -:  345:    */
+       2*:  346:    if (currentMode == Mode::World && zones.count() == 0)
+    #####:  347:        setMode(Mode::Clock);
+        -:  348:
+        2:  349:    configureStatusBar();
+        -:  350:
+        4:  351:    setTransientMessage("Configuration reloaded", monotonicNow());
+        -:  352:
+        2:  353:    logger.info("Configuration reloaded from " + resolved + ".");
+        -:  354:
+        2:  355:    return true;
+        2:  356:}
+        -:  357:
+       24:  358:void Application::configureLogging()
+        -:  359:{
+       48:  360:    const bool loggingEnabled = config.getBool("Logging", true);
+        -:  361:
+       24:  362:    const std::string logFile =
+       96:  363:        config.getValue("LogFile", "Logs/application.log");
+        -:  364:
+       24:  365:    if (!loggingEnabled)
+        -:  366:    {
+       40:  367:        logger.info("Logging disabled by configuration.");
+       20:  368:        logger.close();
+       20:  369:        return;
+        -:  370:    }
+        -:  371:
+        -:  372:    // Reopen only when the configuration points somewhere else.
+       4*:  373:    if (logFile != "Logs/application.log" || !logger.isOpen())
+        -:  374:    {
+    #####:  375:        if (!logger.initialize(logFile))
+        -:  376:        {
+        -:  377:            // Logging is a support service; its absence must not stop the app.
+    #####:  378:            logger.close();
+        -:  379:        }
+        -:  380:    }
+        -:  381:
+        4:  382:    logger.setMinimumLevel(
+       20:  383:        Logger::levelFromString(config.getValue("LogLevel", "INFO")));
+        -:  384:
+        8:  385:    logger.setConsoleOutput(config.getBool("ConsoleLog", false));
+       24:  386:}
+        -:  387:
+       24:  388:void Application::configureFormats()
+        -:  389:{
+       24:  390:    formatter.setTimeFormat(
+        -:  391:        TimeFormatter::timeFormatFromString(
+      120:  392:            config.getValue("TimeFormat", "24")));
+        -:  393:
+       24:  394:    formatter.setDateFormat(
+        -:  395:        TimeFormatter::dateFormatFromString(
+      120:  396:            config.getValue("DateFormat", "LONG")));
+       24:  397:}
+        -:  398:
+       24:  399:void Application::configureTheme()
+        -:  400:{
+       96:  401:    const std::string requested = config.getValue("Theme", "Dark");
+        -:  402:
+       24:  403:    if (theme.loadTheme(requested))
+        -:  404:    {
+       24:  405:        logger.info("Theme '" + theme.currentTheme() + "' loaded.");
+       24:  406:        return;
+        -:  407:    }
+        -:  408:
+        -:  409:    // Unknown or unreadable theme: the default is already in place (TC-013).
+    #####:  410:    logger.warning(
+    #####:  411:        "Theme '" + requested +
+    #####:  412:        "' is unavailable. The default theme has been applied.");
+      24*:  413:}
+        -:  414:
+       24:  415:void Application::configureStatusBar()
+        -:  416:{
+       72:  417:    display.setStatusField("Theme", theme.currentTheme());
+       72:  418:    display.setStatusField("Refresh Rate", describeInterval(interval));
+       96:  419:    display.setStatusField("Status", "Running");
+        -:  420:
+       72:  421:    display.setStatusField("Mode", modeName(currentMode));
+        -:  422:
+       24:  423:    if (alarmsEnabled && alarmManager.count() > 0)
+       10:  424:        display.setStatusField("Next Alarm", "-");
+        -:  425:
+        -:  426:    /*
+        -:  427:    Shown on screen as well as logged, because logging can be switched off in
+        -:  428:    the very file the typo is in -- which is exactly when the warning matters.
+        -:  429:    */
+       24:  430:    if (unknownKeys > 0)
+        -:  431:    {
+        1:  432:        display.setStatusField(
+        2:  433:            "Config",
+        2:  434:            std::to_string(unknownKeys) + " unrecognised key(s)");
+        -:  435:    }
+        -:  436:
+       24:  437:    display.screen().setFooterHint(footerHint());
+       24:  438:}
+        -:  439:
+       24:  440:void Application::configureAlarms()
+        -:  441:{
+       48:  442:    alarmsEnabled = config.getBool("Alarms", true);
+        -:  443:
+       48:  444:    alertNotifier.setBellEnabled(config.getBool("AlarmBell", true));
+        -:  445:
+       48:  446:    alarmManager.setSnoozeMinutes(
+        -:  447:        config.getInt(
+       48:  448:            "SnoozeMinutes",
+        -:  449:            AlarmManager::DEFAULT_SNOOZE_MINUTES,
+        -:  450:            1,
+        -:  451:            240));
+        -:  452:
+       24:  453:    if (!alarmsEnabled)
+        -:  454:    {
+       24:  455:        logger.info("Alarms disabled by configuration.");
+       12:  456:        return;
+        -:  457:    }
+        -:  458:
+       12:  459:    const std::string alarmFile =
+       48:  460:        config.getValue("AlarmFile", "Config/alarms.ini");
+        -:  461:
+       12:  462:    if (!alarmManager.load(alarmFile))
+        -:  463:    {
+        -:  464:        // No alarm file is a normal state, not a failure.
+    #####:  465:        logger.info(
+    #####:  466:            "No alarm file at '" + alarmFile + "'; running without alarms.");
+    #####:  467:        return;
+        -:  468:    }
+        -:  469:
+       12:  470:    logger.info(
+       24:  471:        "Loaded " + std::to_string(alarmManager.count()) +
+       24:  472:        " alarm(s) from " + alarmFile + ".");
+        -:  473:
+       12:  474:    if (alarmManager.invalidCount() > 0)
+        -:  475:    {
+    #####:  476:        logger.warning(
+    #####:  477:            std::to_string(alarmManager.invalidCount()) +
+    #####:  478:            " alarm entr(y/ies) could not be parsed and were skipped.");
+        -:  479:    }
+        -:  480:
+       14:  481:    for (std::size_t index = 0; index < alarmManager.count(); ++index)
+        2:  482:        logger.debug("Alarm: " + alarmManager.at(index).describe());
+       12:  483:}
+        -:  484:
+       24:  485:void Application::configureTimer()
+        -:  486:{
+        -:  487:    /*
+        -:  488:    setDuration() resets the countdown, so applying a reloaded duration to a
+        -:  489:    run in progress would move the finish line under the user. The new value
+        -:  490:    takes effect at the next reset.
+        -:  491:    */
+       24:  492:    if (countdown.isRunning())
+        -:  493:    {
+        2:  494:        logger.info(
+        2:  495:            "Timer duration not applied: a countdown is running.");
+       23:  496:        return;
+        -:  497:    }
+        -:  498:
+       92:  499:    const std::string configured = config.getValue("TimerDuration", "05:00");
+        -:  500:
+       23:  501:    std::int64_t milliseconds = 0;
+        -:  502:
+       23:  503:    if (CountdownTimer::parseDuration(configured, milliseconds))
+        -:  504:    {
+       22:  505:        countdown.setDuration(milliseconds);
+       22:  506:        return;
+        -:  507:    }
+        -:  508:
+        1:  509:    logger.warning(
+        2:  510:        "Timer duration '" + configured +
+        2:  511:        "' is invalid. Using " +
+        4:  512:        CountdownTimer::format(CountdownTimer::DEFAULT_DURATION_MS) + ".");
+        -:  513:
+        1:  514:    countdown.setDuration(CountdownTimer::DEFAULT_DURATION_MS);
+       23:  515:}
+        -:  516:
+       24:  517:void Application::configureZones()
+        -:  518:{
+       96:  519:    const std::string configured = config.getValue("TimeZones", "");
+        -:  520:
+       24:  521:    if (Utility::trim(configured).empty())
+       23:  522:        return;
+        -:  523:
+        1:  524:    if (!zones.load(configured))
+        -:  525:    {
+    #####:  526:        logger.warning(
+    #####:  527:            "No usable time zones in '" + configured + "'.");
+    #####:  528:        return;
+        -:  529:    }
+        -:  530:
+        1:  531:    logger.info(
+        2:  532:        "Loaded " + std::to_string(zones.count()) + " time zone(s).");
+        -:  533:
+        1:  534:    if (zones.invalidCount() > 0)
+        -:  535:    {
+    #####:  536:        logger.warning(
+    #####:  537:            std::to_string(zones.invalidCount()) +
+    #####:  538:            " time zone entr(y/ies) could not be parsed and were skipped.");
+        -:  539:    }
+        -:  540:
+        1:  541:    if (zones.unresolvedCount() > 0)
+        -:  542:    {
+        -:  543:        // Worth a warning rather than a silent UTC: a named zone the platform
+        -:  544:        // cannot resolve would otherwise display the wrong time under the
+        -:  545:        // right label.
+    #####:  546:        logger.warning(
+    #####:  547:            std::to_string(zones.unresolvedCount()) +
+        -:  548:            " time zone(s) cannot be resolved on this platform and will "
+    #####:  549:            "display as UTC.");
+        -:  550:    }
+       24:  551:}
+        -:  552:
+      164:  553:void Application::updateTimer(std::int64_t nowMs)
+        -:  554:{
+      164:  555:    if (!countdown.poll(nowMs))
+      163:  556:        return;
+        -:  557:
+        2:  558:    logger.info("Countdown timer finished.");
+        -:  559:
+        2:  560:    alertNotifier.notify(
+        2:  561:        "TIMER  " + CountdownTimer::format(countdown.duration()),
+        2:  562:        "Countdown finished",
+        2:  563:        "[D] Dismiss   [R] Reset");
+        -:  564:
+        1:  565:    alertRaised = true;
+        -:  566:}
+        -:  567:
+      164:  568:void Application::updateAlarms()
+        -:  569:{
+      164:  570:    if (!alarmsEnabled)
+      142:  571:        return;
+        -:  572:
+        -:  573:    // Fire at most one alarm per frame; poll() handles the once-per-minute rule.
+       22:  574:    if (alarmManager.poll(clock, date))
+        -:  575:    {
+        2:  576:        const Alarm *ringing = alarmManager.active();
+        -:  577:
+        2:  578:        if (ringing != nullptr)
+        -:  579:        {
+        2:  580:            logger.info("Alarm fired: " + ringing->describe());
+        -:  581:
+        2:  582:            alertNotifier.notify(*ringing, alarmManager.snoozeMinutes());
+        8:  583:            display.setStatusField("Status", "ALARM");
+        -:  584:
+        2:  585:            alertRaised = true;
+        -:  586:        }
+        -:  587:    }
+        -:  588:
+       22:  589:    if (alarmManager.count() > 0)
+        -:  590:    {
+       16:  591:        const std::string next = alarmManager.nextSummary(clock, date);
+        -:  592:
+      48*:  593:        display.setStatusField("Next Alarm", next.empty() ? "none" : next);
+       16:  594:    }
+        -:  595:}
+        -:  596:
+      164:  597:void Application::updateAlert()
+        -:  598:{
+        -:  599:    /*
+        -:  600:    The alert panel belongs to whoever raised it, not to the alarm subsystem.
+        -:  601:    Drawing it from updateAlarms() meant a countdown that finished while
+        -:  602:    alarms were switched off was never shown: the timer expired, the bell
+        -:  603:    rang once, and the screen said nothing (DEF-009).
+        -:  604:
+        -:  605:    Drawing it here also removes a one-frame lag, because updateTimer() runs
+        -:  606:    after updateAlarms() and its alert used to wait for the next frame.
+        -:  607:    */
+      164:  608:    if (alertNotifier.isActive() && !alertRaised)
+        -:  609:    {
+        -:  610:        // Keep signalling while the alert waits to be acknowledged. Skipped on
+        -:  611:        // the frame it was raised, where notify() has already rung.
+       13:  612:        alertNotifier.pulse();
+        -:  613:    }
+        -:  614:
+      164:  615:    alertRaised = false;
+        -:  616:
+      164:  617:    display.showNotification(
+      328:  618:        alertNotifier.lines(display.screen().width()));
+      164:  619:}
+        -:  620:
+        1:  621:bool Application::snoozeAlarm()
+        -:  622:{
+        1:  623:    if (!alarmManager.isRinging())
+    #####:  624:        return false;
+        -:  625:
+        1:  626:    const Alarm *ringing = alarmManager.active();
+        1:  627:    const std::string description =
+       1*:  628:        (ringing != nullptr) ? ringing->describe() : "";
+        -:  629:
+        1:  630:    if (!alarmManager.snoozeActive(clock))
+    #####:  631:        return false;
+        -:  632:
+        1:  633:    alertNotifier.clear();
+        1:  634:    display.clearNotification();
+        4:  635:    display.setStatusField("Status", "Running");
+        -:  636:
+        1:  637:    logger.info(
+        2:  638:        "Alarm snoozed for " + std::to_string(alarmManager.snoozeMinutes()) +
+        2:  639:        " minutes: " + description);
+        -:  640:
+        1:  641:    return true;
+        1:  642:}
+        -:  643:
+        2:  644:bool Application::dismissAlarm()
+        -:  645:{
+        2:  646:    if (!alarmManager.isRinging())
+        1:  647:        return false;
+        -:  648:
+        1:  649:    const Alarm *ringing = alarmManager.active();
+        1:  650:    const std::string description =
+       1*:  651:        (ringing != nullptr) ? ringing->describe() : "";
+        -:  652:
+        1:  653:    if (!alarmManager.dismissActive())
+    #####:  654:        return false;
+        -:  655:
+        1:  656:    alertNotifier.clear();
+        1:  657:    display.clearNotification();
+        4:  658:    display.setStatusField("Status", "Running");
+        -:  659:
+        1:  660:    logger.info("Alarm dismissed: " + description);
+        -:  661:
+        1:  662:    return true;
+        1:  663:}
+        -:  664:
+      202:  665:std::int64_t Application::monotonicNow()
+        -:  666:{
+      202:  667:    const auto now = std::chrono::steady_clock::now().time_since_epoch();
+        -:  668:
+      202:  669:    return std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
+        -:  670:}
+        -:  671:
+       59:  672:std::string Application::modeName(Mode mode)
+        -:  673:{
+       59:  674:    switch (mode)
+        -:  675:    {
+       14:  676:    case Mode::Stopwatch:
+       28:  677:        return "Stopwatch";
+        -:  678:
+       13:  679:    case Mode::Timer:
+       26:  680:        return "Timer";
+        -:  681:
+        2:  682:    case Mode::World:
+        4:  683:        return "World";
+        -:  684:
+        1:  685:    case Mode::Plugin:
+        2:  686:        return "Plugin";
+        -:  687:
+       29:  688:    case Mode::Clock:
+       29:  689:        break;
+        -:  690:    }
+        -:  691:
+       58:  692:    return "Clock";
+        -:  693:}
+        -:  694:
+        4:  695:Application::Mode Application::mode() const
+        -:  696:{
+        4:  697:    return currentMode;
+        -:  698:}
+        -:  699:
+       21:  700:void Application::setMode(Mode mode)
+        -:  701:{
+       21:  702:    currentMode = mode;
+        -:  703:
+        -:  704:    /*
+        -:  705:    A plugin's own name, not the word "Plugin": with two loaded, the status
+        -:  706:    bar has to say which one is on screen.
+        -:  707:    */
+       21:  708:    if (mode == Mode::Plugin && pluginManager.count() > 0)
+        3:  709:        display.setStatusField("Mode", pluginManager.nameAt(currentPlugin));
+        -:  710:    else
+       60:  711:        display.setStatusField("Mode", modeName(mode));
+        -:  712:
+       21:  713:    display.screen().setFooterHint(footerHint());
+       21:  714:}
+        -:  715:
+       15:  716:Application::Mode Application::cycleMode()
+        -:  717:{
+       15:  718:    switch (currentMode)
+        -:  719:    {
+        6:  720:    case Mode::Clock:
+        6:  721:        setMode(Mode::Stopwatch);
+        6:  722:        break;
+        -:  723:
+        5:  724:    case Mode::Stopwatch:
+        5:  725:        setMode(Mode::Timer);
+        5:  726:        break;
+        -:  727:
+        3:  728:    case Mode::Timer:
+        -:  729:        // Skip the world clock when no extra zones are configured; an empty
+        -:  730:        // mode is a dead step in the cycle.
+        3:  731:        if (zones.count() > 0)
+        1:  732:            setMode(Mode::World);
+        2:  733:        else if (pluginManager.count() > 0)
+        -:  734:        {
+        1:  735:            currentPlugin = 0;
+        1:  736:            setMode(Mode::Plugin);
+        -:  737:        }
+        -:  738:        else
+        1:  739:            setMode(Mode::Clock);
+        3:  740:        break;
+        -:  741:
+        1:  742:    case Mode::World:
+        -:  743:        // Likewise for plugins: none loaded means no plugin step.
+        1:  744:        if (pluginManager.count() > 0)
+        -:  745:        {
+    #####:  746:            currentPlugin = 0;
+    #####:  747:            setMode(Mode::Plugin);
+        -:  748:        }
+        -:  749:        else
+        1:  750:            setMode(Mode::Clock);
+        1:  751:        break;
+        -:  752:
+    #####:  753:    case Mode::Plugin:
+        -:  754:        /*
+        -:  755:        Each plugin is its own step in the cycle rather than a submenu, so
+        -:  756:        M keeps meaning the same thing however many are installed.
+        -:  757:        */
+    #####:  758:        if (currentPlugin + 1 < pluginManager.count())
+        -:  759:        {
+    #####:  760:            ++currentPlugin;
+    #####:  761:            setMode(Mode::Plugin);
+        -:  762:        }
+        -:  763:        else
+        -:  764:        {
+    #####:  765:            currentPlugin = 0;
+    #####:  766:            setMode(Mode::Clock);
+        -:  767:        }
+    #####:  768:        break;
+        -:  769:    }
+        -:  770:
+       15:  771:    return currentMode;
+        -:  772:}
+        -:  773:
+        4:  774:Stopwatch &Application::stopwatch()
+        -:  775:{
+        4:  776:    return elapsedTimer;
+        -:  777:}
+        -:  778:
+        6:  779:CountdownTimer &Application::timer()
+        -:  780:{
+        6:  781:    return countdown;
+        -:  782:}
+        -:  783:
+    #####:  784:WorldClock &Application::world()
+        -:  785:{
+    #####:  786:    return zones;
+        -:  787:}
+        -:  788:
+       45:  789:std::string Application::footerHint() const
+        -:  790:{
+        -:  791:    /*
+        -:  792:    T and C work in every mode, but the stopwatch and timer footers are
+        -:  793:    already close to eighty columns, so only the modes with room list them.
+        -:  794:    */
+       45:  795:    switch (currentMode)
+        -:  796:    {
+        8:  797:    case Mode::Stopwatch:
+        8:  798:        return "[Space] Start/Stop  [L] Lap  [R] Reset  [M] Mode  [T] Theme  "
+        8:  799:               "[Q] Quit";
+        -:  800:
+        8:  801:    case Mode::Timer:
+       16:  802:        return "[Space] Start/Pause  [R] Reset  [M] Mode  [T] Theme  [Q] Quit";
+        -:  803:
+        1:  804:    case Mode::Plugin:
+        -:  805:    {
+        1:  806:        const DigitalClockPlugin *plugin = pluginManager.at(currentPlugin);
+        -:  807:
+        1:  808:        if (plugin != nullptr && plugin->footerHint != nullptr)
+        -:  809:        {
+        1:  810:            const char *hint = plugin->footerHint();
+        -:  811:
+        1:  812:            if (hint != nullptr)
+        2:  813:                return hint;
+        -:  814:        }
+        -:  815:
+    #####:  816:        return "[M] Mode  [T] Theme  [Q] Quit";
+        -:  817:    }
+        -:  818:
+       28:  819:    case Mode::World:
+        -:  820:    case Mode::Clock:
+       28:  821:        break;
+        -:  822:    }
+        -:  823:
+       28:  824:    return "[M] Mode  [T] Theme  [F] 12/24  [C] Reload   "
+       28:  825:           "Press Q or Ctrl+C to Exit";
+        -:  826:}
+        -:  827:
+        1:  828:PluginManager &Application::plugins()
+        -:  829:{
+        1:  830:    return pluginManager;
+        -:  831:}
+        -:  832:
+    #####:  833:const DigitalClockPlugin *Application::activePlugin() const
+        -:  834:{
+    #####:  835:    if (currentMode != Mode::Plugin)
+    #####:  836:        return nullptr;
+        -:  837:
+    #####:  838:    return pluginManager.at(currentPlugin);
+        -:  839:}
+        -:  840:
+        -:  841:namespace
+        -:  842:{
+        -:  843:    /*
+        -:  844:    The host services lent to every plugin. File-scope because their
+        -:  845:    addresses are handed across a C ABI and must outlive any Application:
+        -:  846:    a plugin may hold the host pointer until its shutdown().
+        -:  847:    */
+        -:  848:    Logger *pluginLogger = nullptr;
+        -:  849:
+       21:  850:    extern "C" void pluginLog(const char *message)
+        -:  851:    {
+       21:  852:        if (pluginLogger != nullptr && message != nullptr)
+       63:  853:            pluginLogger->info(std::string("[plugin] ") + message);
+       21:  854:    }
+        -:  855:
+    #####:  856:    extern "C" long long pluginMonotonicNow()
+        -:  857:    {
+    #####:  858:        return static_cast<long long>(Application::monotonicNow());
+        -:  859:    }
+        -:  860:
+        -:  861:    DigitalClockHost pluginHost = {
+        -:  862:        DIGITALCLOCK_PLUGIN_ABI, pluginLog, pluginMonotonicNow};
+        -:  863:}
+        -:  864:
+       22:  865:void Application::configurePlugins()
+        -:  866:{
+       66:  867:    if (!config.getBool("Plugins", true))
+        -:  868:    {
+        4:  869:        logger.info("Plugins disabled by configuration.");
+        2:  870:        return;
+        -:  871:    }
+        -:  872:
+       20:  873:    if (!PluginManager::isSupported())
+        -:  874:    {
+    #####:  875:        logger.info("Plugins are not supported on this platform.");
+    #####:  876:        return;
+        -:  877:    }
+        -:  878:
+       20:  879:    pluginLogger = &logger;
+        -:  880:
+       80:  881:    const std::string directory = config.getValue("PluginDirectory", "Plugins");
+        -:  882:
+        -:  883:    const std::size_t added =
+       20:  884:        pluginManager.loadDirectory(directory, pluginHost);
+        -:  885:
+       20:  886:    if (added > 0)
+        -:  887:    {
+       20:  888:        logger.info(
+       40:  889:            "Loaded " + std::to_string(added) + " plugin(s) from " +
+       40:  890:            directory + ".");
+        -:  891:
+       40:  892:        for (std::size_t index = 0; index < pluginManager.count(); ++index)
+        -:  893:        {
+       20:  894:            const DigitalClockPlugin *plugin = pluginManager.at(index);
+        -:  895:
+       20:  896:            logger.info(
+       40:  897:                "Plugin: " + pluginManager.nameAt(index) + " " +
+       20:  898:                ((plugin != nullptr && plugin->version != nullptr)
+        -:  899:                     ? plugin->version
+      60*:  900:                     : "?"));
+        -:  901:        }
+        -:  902:    }
+        -:  903:
+        -:  904:    // Refusals are warnings rather than silence: a plugin that is present
+        -:  905:    // but not loaded is exactly the case a user needs told about.
+      40*:  906:    for (const std::string &reason : pluginManager.rejections())
+    #####:  907:        logger.warning("Plugin refused: " + reason);
+       20:  908:}
+        -:  909:
+        6:  910:AlarmManager &Application::alarms()
+        -:  911:{
+        6:  912:    return alarmManager;
+        -:  913:}
+        -:  914:
+        2:  915:Notifier &Application::notifier()
+        -:  916:{
+        2:  917:    return alertNotifier;
+        -:  918:}
+        -:  919:
+      164:  920:void Application::renderFrame()
+        -:  921:{
+      164:  922:    const std::int64_t nowMs = monotonicNow();
+        -:  923:
+      164:  924:    clock.update();
+      164:  925:    date.update();
+        -:  926:
+        -:  927:    // A status message announces something that just happened, so it clears
+        -:  928:    // itself rather than sitting on screen for the rest of the session.
+      164:  929:    if (messageUntilMs > 0 && nowMs >= messageUntilMs)
+        -:  930:    {
+    #####:  931:        display.setMessage("");
+    #####:  932:        messageUntilMs = 0;
+        -:  933:    }
+        -:  934:
+        -:  935:    // Alarms and the countdown run regardless of which mode is on screen, so
+        -:  936:    // neither is missed while the user is looking at something else.
+      164:  937:    updateAlarms();
+      164:  938:    updateTimer(nowMs);
+      164:  939:    updateAlert();
+        -:  940:
+      164:  941:    switch (currentMode)
+        -:  942:    {
+       28:  943:    case Mode::Stopwatch:
+        -:  944:    {
+       28:  945:        display.renderClock(elapsedTimer.formatted(nowMs));
+        -:  946:
+       56:  947:        std::string state = elapsedTimer.isRunning() ? "Running" : "Stopped";
+        -:  948:
+       28:  949:        if (elapsedTimer.lapCount() > 0)
+        -:  950:        {
+       14:  951:            state += "   Lap " + std::to_string(elapsedTimer.lapCount()) +
+       14:  952:                     ": " +
+       14:  953:                     Stopwatch::format(
+       14:  954:                         elapsedTimer.lapSplit(elapsedTimer.lapCount() - 1));
+        -:  955:        }
+        -:  956:
+       28:  957:        display.renderDate("Stopwatch - " + state);
+       28:  958:        break;
+       28:  959:    }
+        -:  960:
+       57:  961:    case Mode::Timer:
+        -:  962:    {
+       57:  963:        display.renderClock(countdown.formatted(nowMs));
+        -:  964:
+       57:  965:        std::string state;
+        -:  966:
+       57:  967:        if (countdown.isRunning())
+       29:  968:            state = "Running";
+       28:  969:        else if (countdown.hasExpired(nowMs))
+       12:  970:            state = "Finished";
+       16:  971:        else if (countdown.remaining(nowMs) == countdown.duration())
+       16:  972:            state = "Ready";
+        -:  973:        else
+    #####:  974:            state = "Paused";
+        -:  975:
+       57:  976:        display.renderDate(
+      114:  977:            "Timer - " + state + "   of " +
+      171:  978:            CountdownTimer::format(countdown.duration()));
+       57:  979:        break;
+       57:  980:    }
+        -:  981:
+       10:  982:    case Mode::Plugin:
+        -:  983:    {
+       10:  984:        const DigitalClockPlugin *plugin = pluginManager.at(currentPlugin);
+        -:  985:
+        -:  986:        /*
+        -:  987:        Fixed buffers, pre-terminated. A plugin that writes nothing shows
+        -:  988:        nothing rather than whatever the stack held, and one that writes
+        -:  989:        too much is truncated rather than trusted with our memory.
+        -:  990:        */
+       10:  991:        char readout[128] = {0};
+       10:  992:        char secondary[192] = {0};
+        -:  993:
+       10:  994:        if (plugin != nullptr && plugin->render != nullptr)
+        -:  995:        {
+       10:  996:            plugin->render(static_cast<long long>(nowMs),
+        -:  997:                           readout, static_cast<int>(sizeof(readout)),
+        -:  998:                           secondary, static_cast<int>(sizeof(secondary)));
+        -:  999:
+       10: 1000:            readout[sizeof(readout) - 1] = '\0';
+       10: 1001:            secondary[sizeof(secondary) - 1] = '\0';
+        -: 1002:        }
+        -: 1003:
+       20: 1004:        display.renderClock(readout);
+       20: 1005:        display.renderDate(secondary);
+       10: 1006:        break;
+        -: 1007:    }
+        -: 1008:
+        3: 1009:    case Mode::World:
+        -: 1010:    {
+        3: 1011:        display.renderClock(formatter.formatTimeWide(clock));
+        3: 1012:        display.renderDate(formatter.formatDate(date));
+        3: 1013:        break;
+        -: 1014:    }
+        -: 1015:
+       66: 1016:    case Mode::Clock:
+       66: 1017:        display.renderClock(formatter.formatTimeWide(clock));
+       66: 1018:        display.renderDate(formatter.formatDate(date));
+       66: 1019:        break;
+        -: 1020:    }
+        -: 1021:
+        -: 1022:    // The zone rows belong to the world clock only.
+      164: 1023:    if (currentMode == Mode::World)
+        -: 1024:    {
+        3: 1025:        display.showInfoLines(
+        6: 1026:            zones.rows(
+        -: 1027:                std::time(nullptr),
+        3: 1028:                formatter.timeFormat() == TimeFormatter::TimeFormat::Hour12));
+        -: 1029:    }
+        -: 1030:    else
+        -: 1031:    {
+      161: 1032:        display.showInfoLines({});
+        -: 1033:    }
+        -: 1034:
+      164: 1035:    display.renderScreen();
+      164: 1036:}
+        -: 1037:
+      271: 1038:bool Application::handleKey(int key)
+        -: 1039:{
+      271: 1040:    if (key < 0)
+      243: 1041:        return false;
+        -: 1042:
+       28: 1043:    const std::int64_t nowMs = monotonicNow();
+        -: 1044:
+        -: 1045:    // Acknowledging an alert comes first: whatever the mode, a ringing alarm
+        -: 1046:    // or a finished countdown is what the user is responding to.
+       28: 1047:    if (key == 's' || key == 'S')
+        -: 1048:    {
+        1: 1049:        if (snoozeAlarm())
+        1: 1050:            return true;
+        -: 1051:    }
+        -: 1052:
+       27: 1053:    if (key == 'd' || key == 'D')
+        -: 1054:    {
+        2: 1055:        if (dismissAlarm())
+        1: 1056:            return true;
+        -: 1057:
+        1: 1058:        if (countdown.isFinished())
+        -: 1059:        {
+        1: 1060:            countdown.acknowledge();
+        1: 1061:            alertNotifier.clear();
+        1: 1062:            display.clearNotification();
+        -: 1063:
+        2: 1064:            logger.info("Countdown acknowledged.");
+        -: 1065:
+        1: 1066:            return true;
+        -: 1067:        }
+        -: 1068:    }
+        -: 1069:
+       25: 1070:    if (key == 'm' || key == 'M')
+        -: 1071:    {
+       12: 1072:        logger.debug("Mode changed to " + modeName(cycleMode()) + ".");
+       12: 1073:        return true;
+        -: 1074:    }
+        -: 1075:
+        -: 1076:    // Theme and reload apply in every mode, so they are handled before the
+        -: 1077:    // mode-specific keys rather than repeated in each branch.
+       13: 1078:    if (key == 't' || key == 'T')
+        -: 1079:    {
+        1: 1080:        cycleTheme();
+        1: 1081:        return true;
+        -: 1082:    }
+        -: 1083:
+       12: 1084:    if (key == 'c' || key == 'C')
+        -: 1085:    {
+        2: 1086:        reloadConfiguration();
+        2: 1087:        return true;
+        -: 1088:    }
+        -: 1089:
+       10: 1090:    if (key == 'f' || key == 'F')
+        -: 1091:    {
+        1: 1092:        toggleTimeFormat();
+        1: 1093:        return true;
+        -: 1094:    }
+        -: 1095:
+        9: 1096:    switch (currentMode)
+        -: 1097:    {
+        4: 1098:    case Mode::Stopwatch:
+        4: 1099:        if (key == ' ')
+        -: 1100:        {
+        4: 1101:            logger.debug(
+        4: 1102:                elapsedTimer.toggle(nowMs) ? "Stopwatch started."
+        -: 1103:                                           : "Stopwatch stopped.");
+        2: 1104:            return true;
+        -: 1105:        }
+        -: 1106:
+        2: 1107:        if (key == 'l' || key == 'L')
+        1: 1108:            return elapsedTimer.lap(nowMs);
+        -: 1109:
+       1*: 1110:        if (key == 'r' || key == 'R')
+        -: 1111:        {
+        1: 1112:            elapsedTimer.reset();
+        2: 1113:            logger.debug("Stopwatch reset.");
+        1: 1114:            return true;
+        -: 1115:        }
+        -: 1116:
+    #####: 1117:        break;
+        -: 1118:
+        3: 1119:    case Mode::Timer:
+        3: 1120:        if (key == ' ')
+        -: 1121:        {
+        4: 1122:            logger.debug(
+       4*: 1123:                countdown.toggle(nowMs) ? "Timer started." : "Timer paused.");
+        2: 1124:            return true;
+        -: 1125:        }
+        -: 1126:
+       1*: 1127:        if (key == 'r' || key == 'R')
+        -: 1128:        {
+        1: 1129:            countdown.reset();
+        1: 1130:            alertNotifier.clear();
+        1: 1131:            display.clearNotification();
+        -: 1132:
+        2: 1133:            logger.debug("Timer reset.");
+        -: 1134:
+        1: 1135:            return true;
+        -: 1136:        }
+        -: 1137:
+    #####: 1138:        break;
+        -: 1139:
+        2: 1140:    case Mode::Plugin:
+        -: 1141:    {
+        -: 1142:        /*
+        -: 1143:        Offered last, and only keys the application has not already taken.
+        -: 1144:        A plugin cannot capture Q, M, T, F, C, S or D, so no plugin can
+        -: 1145:        leave the user unable to change mode or quit.
+        -: 1146:        */
+        2: 1147:        const DigitalClockPlugin *plugin = pluginManager.at(currentPlugin);
+        -: 1148:
+        2: 1149:        if (plugin != nullptr && plugin->handleKey != nullptr)
+        2: 1150:            return plugin->handleKey(key, static_cast<long long>(nowMs)) != 0;
+        -: 1151:
+    #####: 1152:        break;
+        -: 1153:    }
+        -: 1154:
+    #####: 1155:    case Mode::World:
+        -: 1156:    case Mode::Clock:
+    #####: 1157:        break;
+        -: 1158:    }
+        -: 1159:
+    #####: 1160:    return false;
+        -: 1161:}
+        -: 1162:
+      158: 1163:bool Application::waitForNextFrame()
+        -: 1164:{
+      158: 1165:    int remaining = interval;
+        -: 1166:
+      395: 1167:    while (remaining > 0)
+        -: 1168:    {
+      282: 1169:        if (terminationRequested.load())
+      45*: 1170:            return false;
+        -: 1171:
+      282: 1172:        const int slice = (remaining < POLL_SLICE_MS) ? remaining
+        -: 1173:                                                      : POLL_SLICE_MS;
+        -: 1174:
+      282: 1175:        std::this_thread::sleep_for(std::chrono::milliseconds(slice));
+        -: 1176:
+      282: 1177:        remaining -= slice;
+        -: 1178:
+      282: 1179:        const int key = display.readKey();
+        -: 1180:
+      282: 1181:        if (key == 'q' || key == 'Q')
+        -: 1182:        {
+       22: 1183:            logger.info("Exit requested by keypress.");
+       11: 1184:            return false;
+        -: 1185:        }
+        -: 1186:
+        -: 1187:        /*
+        -: 1188:        A consumed key redraws at once. Waiting out the rest of the interval
+        -: 1189:        would make the stopwatch feel unresponsive: at the default one-second
+        -: 1190:        refresh, a lap keypress could sit invisible for most of a second.
+        -: 1191:        */
+      271: 1192:        if (handleKey(key))
+       28: 1193:            return true;
+        -: 1194:
+        -: 1195:        // A running stopwatch needs a faster redraw than the configured
+        -: 1196:        // interval, or the hundredths would visibly jump.
+      243: 1197:        if (currentMode == Mode::Stopwatch && elapsedTimer.isRunning())
+        6: 1198:            return true;
+        -: 1199:    }
+        -: 1200:
+      113: 1201:    return !terminationRequested.load();
+        -: 1202:}
+        -: 1203:
+       13: 1204:int Application::run()
+        -: 1205:{
+       13: 1206:    if (!initialized)
+        1: 1207:        return EXIT_STARTUP_FAILED;
+        -: 1208:
+       12: 1209:    running = true;
+        -: 1210:
+       24: 1211:    logger.info("Entering main refresh loop.");
+        -: 1212:
+      182: 1213:    while (running)
+        -: 1214:    {
+      158: 1215:        renderFrame();
+        -: 1216:
+      158: 1217:        if (!waitForNextFrame())
+       12: 1218:            running = false;
+        -: 1219:    }
+        -: 1220:
+       12: 1221:    if (terminationRequested.load())
+        3: 1222:        logger.info("Termination signal received.");
+        -: 1223:
+       24: 1224:    logger.info("Shutdown requested.");
+        -: 1225:
+       12: 1226:    shutdown();
+        -: 1227:
+       12: 1228:    return EXIT_OK;
+        -: 1229:}
+        -: 1230:
+        1: 1231:void Application::requestStop()
+        -: 1232:{
+        1: 1233:    running = false;
+        1: 1234:}
+        -: 1235:
+        4: 1236:bool Application::isRunning() const
+        -: 1237:{
+        4: 1238:    return running;
+        -: 1239:}
+        -: 1240:
+        6: 1241:int Application::refreshInterval() const
+        -: 1242:{
+        6: 1243:    return interval;
+        -: 1244:}
+        -: 1245:
+       47: 1246:void Application::shutdown()
+        -: 1247:{
+       47: 1248:    if (!initialized)
+       25: 1249:        return;
+        -: 1250:
+       22: 1251:    running = false;
+        -: 1252:
+       88: 1253:    display.setStatusField("Status", "Stopped");
+       22: 1254:    display.shutdown();
+        -: 1255:
+       22: 1256:    pluginManager.unloadAll();
+       22: 1257:    pluginLogger = nullptr;
+        -: 1258:
+       44: 1259:    logger.info("Resources released.");
+       44: 1260:    logger.info("Shutdown complete.");
+       22: 1261:    logger.close();
+        -: 1262:
+       22: 1263:    initialized = false;
+        -: 1264:}

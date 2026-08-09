@@ -1,0 +1,3221 @@
+        -:    0:Source:/usr/include/c++/16/tuple
+        -:    0:Graph:../Obj/ThemeManager.gcno
+        -:    0:Data:../Obj/ThemeManager.gcda
+        -:    0:Runs:1
+        -:    1:// <tuple> -*- C++ -*-
+        -:    2:
+        -:    3:// Copyright (C) 2007-2026 Free Software Foundation, Inc.
+        -:    4://
+        -:    5:// This file is part of the GNU ISO C++ Library.  This library is free
+        -:    6:// software; you can redistribute it and/or modify it under the
+        -:    7:// terms of the GNU General Public License as published by the
+        -:    8:// Free Software Foundation; either version 3, or (at your option)
+        -:    9:// any later version.
+        -:   10:
+        -:   11:// This library is distributed in the hope that it will be useful,
+        -:   12:// but WITHOUT ANY WARRANTY; without even the implied warranty of
+        -:   13:// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        -:   14:// GNU General Public License for more details.
+        -:   15:
+        -:   16:// Under Section 7 of GPL version 3, you are granted additional
+        -:   17:// permissions described in the GCC Runtime Library Exception, version
+        -:   18:// 3.1, as published by the Free Software Foundation.
+        -:   19:
+        -:   20:// You should have received a copy of the GNU General Public License and
+        -:   21:// a copy of the GCC Runtime Library Exception along with this program;
+        -:   22:// see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
+        -:   23:// <http://www.gnu.org/licenses/>.
+        -:   24:
+        -:   25:/** @file include/tuple
+        -:   26: *  This is a Standard C++ Library header.
+        -:   27: */
+        -:   28:
+        -:   29:#ifndef _GLIBCXX_TUPLE
+        -:   30:#define _GLIBCXX_TUPLE 1
+        -:   31:
+        -:   32:#ifdef _GLIBCXX_SYSHDR
+        -:   33:#pragma GCC system_header
+        -:   34:#endif
+        -:   35:
+        -:   36:#if __cplusplus < 201103L
+        -:   37:# include <bits/c++0x_warning.h>
+        -:   38:#else
+        -:   39:
+        -:   40:#include <bits/stl_pair.h>		// for std::pair
+        -:   41:#include <bits/uses_allocator.h>	// for std::allocator_arg_t
+        -:   42:#include <bits/utility.h>		// for std::tuple_size etc.
+        -:   43:#include <bits/invoke.h>		// for std::__invoke
+        -:   44:#if __cplusplus > 201703L
+        -:   45:# include <compare>
+        -:   46:# include <bits/ranges_util.h>		// for std::ranges::subrange
+        -:   47:#endif
+        -:   48:
+        -:   49:#define __glibcxx_want_constexpr_tuple
+        -:   50:#define __glibcxx_want_tuple_element_t
+        -:   51:#define __glibcxx_want_tuples_by_type
+        -:   52:#define __glibcxx_want_apply
+        -:   53:#define __glibcxx_want_make_from_tuple
+        -:   54:#define __glibcxx_want_ranges_zip
+        -:   55:#define __glibcxx_want_tuple_like
+        -:   56:#define __glibcxx_want_constrained_equality
+        -:   57:#include <bits/version.h>
+        -:   58:
+        -:   59:namespace std _GLIBCXX_VISIBILITY(default)
+        -:   60:{
+        -:   61:_GLIBCXX_BEGIN_NAMESPACE_VERSION
+        -:   62:
+        -:   63:  /**
+        -:   64:   *  @addtogroup utilities
+        -:   65:   *  @{
+        -:   66:   */
+        -:   67:
+        -:   68:  template<typename... _Elements>
+        -:   69:    class tuple;
+        -:   70:
+        -:   71:  /// @cond undocumented
+        -:   72:  template<typename _Tp>
+        -:   73:    struct __is_empty_non_tuple : is_empty<_Tp> { };
+        -:   74:
+        -:   75:  // Using EBO for elements that are tuples causes ambiguous base errors.
+        -:   76:  template<typename _El0, typename... _El>
+        -:   77:    struct __is_empty_non_tuple<tuple<_El0, _El...>> : false_type { };
+        -:   78:
+        -:   79:  // Use the Empty Base-class Optimization for empty, non-final types.
+        -:   80:  template<typename _Tp>
+        -:   81:    using __empty_not_final
+        -:   82:    = __conditional_t<__is_final(_Tp), false_type,
+        -:   83:		      __is_empty_non_tuple<_Tp>>;
+        -:   84:
+        -:   85:  template<size_t _Idx, typename _Head,
+        -:   86:	   bool = __empty_not_final<_Head>::value>
+        -:   87:    struct _Head_base;
+        -:   88:
+        -:   89:#if __has_cpp_attribute(__no_unique_address__)
+        -:   90:  template<size_t _Idx, typename _Head>
+        -:   91:    struct _Head_base<_Idx, _Head, true>
+        -:   92:    {
+        -:   93:      constexpr _Head_base()
+        -:   94:      : _M_head_impl() { }
+        -:   95:
+        -:   96:      constexpr _Head_base(const _Head& __h)
+        -:   97:      : _M_head_impl(__h) { }
+        -:   98:
+        -:   99:      constexpr _Head_base(const _Head_base&) = default;
+        -:  100:      constexpr _Head_base(_Head_base&&) = default;
+        -:  101:
+        -:  102:      template<typename _UHead>
+        -:  103:	constexpr _Head_base(_UHead&& __h)
+        -:  104:	: _M_head_impl(std::forward<_UHead>(__h)) { }
+        -:  105:
+        -:  106:      _GLIBCXX20_CONSTEXPR
+        -:  107:      _Head_base(allocator_arg_t, __uses_alloc0)
+        -:  108:      : _M_head_impl() { }
+        -:  109:
+        -:  110:      template<typename _Alloc>
+        -:  111:	_GLIBCXX20_CONSTEXPR
+        -:  112:	_Head_base(allocator_arg_t, __uses_alloc1<_Alloc> __a)
+        -:  113:	: _M_head_impl(allocator_arg, *__a._M_a) { }
+        -:  114:
+        -:  115:      template<typename _Alloc>
+        -:  116:	_GLIBCXX20_CONSTEXPR
+        -:  117:	_Head_base(allocator_arg_t, __uses_alloc2<_Alloc> __a)
+        -:  118:	: _M_head_impl(*__a._M_a) { }
+        -:  119:
+        -:  120:      template<typename _UHead>
+        -:  121:	_GLIBCXX20_CONSTEXPR
+        -:  122:	_Head_base(__uses_alloc0, _UHead&& __uhead)
+        -:  123:	: _M_head_impl(std::forward<_UHead>(__uhead)) { }
+        -:  124:
+        -:  125:      template<typename _Alloc, typename _UHead>
+        -:  126:	_GLIBCXX20_CONSTEXPR
+        -:  127:	_Head_base(__uses_alloc1<_Alloc> __a, _UHead&& __uhead)
+        -:  128:	: _M_head_impl(allocator_arg, *__a._M_a, std::forward<_UHead>(__uhead))
+        -:  129:	{ }
+        -:  130:
+        -:  131:      template<typename _Alloc, typename _UHead>
+        -:  132:	_GLIBCXX20_CONSTEXPR
+        -:  133:	_Head_base(__uses_alloc2<_Alloc> __a, _UHead&& __uhead)
+        -:  134:	: _M_head_impl(std::forward<_UHead>(__uhead), *__a._M_a) { }
+        -:  135:
+        -:  136:      static constexpr _Head&
+        -:  137:      _M_head(_Head_base& __b) noexcept { return __b._M_head_impl; }
+        -:  138:
+        -:  139:      static constexpr const _Head&
+        -:  140:      _M_head(const _Head_base& __b) noexcept { return __b._M_head_impl; }
+        -:  141:
+        -:  142:      [[__no_unique_address__]] _Head _M_head_impl;
+        -:  143:    };
+        -:  144:#else
+        -:  145:  template<size_t _Idx, typename _Head>
+        -:  146:    struct _Head_base<_Idx, _Head, true>
+        -:  147:    : public _Head
+        -:  148:    {
+        -:  149:      constexpr _Head_base()
+        -:  150:      : _Head() { }
+        -:  151:
+        -:  152:      constexpr _Head_base(const _Head& __h)
+        -:  153:      : _Head(__h) { }
+        -:  154:
+        -:  155:      constexpr _Head_base(const _Head_base&) = default;
+        -:  156:      constexpr _Head_base(_Head_base&&) = default;
+        -:  157:
+        -:  158:      template<typename _UHead>
+        -:  159:        constexpr _Head_base(_UHead&& __h)
+        -:  160:	: _Head(std::forward<_UHead>(__h)) { }
+        -:  161:
+        -:  162:      _GLIBCXX20_CONSTEXPR
+        -:  163:      _Head_base(allocator_arg_t, __uses_alloc0)
+        -:  164:      : _Head() { }
+        -:  165:
+        -:  166:      template<typename _Alloc>
+        -:  167:	_GLIBCXX20_CONSTEXPR
+        -:  168:	_Head_base(allocator_arg_t, __uses_alloc1<_Alloc> __a)
+        -:  169:	: _Head(allocator_arg, *__a._M_a) { }
+        -:  170:
+        -:  171:      template<typename _Alloc>
+        -:  172:	_GLIBCXX20_CONSTEXPR
+        -:  173:	_Head_base(allocator_arg_t, __uses_alloc2<_Alloc> __a)
+        -:  174:	: _Head(*__a._M_a) { }
+        -:  175:
+        -:  176:      template<typename _UHead>
+        -:  177:	_GLIBCXX20_CONSTEXPR
+        -:  178:	_Head_base(__uses_alloc0, _UHead&& __uhead)
+        -:  179:	: _Head(std::forward<_UHead>(__uhead)) { }
+        -:  180:
+        -:  181:      template<typename _Alloc, typename _UHead>
+        -:  182:	_GLIBCXX20_CONSTEXPR
+        -:  183:	_Head_base(__uses_alloc1<_Alloc> __a, _UHead&& __uhead)
+        -:  184:	: _Head(allocator_arg, *__a._M_a, std::forward<_UHead>(__uhead)) { }
+        -:  185:
+        -:  186:      template<typename _Alloc, typename _UHead>
+        -:  187:	_GLIBCXX20_CONSTEXPR
+        -:  188:	_Head_base(__uses_alloc2<_Alloc> __a, _UHead&& __uhead)
+        -:  189:	: _Head(std::forward<_UHead>(__uhead), *__a._M_a) { }
+        -:  190:
+        -:  191:      static constexpr _Head&
+        -:  192:      _M_head(_Head_base& __b) noexcept { return __b; }
+        -:  193:
+        -:  194:      static constexpr const _Head&
+        -:  195:      _M_head(const _Head_base& __b) noexcept { return __b; }
+        -:  196:    };
+        -:  197:#endif
+        -:  198:
+        -:  199:  template<size_t _Idx, typename _Head>
+        -:  200:    struct _Head_base<_Idx, _Head, false>
+        -:  201:    {
+        -:  202:      constexpr _Head_base()
+        -:  203:      : _M_head_impl() { }
+        -:  204:
+      238:  205:      constexpr _Head_base(const _Head& __h)
+      238:  206:      : _M_head_impl(__h) { }
+        -:  207:
+        -:  208:      constexpr _Head_base(const _Head_base&) = default;
+        -:  209:      constexpr _Head_base(_Head_base&&) = default;
+        -:  210:
+        -:  211:      template<typename _UHead>
+      264:  212:        constexpr _Head_base(_UHead&& __h)
+      264:  213:	: _M_head_impl(std::forward<_UHead>(__h)) { }
+        -:  214:
+        -:  215:      _GLIBCXX20_CONSTEXPR
+        -:  216:      _Head_base(allocator_arg_t, __uses_alloc0)
+        -:  217:      : _M_head_impl() { }
+        -:  218:
+        -:  219:      template<typename _Alloc>
+        -:  220:	_GLIBCXX20_CONSTEXPR
+        -:  221:	_Head_base(allocator_arg_t, __uses_alloc1<_Alloc> __a)
+        -:  222:	: _M_head_impl(allocator_arg, *__a._M_a) { }
+        -:  223:
+        -:  224:      template<typename _Alloc>
+        -:  225:	_GLIBCXX20_CONSTEXPR
+        -:  226:	_Head_base(allocator_arg_t, __uses_alloc2<_Alloc> __a)
+        -:  227:	: _M_head_impl(*__a._M_a) { }
+        -:  228:
+        -:  229:      template<typename _UHead>
+        -:  230:	_GLIBCXX20_CONSTEXPR
+        -:  231:	_Head_base(__uses_alloc0, _UHead&& __uhead)
+        -:  232:	: _M_head_impl(std::forward<_UHead>(__uhead)) { }
+        -:  233:
+        -:  234:      template<typename _Alloc, typename _UHead>
+        -:  235:	_GLIBCXX20_CONSTEXPR
+        -:  236:	_Head_base(__uses_alloc1<_Alloc> __a, _UHead&& __uhead)
+        -:  237:	: _M_head_impl(allocator_arg, *__a._M_a, std::forward<_UHead>(__uhead))
+        -:  238:	{ }
+        -:  239:
+        -:  240:      template<typename _Alloc, typename _UHead>
+        -:  241:	_GLIBCXX20_CONSTEXPR
+        -:  242:	_Head_base(__uses_alloc2<_Alloc> __a, _UHead&& __uhead)
+        -:  243:	: _M_head_impl(std::forward<_UHead>(__uhead), *__a._M_a) { }
+        -:  244:
+        -:  245:      static constexpr _Head&
+      502:  246:      _M_head(_Head_base& __b) noexcept { return __b._M_head_impl; }
+------------------
+_ZNSt10_Head_baseILm0ERKN12ThemeManager7ElementELb0EE7_M_headERS4_:
+      238:  246:      _M_head(_Head_base& __b) noexcept { return __b._M_head_impl; }
+------------------
+_ZNSt10_Head_baseILm0EON12ThemeManager7ElementELb0EE7_M_headERS3_:
+      264:  246:      _M_head(_Head_base& __b) noexcept { return __b._M_head_impl; }
+------------------
+        -:  247:
+        -:  248:      static constexpr const _Head&
+        -:  249:      _M_head(const _Head_base& __b) noexcept { return __b._M_head_impl; }
+        -:  250:
+        -:  251:      _Head _M_head_impl;
+        -:  252:    };
+        -:  253:
+        -:  254:#if __cpp_lib_tuple_like // >= C++23
+        -:  255:  struct __tuple_like_tag_t { explicit __tuple_like_tag_t() = default; };
+        -:  256:
+        -:  257:  // This forward declaration is used by the operator<=> overload for
+        -:  258:  // tuple-like types.
+        -:  259:  template<typename _Cat, typename _Tp, typename _Up, typename _IndexSeq>
+        -:  260:    constexpr _Cat
+        -:  261:    __tuple_cmp(const _Tp& __t, const _Up& __u, _IndexSeq);
+        -:  262:#endif // C++23
+        -:  263:
+        -:  264:  /**
+        -:  265:   * Contains the actual implementation of the @c tuple template, stored
+        -:  266:   * as a recursive inheritance hierarchy from the first element (most
+        -:  267:   * derived class) to the last (least derived class). The @c Idx
+        -:  268:   * parameter gives the 0-based index of the element stored at this
+        -:  269:   * point in the hierarchy; we use it to implement a constant-time
+        -:  270:   * get() operation.
+        -:  271:   */
+        -:  272:  template<size_t _Idx, typename... _Elements>
+        -:  273:    struct _Tuple_impl;
+        -:  274:
+        -:  275:  /**
+        -:  276:   * Recursive tuple implementation. Here we store the @c Head element
+        -:  277:   * and derive from a @c Tuple_impl containing the remaining elements
+        -:  278:   * (which contains the @c Tail).
+        -:  279:   */
+        -:  280:  template<size_t _Idx, typename _Head, typename... _Tail>
+        -:  281:    struct _Tuple_impl<_Idx, _Head, _Tail...>
+        -:  282:    : public _Tuple_impl<_Idx + 1, _Tail...>,
+        -:  283:      private _Head_base<_Idx, _Head>
+        -:  284:    {
+        -:  285:      template<size_t, typename...> friend struct _Tuple_impl;
+        -:  286:
+        -:  287:      typedef _Tuple_impl<_Idx + 1, _Tail...> _Inherited;
+        -:  288:      typedef _Head_base<_Idx, _Head> _Base;
+        -:  289:
+        -:  290:      static constexpr _Head&
+        -:  291:      _M_head(_Tuple_impl& __t) noexcept { return _Base::_M_head(__t); }
+        -:  292:
+        -:  293:      static constexpr const _Head&
+        -:  294:      _M_head(const _Tuple_impl& __t) noexcept { return _Base::_M_head(__t); }
+        -:  295:
+        -:  296:      static constexpr _Inherited&
+        -:  297:      _M_tail(_Tuple_impl& __t) noexcept { return __t; }
+        -:  298:
+        -:  299:      static constexpr const _Inherited&
+        -:  300:      _M_tail(const _Tuple_impl& __t) noexcept { return __t; }
+        -:  301:
+        -:  302:      constexpr _Tuple_impl()
+        -:  303:      : _Inherited(), _Base() { }
+        -:  304:
+        -:  305:      explicit constexpr
+        -:  306:      _Tuple_impl(const _Head& __head, const _Tail&... __tail)
+        -:  307:      : _Inherited(__tail...), _Base(__head)
+        -:  308:      { }
+        -:  309:
+        -:  310:      template<typename _UHead, typename... _UTail,
+        -:  311:	       typename = __enable_if_t<sizeof...(_Tail) == sizeof...(_UTail)>>
+        -:  312:	explicit constexpr
+        -:  313:	_Tuple_impl(_UHead&& __head, _UTail&&... __tail)
+        -:  314:	: _Inherited(std::forward<_UTail>(__tail)...),
+        -:  315:	  _Base(std::forward<_UHead>(__head))
+        -:  316:	{ }
+        -:  317:
+        -:  318:      constexpr _Tuple_impl(const _Tuple_impl&) = default;
+        -:  319:
+        -:  320:      // _GLIBCXX_RESOLVE_LIB_DEFECTS
+        -:  321:      // 2729. Missing SFINAE on std::pair::operator=
+        -:  322:      _Tuple_impl& operator=(const _Tuple_impl&) = delete;
+        -:  323:
+        -:  324:      _Tuple_impl(_Tuple_impl&&) = default;
+        -:  325:
+        -:  326:      template<typename... _UElements>
+        -:  327:	constexpr
+        -:  328:	_Tuple_impl(const _Tuple_impl<_Idx, _UElements...>& __in)
+        -:  329:	: _Inherited(_Tuple_impl<_Idx, _UElements...>::_M_tail(__in)),
+        -:  330:	  _Base(_Tuple_impl<_Idx, _UElements...>::_M_head(__in))
+        -:  331:	{ }
+        -:  332:
+        -:  333:      template<typename _UHead, typename... _UTails>
+        -:  334:	constexpr
+        -:  335:	_Tuple_impl(_Tuple_impl<_Idx, _UHead, _UTails...>&& __in)
+        -:  336:	: _Inherited(std::move
+        -:  337:		     (_Tuple_impl<_Idx, _UHead, _UTails...>::_M_tail(__in))),
+        -:  338:	  _Base(std::forward<_UHead>
+        -:  339:		(_Tuple_impl<_Idx, _UHead, _UTails...>::_M_head(__in)))
+        -:  340:	{ }
+        -:  341:
+        -:  342:#if __cpp_lib_ranges_zip // >= C++23
+        -:  343:      template<typename... _UElements>
+        -:  344:	constexpr
+        -:  345:	_Tuple_impl(_Tuple_impl<_Idx, _UElements...>& __in)
+        -:  346:	: _Inherited(_Tuple_impl<_Idx, _UElements...>::_M_tail(__in)),
+        -:  347:	  _Base(_Tuple_impl<_Idx, _UElements...>::_M_head(__in))
+        -:  348:	{ }
+        -:  349:
+        -:  350:      template<typename _UHead, typename... _UTails>
+        -:  351:	constexpr
+        -:  352:	_Tuple_impl(const _Tuple_impl<_Idx, _UHead, _UTails...>&& __in)
+        -:  353:	: _Inherited(std::move
+        -:  354:		     (_Tuple_impl<_Idx, _UHead, _UTails...>::_M_tail(__in))),
+        -:  355:	  _Base(std::forward<const _UHead>
+        -:  356:		(_Tuple_impl<_Idx, _UHead, _UTails...>::_M_head(__in)))
+        -:  357:	{ }
+        -:  358:#endif // C++23
+        -:  359:
+        -:  360:#if __cpp_lib_tuple_like // >= C++23
+        -:  361:      template<typename _UTuple, size_t... _Is>
+        -:  362:	constexpr
+        -:  363:	_Tuple_impl(__tuple_like_tag_t, _UTuple&& __u, index_sequence<_Is...>)
+        -:  364:	: _Tuple_impl(std::get<_Is>(std::forward<_UTuple>(__u))...)
+        -:  365:	{ }
+        -:  366:#endif // C++23
+        -:  367:
+        -:  368:      template<typename _Alloc>
+        -:  369:	_GLIBCXX20_CONSTEXPR
+        -:  370:	_Tuple_impl(allocator_arg_t __tag, const _Alloc& __a)
+        -:  371:	: _Inherited(__tag, __a),
+        -:  372:	  _Base(__tag, __use_alloc<_Head>(__a))
+        -:  373:	{ }
+        -:  374:
+        -:  375:      template<typename _Alloc>
+        -:  376:	_GLIBCXX20_CONSTEXPR
+        -:  377:	_Tuple_impl(allocator_arg_t __tag, const _Alloc& __a,
+        -:  378:		    const _Head& __head, const _Tail&... __tail)
+        -:  379:	: _Inherited(__tag, __a, __tail...),
+        -:  380:	  _Base(__use_alloc<_Head, _Alloc, _Head>(__a), __head)
+        -:  381:	{ }
+        -:  382:
+        -:  383:      template<typename _Alloc, typename _UHead, typename... _UTail,
+        -:  384:	       typename = __enable_if_t<sizeof...(_Tail) == sizeof...(_UTail)>>
+        -:  385:	_GLIBCXX20_CONSTEXPR
+        -:  386:	_Tuple_impl(allocator_arg_t __tag, const _Alloc& __a,
+        -:  387:		    _UHead&& __head, _UTail&&... __tail)
+        -:  388:	: _Inherited(__tag, __a, std::forward<_UTail>(__tail)...),
+        -:  389:	  _Base(__use_alloc<_Head, _Alloc, _UHead>(__a),
+        -:  390:		std::forward<_UHead>(__head))
+        -:  391:	{ }
+        -:  392:
+        -:  393:      template<typename _Alloc>
+        -:  394:	_GLIBCXX20_CONSTEXPR
+        -:  395:	_Tuple_impl(allocator_arg_t __tag, const _Alloc& __a,
+        -:  396:		    const _Tuple_impl& __in)
+        -:  397:	: _Inherited(__tag, __a, _M_tail(__in)),
+        -:  398:	  _Base(__use_alloc<_Head, _Alloc, _Head>(__a), _M_head(__in))
+        -:  399:	{ }
+        -:  400:
+        -:  401:      template<typename _Alloc>
+        -:  402:	_GLIBCXX20_CONSTEXPR
+        -:  403:	_Tuple_impl(allocator_arg_t __tag, const _Alloc& __a,
+        -:  404:		    _Tuple_impl&& __in)
+        -:  405:	: _Inherited(__tag, __a, std::move(_M_tail(__in))),
+        -:  406:	  _Base(__use_alloc<_Head, _Alloc, _Head>(__a),
+        -:  407:		std::forward<_Head>(_M_head(__in)))
+        -:  408:	{ }
+        -:  409:
+        -:  410:      template<typename _Alloc, typename _UHead, typename... _UTails>
+        -:  411:	_GLIBCXX20_CONSTEXPR
+        -:  412:	_Tuple_impl(allocator_arg_t __tag, const _Alloc& __a,
+        -:  413:		    const _Tuple_impl<_Idx, _UHead, _UTails...>& __in)
+        -:  414:	: _Inherited(__tag, __a,
+        -:  415:		     _Tuple_impl<_Idx, _UHead, _UTails...>::_M_tail(__in)),
+        -:  416:	  _Base(__use_alloc<_Head, _Alloc, const _UHead&>(__a),
+        -:  417:		_Tuple_impl<_Idx, _UHead, _UTails...>::_M_head(__in))
+        -:  418:	{ }
+        -:  419:
+        -:  420:      template<typename _Alloc, typename _UHead, typename... _UTails>
+        -:  421:	_GLIBCXX20_CONSTEXPR
+        -:  422:	_Tuple_impl(allocator_arg_t __tag, const _Alloc& __a,
+        -:  423:		    _Tuple_impl<_Idx, _UHead, _UTails...>&& __in)
+        -:  424:	: _Inherited(__tag, __a, std::move
+        -:  425:		     (_Tuple_impl<_Idx, _UHead, _UTails...>::_M_tail(__in))),
+        -:  426:	  _Base(__use_alloc<_Head, _Alloc, _UHead>(__a),
+        -:  427:		std::forward<_UHead>
+        -:  428:		(_Tuple_impl<_Idx, _UHead, _UTails...>::_M_head(__in)))
+        -:  429:	{ }
+        -:  430:
+        -:  431:#if __cpp_lib_ranges_zip // >= C++23
+        -:  432:      template<typename _Alloc, typename _UHead, typename... _UTails>
+        -:  433:	constexpr
+        -:  434:	_Tuple_impl(allocator_arg_t __tag, const _Alloc& __a,
+        -:  435:		    _Tuple_impl<_Idx, _UHead, _UTails...>& __in)
+        -:  436:	: _Inherited(__tag, __a,
+        -:  437:		     _Tuple_impl<_Idx, _UHead, _UTails...>::_M_tail(__in)),
+        -:  438:	  _Base(__use_alloc<_Head, _Alloc, _UHead&>(__a),
+        -:  439:		_Tuple_impl<_Idx, _UHead, _UTails...>::_M_head(__in))
+        -:  440:	{ }
+        -:  441:
+        -:  442:      template<typename _Alloc, typename _UHead, typename... _UTails>
+        -:  443:	constexpr
+        -:  444:	_Tuple_impl(allocator_arg_t __tag, const _Alloc& __a,
+        -:  445:		    const _Tuple_impl<_Idx, _UHead, _UTails...>&& __in)
+        -:  446:	: _Inherited(__tag, __a, std::move
+        -:  447:		     (_Tuple_impl<_Idx, _UHead, _UTails...>::_M_tail(__in))),
+        -:  448:	  _Base(__use_alloc<_Head, _Alloc, const _UHead>(__a),
+        -:  449:		std::forward<const _UHead>
+        -:  450:		(_Tuple_impl<_Idx, _UHead, _UTails...>::_M_head(__in)))
+        -:  451:	{ }
+        -:  452:#endif // C++23
+        -:  453:
+        -:  454:#if __cpp_lib_tuple_like // >= C++23
+        -:  455:      template<typename _Alloc, typename _UTuple, size_t... _Is>
+        -:  456:	constexpr
+        -:  457:	_Tuple_impl(__tuple_like_tag_t, allocator_arg_t __tag, const _Alloc& __a,
+        -:  458:		    _UTuple&& __u, index_sequence<_Is...>)
+        -:  459:	: _Tuple_impl(__tag, __a, std::get<_Is>(std::forward<_UTuple>(__u))...)
+        -:  460:	{ }
+        -:  461:#endif // C++23
+        -:  462:
+        -:  463:      template<typename... _UElements>
+        -:  464:	_GLIBCXX20_CONSTEXPR
+        -:  465:	void
+        -:  466:	_M_assign(const _Tuple_impl<_Idx, _UElements...>& __in)
+        -:  467:	{
+        -:  468:	  _M_head(*this) = _Tuple_impl<_Idx, _UElements...>::_M_head(__in);
+        -:  469:	  _M_tail(*this)._M_assign(
+        -:  470:	      _Tuple_impl<_Idx, _UElements...>::_M_tail(__in));
+        -:  471:	}
+        -:  472:
+        -:  473:      template<typename _UHead, typename... _UTails>
+        -:  474:	_GLIBCXX20_CONSTEXPR
+        -:  475:	void
+        -:  476:	_M_assign(_Tuple_impl<_Idx, _UHead, _UTails...>&& __in)
+        -:  477:	{
+        -:  478:	  _M_head(*this) = std::forward<_UHead>
+        -:  479:	    (_Tuple_impl<_Idx, _UHead, _UTails...>::_M_head(__in));
+        -:  480:	  _M_tail(*this)._M_assign(
+        -:  481:	      std::move(_Tuple_impl<_Idx, _UHead, _UTails...>::_M_tail(__in)));
+        -:  482:	}
+        -:  483:
+        -:  484:#if __cpp_lib_ranges_zip // >= C++23
+        -:  485:      template<typename... _UElements>
+        -:  486:	constexpr void
+        -:  487:	_M_assign(const _Tuple_impl<_Idx, _UElements...>& __in) const
+        -:  488:	{
+        -:  489:	  _M_head(*this) = _Tuple_impl<_Idx, _UElements...>::_M_head(__in);
+        -:  490:	  _M_tail(*this)._M_assign(
+        -:  491:	      _Tuple_impl<_Idx, _UElements...>::_M_tail(__in));
+        -:  492:	}
+        -:  493:
+        -:  494:      template<typename _UHead, typename... _UTails>
+        -:  495:	constexpr void
+        -:  496:	_M_assign(_Tuple_impl<_Idx, _UHead, _UTails...>&& __in) const
+        -:  497:	{
+        -:  498:	  _M_head(*this) = std::forward<_UHead>
+        -:  499:	    (_Tuple_impl<_Idx, _UHead, _UTails...>::_M_head(__in));
+        -:  500:	  _M_tail(*this)._M_assign(
+        -:  501:	      std::move(_Tuple_impl<_Idx, _UHead, _UTails...>::_M_tail(__in)));
+        -:  502:	}
+        -:  503:#endif // C++23
+        -:  504:
+        -:  505:#if __cpp_lib_tuple_like // >= C++23
+        -:  506:      template<typename _UTuple>
+        -:  507:	constexpr void
+        -:  508:	_M_assign(__tuple_like_tag_t __tag, _UTuple&& __u)
+        -:  509:	{
+        -:  510:	  _M_head(*this) = std::get<_Idx>(std::forward<_UTuple>(__u));
+        -:  511:	  _M_tail(*this)._M_assign(__tag, std::forward<_UTuple>(__u));
+        -:  512:	}
+        -:  513:
+        -:  514:      template<typename _UTuple>
+        -:  515:	constexpr void
+        -:  516:	_M_assign(__tuple_like_tag_t __tag, _UTuple&& __u) const
+        -:  517:	{
+        -:  518:	  _M_head(*this) = std::get<_Idx>(std::forward<_UTuple>(__u));
+        -:  519:	  _M_tail(*this)._M_assign(__tag, std::forward<_UTuple>(__u));
+        -:  520:	}
+        -:  521:#endif // C++23
+        -:  522:
+        -:  523:    protected:
+        -:  524:      _GLIBCXX20_CONSTEXPR
+        -:  525:      void
+        -:  526:      _M_swap(_Tuple_impl& __in)
+        -:  527:      {
+        -:  528:	using std::swap;
+        -:  529:	swap(_M_head(*this), _M_head(__in));
+        -:  530:	_Inherited::_M_swap(_M_tail(__in));
+        -:  531:      }
+        -:  532:
+        -:  533:#if __cpp_lib_ranges_zip // >= C++23
+        -:  534:      constexpr void
+        -:  535:      _M_swap(const _Tuple_impl& __in) const
+        -:  536:      {
+        -:  537:	using std::swap;
+        -:  538:	swap(_M_head(*this), _M_head(__in));
+        -:  539:	_Inherited::_M_swap(_M_tail(__in));
+        -:  540:      }
+        -:  541:#endif // C++23
+        -:  542:    };
+        -:  543:
+        -:  544:  // Basis case of inheritance recursion.
+        -:  545:  template<size_t _Idx, typename _Head>
+        -:  546:    struct _Tuple_impl<_Idx, _Head>
+        -:  547:    : private _Head_base<_Idx, _Head>
+        -:  548:    {
+        -:  549:      template<size_t, typename...> friend struct _Tuple_impl;
+        -:  550:
+        -:  551:      typedef _Head_base<_Idx, _Head> _Base;
+        -:  552:
+        -:  553:      static constexpr _Head&
+      502:  554:      _M_head(_Tuple_impl& __t) noexcept { return _Base::_M_head(__t); }
+------------------
+_ZNSt11_Tuple_implILm0EJRKN12ThemeManager7ElementEEE7_M_headERS4_:
+      238:  554:      _M_head(_Tuple_impl& __t) noexcept { return _Base::_M_head(__t); }
+------------------
+_ZNSt11_Tuple_implILm0EJON12ThemeManager7ElementEEE7_M_headERS3_:
+      264:  554:      _M_head(_Tuple_impl& __t) noexcept { return _Base::_M_head(__t); }
+------------------
+        -:  555:
+        -:  556:      static constexpr const _Head&
+        -:  557:      _M_head(const _Tuple_impl& __t) noexcept { return _Base::_M_head(__t); }
+        -:  558:
+        -:  559:      constexpr
+        -:  560:      _Tuple_impl()
+        -:  561:      : _Base() { }
+        -:  562:
+        -:  563:      explicit constexpr
+      238:  564:      _Tuple_impl(const _Head& __head)
+      238:  565:      : _Base(__head)
+      238:  566:      { }
+        -:  567:
+        -:  568:      template<typename _UHead>
+        -:  569:	explicit constexpr
+      264:  570:	_Tuple_impl(_UHead&& __head)
+      528:  571:	: _Base(std::forward<_UHead>(__head))
+      264:  572:	{ }
+        -:  573:
+        -:  574:      constexpr _Tuple_impl(const _Tuple_impl&) = default;
+        -:  575:
+        -:  576:      // _GLIBCXX_RESOLVE_LIB_DEFECTS
+        -:  577:      // 2729. Missing SFINAE on std::pair::operator=
+        -:  578:      _Tuple_impl& operator=(const _Tuple_impl&) = delete;
+        -:  579:
+        -:  580:#if _GLIBCXX_INLINE_VERSION
+        -:  581:      _Tuple_impl(_Tuple_impl&&) = default;
+        -:  582:#else
+        -:  583:      constexpr
+      502:  584:      _Tuple_impl(_Tuple_impl&& __in)
+        -:  585:      noexcept(is_nothrow_move_constructible<_Head>::value)
+      502:  586:      : _Base(static_cast<_Base&&>(__in))
+      502:  587:      { }
+------------------
+_ZNSt11_Tuple_implILm0EJRKN12ThemeManager7ElementEEEC2EOS4_:
+      238:  584:      _Tuple_impl(_Tuple_impl&& __in)
+        -:  585:      noexcept(is_nothrow_move_constructible<_Head>::value)
+      238:  586:      : _Base(static_cast<_Base&&>(__in))
+      238:  587:      { }
+------------------
+_ZNSt11_Tuple_implILm0EJON12ThemeManager7ElementEEEC2EOS3_:
+      264:  584:      _Tuple_impl(_Tuple_impl&& __in)
+        -:  585:      noexcept(is_nothrow_move_constructible<_Head>::value)
+      264:  586:      : _Base(static_cast<_Base&&>(__in))
+      264:  587:      { }
+------------------
+        -:  588:#endif
+        -:  589:
+        -:  590:      template<typename _UHead>
+        -:  591:	constexpr
+        -:  592:	_Tuple_impl(const _Tuple_impl<_Idx, _UHead>& __in)
+        -:  593:	: _Base(_Tuple_impl<_Idx, _UHead>::_M_head(__in))
+        -:  594:	{ }
+        -:  595:
+        -:  596:      template<typename _UHead>
+        -:  597:	constexpr
+        -:  598:	_Tuple_impl(_Tuple_impl<_Idx, _UHead>&& __in)
+        -:  599:	: _Base(std::forward<_UHead>(_Tuple_impl<_Idx, _UHead>::_M_head(__in)))
+        -:  600:	{ }
+        -:  601:
+        -:  602:#if __cpp_lib_ranges_zip // >= C++23
+        -:  603:      template<typename _UHead>
+        -:  604:	constexpr
+        -:  605:	_Tuple_impl(_Tuple_impl<_Idx, _UHead>& __in)
+        -:  606:	: _Base(_Tuple_impl<_Idx, _UHead>::_M_head(__in))
+        -:  607:	{ }
+        -:  608:
+        -:  609:      template<typename _UHead>
+        -:  610:	constexpr
+        -:  611:	_Tuple_impl(const _Tuple_impl<_Idx, _UHead>&& __in)
+        -:  612:	: _Base(std::forward<const _UHead>(_Tuple_impl<_Idx, _UHead>::_M_head(__in)))
+        -:  613:	{ }
+        -:  614:#endif // C++23
+        -:  615:
+        -:  616:#if __cpp_lib_tuple_like // >= C++23
+        -:  617:      template<typename _UTuple>
+        -:  618:	constexpr
+        -:  619:	_Tuple_impl(__tuple_like_tag_t, _UTuple&& __u, index_sequence<0>)
+        -:  620:	: _Tuple_impl(std::get<0>(std::forward<_UTuple>(__u)))
+        -:  621:	{ }
+        -:  622:#endif // C++23
+        -:  623:
+        -:  624:      template<typename _Alloc>
+        -:  625:	_GLIBCXX20_CONSTEXPR
+        -:  626:	_Tuple_impl(allocator_arg_t __tag, const _Alloc& __a)
+        -:  627:	: _Base(__tag, __use_alloc<_Head>(__a))
+        -:  628:	{ }
+        -:  629:
+        -:  630:      template<typename _Alloc>
+        -:  631:	_GLIBCXX20_CONSTEXPR
+        -:  632:	_Tuple_impl(allocator_arg_t, const _Alloc& __a,
+        -:  633:		    const _Head& __head)
+        -:  634:	: _Base(__use_alloc<_Head, _Alloc, const _Head&>(__a), __head)
+        -:  635:	{ }
+        -:  636:
+        -:  637:      template<typename _Alloc, typename _UHead>
+        -:  638:	_GLIBCXX20_CONSTEXPR
+        -:  639:	_Tuple_impl(allocator_arg_t, const _Alloc& __a,
+        -:  640:		    _UHead&& __head)
+        -:  641:	: _Base(__use_alloc<_Head, _Alloc, _UHead>(__a),
+        -:  642:		std::forward<_UHead>(__head))
+        -:  643:	{ }
+        -:  644:
+        -:  645:      template<typename _Alloc>
+        -:  646:	_GLIBCXX20_CONSTEXPR
+        -:  647:	_Tuple_impl(allocator_arg_t, const _Alloc& __a,
+        -:  648:		    const _Tuple_impl& __in)
+        -:  649:	: _Base(__use_alloc<_Head, _Alloc, const _Head&>(__a), _M_head(__in))
+        -:  650:	{ }
+        -:  651:
+        -:  652:      template<typename _Alloc>
+        -:  653:	_GLIBCXX20_CONSTEXPR
+        -:  654:	_Tuple_impl(allocator_arg_t, const _Alloc& __a,
+        -:  655:		    _Tuple_impl&& __in)
+        -:  656:	: _Base(__use_alloc<_Head, _Alloc, _Head>(__a),
+        -:  657:		std::forward<_Head>(_M_head(__in)))
+        -:  658:	{ }
+        -:  659:
+        -:  660:      template<typename _Alloc, typename _UHead>
+        -:  661:	_GLIBCXX20_CONSTEXPR
+        -:  662:	_Tuple_impl(allocator_arg_t, const _Alloc& __a,
+        -:  663:		    const _Tuple_impl<_Idx, _UHead>& __in)
+        -:  664:	: _Base(__use_alloc<_Head, _Alloc, const _UHead&>(__a),
+        -:  665:		_Tuple_impl<_Idx, _UHead>::_M_head(__in))
+        -:  666:	{ }
+        -:  667:
+        -:  668:      template<typename _Alloc, typename _UHead>
+        -:  669:	_GLIBCXX20_CONSTEXPR
+        -:  670:	_Tuple_impl(allocator_arg_t, const _Alloc& __a,
+        -:  671:		    _Tuple_impl<_Idx, _UHead>&& __in)
+        -:  672:	: _Base(__use_alloc<_Head, _Alloc, _UHead>(__a),
+        -:  673:		std::forward<_UHead>(_Tuple_impl<_Idx, _UHead>::_M_head(__in)))
+        -:  674:	{ }
+        -:  675:
+        -:  676:#if __cpp_lib_ranges_zip // >= C++23
+        -:  677:      template<typename _Alloc, typename _UHead>
+        -:  678:	constexpr
+        -:  679:	_Tuple_impl(allocator_arg_t, const _Alloc& __a,
+        -:  680:		    _Tuple_impl<_Idx, _UHead>& __in)
+        -:  681:	: _Base(__use_alloc<_Head, _Alloc, _UHead&>(__a),
+        -:  682:		_Tuple_impl<_Idx, _UHead>::_M_head(__in))
+        -:  683:	{ }
+        -:  684:
+        -:  685:      template<typename _Alloc, typename _UHead>
+        -:  686:	constexpr
+        -:  687:	_Tuple_impl(allocator_arg_t, const _Alloc& __a,
+        -:  688:		    const _Tuple_impl<_Idx, _UHead>&& __in)
+        -:  689:	: _Base(__use_alloc<_Head, _Alloc, const _UHead>(__a),
+        -:  690:		std::forward<const _UHead>(_Tuple_impl<_Idx, _UHead>::_M_head(__in)))
+        -:  691:	{ }
+        -:  692:#endif // C++23
+        -:  693:
+        -:  694:#if __cpp_lib_tuple_like // >= C++23
+        -:  695:      template<typename _Alloc, typename _UTuple>
+        -:  696:	constexpr
+        -:  697:	_Tuple_impl(__tuple_like_tag_t, allocator_arg_t __tag, const _Alloc& __a,
+        -:  698:		    _UTuple&& __u, index_sequence<0>)
+        -:  699:	: _Tuple_impl(__tag, __a, std::get<0>(std::forward<_UTuple>(__u)))
+        -:  700:	{ }
+        -:  701:#endif // C++23
+        -:  702:
+        -:  703:      template<typename _UHead>
+        -:  704:	_GLIBCXX20_CONSTEXPR
+        -:  705:	void
+        -:  706:	_M_assign(const _Tuple_impl<_Idx, _UHead>& __in)
+        -:  707:	{
+        -:  708:	  _M_head(*this) = _Tuple_impl<_Idx, _UHead>::_M_head(__in);
+        -:  709:	}
+        -:  710:
+        -:  711:      template<typename _UHead>
+        -:  712:	_GLIBCXX20_CONSTEXPR
+        -:  713:	void
+        -:  714:	_M_assign(_Tuple_impl<_Idx, _UHead>&& __in)
+        -:  715:	{
+        -:  716:	  _M_head(*this)
+        -:  717:	    = std::forward<_UHead>(_Tuple_impl<_Idx, _UHead>::_M_head(__in));
+        -:  718:	}
+        -:  719:
+        -:  720:#if __cpp_lib_ranges_zip // >= C++23
+        -:  721:      template<typename _UHead>
+        -:  722:	constexpr void
+        -:  723:	_M_assign(const _Tuple_impl<_Idx, _UHead>& __in) const
+        -:  724:	{
+        -:  725:	  _M_head(*this) = _Tuple_impl<_Idx, _UHead>::_M_head(__in);
+        -:  726:	}
+        -:  727:
+        -:  728:      template<typename _UHead>
+        -:  729:	constexpr void
+        -:  730:	_M_assign(_Tuple_impl<_Idx, _UHead>&& __in) const
+        -:  731:	{
+        -:  732:	  _M_head(*this)
+        -:  733:	    = std::forward<_UHead>(_Tuple_impl<_Idx, _UHead>::_M_head(__in));
+        -:  734:	}
+        -:  735:#endif // C++23
+        -:  736:
+        -:  737:#if __cpp_lib_tuple_like // >= C++23
+        -:  738:    template<typename _UTuple>
+        -:  739:      constexpr void
+        -:  740:      _M_assign(__tuple_like_tag_t, _UTuple&& __u)
+        -:  741:      { _M_head(*this) = std::get<_Idx>(std::forward<_UTuple>(__u)); }
+        -:  742:
+        -:  743:    template<typename _UTuple>
+        -:  744:      constexpr void
+        -:  745:      _M_assign(__tuple_like_tag_t, _UTuple&& __u) const
+        -:  746:      { _M_head(*this) = std::get<_Idx>(std::forward<_UTuple>(__u)); }
+        -:  747:#endif // C++23
+        -:  748:
+        -:  749:    protected:
+        -:  750:      _GLIBCXX20_CONSTEXPR
+        -:  751:      void
+        -:  752:      _M_swap(_Tuple_impl& __in)
+        -:  753:      {
+        -:  754:	using std::swap;
+        -:  755:	swap(_M_head(*this), _M_head(__in));
+        -:  756:      }
+        -:  757:
+        -:  758:#if __cpp_lib_ranges_zip // >= C++23
+        -:  759:      constexpr void
+        -:  760:      _M_swap(const _Tuple_impl& __in) const
+        -:  761:      {
+        -:  762:	using std::swap;
+        -:  763:	swap(_M_head(*this), _M_head(__in));
+        -:  764:      }
+        -:  765:#endif // C++23
+        -:  766:    };
+        -:  767:
+        -:  768:  // Concept utility functions, reused in conditionally-explicit
+        -:  769:  // constructors.
+        -:  770:  template<bool, typename... _Types>
+        -:  771:    struct _TupleConstraints
+        -:  772:    {
+        -:  773:      template<typename... _UTypes>
+        -:  774:	using __constructible = __and_<is_constructible<_Types, _UTypes>...>;
+        -:  775:
+        -:  776:      template<typename... _UTypes>
+        -:  777:	using __convertible = __and_<is_convertible<_UTypes, _Types>...>;
+        -:  778:
+        -:  779:      // Constraint for a non-explicit constructor.
+        -:  780:      // True iff each Ti in _Types... can be constructed from Ui in _UTypes...
+        -:  781:      // and every Ui is implicitly convertible to Ti.
+        -:  782:      template<typename... _UTypes>
+        -:  783:	static constexpr bool __is_implicitly_constructible()
+        -:  784:	{
+        -:  785:	  return __and_<__constructible<_UTypes...>,
+        -:  786:			__convertible<_UTypes...>
+        -:  787:			>::value;
+        -:  788:	}
+        -:  789:
+        -:  790:      // Constraint for a non-explicit constructor.
+        -:  791:      // True iff each Ti in _Types... can be constructed from Ui in _UTypes...
+        -:  792:      // but not every Ui is implicitly convertible to Ti.
+        -:  793:      template<typename... _UTypes>
+        -:  794:	static constexpr bool __is_explicitly_constructible()
+        -:  795:	{
+        -:  796:	  return __and_<__constructible<_UTypes...>,
+        -:  797:			__not_<__convertible<_UTypes...>>
+        -:  798:			>::value;
+        -:  799:	}
+        -:  800:
+        -:  801:      static constexpr bool __is_implicitly_default_constructible()
+        -:  802:      {
+        -:  803:	return __and_<std::__is_implicitly_default_constructible<_Types>...
+        -:  804:		      >::value;
+        -:  805:      }
+        -:  806:
+        -:  807:      static constexpr bool __is_explicitly_default_constructible()
+        -:  808:      {
+        -:  809:	return __and_<is_default_constructible<_Types>...,
+        -:  810:		      __not_<__and_<
+        -:  811:			std::__is_implicitly_default_constructible<_Types>...>
+        -:  812:		      >>::value;
+        -:  813:      }
+        -:  814:    };
+        -:  815:
+        -:  816:  // Partial specialization used when a required precondition isn't met,
+        -:  817:  // e.g. when sizeof...(_Types) != sizeof...(_UTypes).
+        -:  818:  template<typename... _Types>
+        -:  819:    struct _TupleConstraints<false, _Types...>
+        -:  820:    {
+        -:  821:      template<typename... _UTypes>
+        -:  822:	static constexpr bool __is_implicitly_constructible()
+        -:  823:	{ return false; }
+        -:  824:
+        -:  825:      template<typename... _UTypes>
+        -:  826:	static constexpr bool __is_explicitly_constructible()
+        -:  827:	{ return false; }
+        -:  828:    };
+        -:  829:  /// @endcond
+        -:  830:
+        -:  831:  /// Primary class template, tuple
+        -:  832:  template<typename... _Elements>
+        -:  833:    class tuple : public _Tuple_impl<0, _Elements...>
+        -:  834:    {
+        -:  835:      using _Inherited = _Tuple_impl<0, _Elements...>;
+        -:  836:
+        -:  837:#if __cpp_concepts && __cpp_consteval && __cpp_conditional_explicit // >= C++20
+        -:  838:      template<typename... _UTypes>
+        -:  839:	static consteval bool
+        -:  840:	__constructible()
+        -:  841:	{
+        -:  842:	  if constexpr (sizeof...(_UTypes) == sizeof...(_Elements))
+        -:  843:	    return __and_v<is_constructible<_Elements, _UTypes>...>;
+        -:  844:	  else
+        -:  845:	    return false;
+        -:  846:	}
+        -:  847:
+        -:  848:      template<typename... _UTypes>
+        -:  849:	static consteval bool
+        -:  850:	__nothrow_constructible()
+        -:  851:	{
+        -:  852:	  if constexpr (sizeof...(_UTypes) == sizeof...(_Elements))
+        -:  853:	    return __and_v<is_nothrow_constructible<_Elements, _UTypes>...>;
+        -:  854:	  else
+        -:  855:	    return false;
+        -:  856:	}
+        -:  857:
+        -:  858:      template<typename... _UTypes>
+        -:  859:	static consteval bool
+        -:  860:	__convertible()
+        -:  861:	{
+        -:  862:	  if constexpr (sizeof...(_UTypes) == sizeof...(_Elements))
+        -:  863:	    return __and_v<is_convertible<_UTypes, _Elements>...>;
+        -:  864:	  else
+        -:  865:	    return false;
+        -:  866:	}
+        -:  867:
+        -:  868:      // _GLIBCXX_RESOLVE_LIB_DEFECTS
+        -:  869:      // 3121. tuple constructor constraints for UTypes&&... overloads
+        -:  870:      template<typename... _UTypes>
+        -:  871:	static consteval bool
+        -:  872:	__disambiguating_constraint()
+        -:  873:	{
+        -:  874:	  if constexpr (sizeof...(_Elements) != sizeof...(_UTypes))
+        -:  875:	    return false;
+        -:  876:	  else if constexpr (sizeof...(_Elements) == 1)
+        -:  877:	    {
+        -:  878:	      using _U0 = typename _Nth_type<0, _UTypes...>::type;
+        -:  879:	      return !is_same_v<remove_cvref_t<_U0>, tuple>;
+        -:  880:	    }
+        -:  881:	  else if constexpr (sizeof...(_Elements) < 4)
+        -:  882:	    {
+        -:  883:	      using _U0 = typename _Nth_type<0, _UTypes...>::type;
+        -:  884:	      if constexpr (!is_same_v<remove_cvref_t<_U0>, allocator_arg_t>)
+        -:  885:		return true;
+        -:  886:	      else
+        -:  887:		{
+        -:  888:		  using _T0 = typename _Nth_type<0, _Elements...>::type;
+        -:  889:		  return is_same_v<remove_cvref_t<_T0>, allocator_arg_t>;
+        -:  890:		}
+        -:  891:	    }
+        -:  892:	  return true;
+        -:  893:	}
+        -:  894:
+        -:  895:      // Return true iff sizeof...(Types) == 1 && tuple_size_v<TUPLE> == 1
+        -:  896:      // and the single element in Types can be initialized from TUPLE,
+        -:  897:      // or is the same type as tuple_element_t<0, TUPLE>.
+        -:  898:      template<typename _Tuple>
+        -:  899:	static consteval bool
+        -:  900:	__use_other_ctor()
+        -:  901:	{
+        -:  902:	  if constexpr (sizeof...(_Elements) != 1)
+        -:  903:	    return false;
+        -:  904:	  else if constexpr (is_same_v<remove_cvref_t<_Tuple>, tuple>)
+        -:  905:	    return true; // Should use a copy/move constructor instead.
+        -:  906:	  else
+        -:  907:	    {
+        -:  908:	      using _Tp = typename _Nth_type<0, _Elements...>::type;
+        -:  909:	      if constexpr (is_convertible_v<_Tuple, _Tp>)
+        -:  910:		return true;
+        -:  911:	      else if constexpr (is_constructible_v<_Tp, _Tuple>)
+        -:  912:		return true;
+        -:  913:	    }
+        -:  914:	  return false;
+        -:  915:	}
+        -:  916:
+        -:  917:      template<typename... _Up>
+        -:  918:	static consteval bool
+        -:  919:	__dangles()
+        -:  920:	{
+        -:  921:#if __has_builtin(__reference_constructs_from_temporary)
+        -:  922:	  return (__reference_constructs_from_temporary(_Elements, _Up&&)
+        -:  923:		    || ...);
+        -:  924:#else
+        -:  925:	  return false;
+        -:  926:#endif
+        -:  927:	}
+        -:  928:
+        -:  929:#if __cpp_lib_tuple_like // >= C++23
+        -:  930:      // _GLIBCXX_RESOLVE_LIB_DEFECTS
+        -:  931:      // 4045. tuple can create dangling references from tuple-like
+        -:  932:      template<typename _UTuple>
+        -:  933:	static consteval bool
+        -:  934:	__dangles_from_tuple_like()
+        -:  935:	{
+        -:  936:	  return []<size_t... _Is>(index_sequence<_Is...>) {
+        -:  937:	    return __dangles<decltype(std::get<_Is>(std::declval<_UTuple>()))...>();
+        -:  938:	  }(index_sequence_for<_Elements...>{});
+        -:  939:	}
+        -:  940:
+        -:  941:      template<typename _UTuple>
+        -:  942:	static consteval bool
+        -:  943:	__constructible_from_tuple_like()
+        -:  944:	{
+        -:  945:	  return []<size_t... _Is>(index_sequence<_Is...>) {
+        -:  946:	    return __constructible<decltype(std::get<_Is>(std::declval<_UTuple>()))...>();
+        -:  947:	  }(index_sequence_for<_Elements...>{});
+        -:  948:	}
+        -:  949:
+        -:  950:      template<typename _UTuple>
+        -:  951:	static consteval bool
+        -:  952:	__convertible_from_tuple_like()
+        -:  953:	{
+        -:  954:	  return []<size_t... _Is>(index_sequence<_Is...>) {
+        -:  955:	    return __convertible<decltype(std::get<_Is>(std::declval<_UTuple>()))...>();
+        -:  956:	  }(index_sequence_for<_Elements...>{});
+        -:  957:	}
+        -:  958:#endif // C++23
+        -:  959:
+        -:  960:    public:
+        -:  961:      constexpr
+        -:  962:      explicit(!(__is_implicitly_default_constructible_v<_Elements> && ...))
+        -:  963:      tuple()
+        -:  964:      noexcept((is_nothrow_default_constructible_v<_Elements> && ...))
+        -:  965:      requires (is_default_constructible_v<_Elements> && ...)
+        -:  966:      : _Inherited()
+        -:  967:      { }
+        -:  968:
+        -:  969:      // Defined as a template to work around PR libstdc++/116440.
+        -:  970:      template<typename = void>
+        -:  971:	constexpr explicit(!__convertible<const _Elements&...>())
+        -:  972:	tuple(const type_identity_t<_Elements>&... __elements)
+        -:  973:	noexcept(__nothrow_constructible<const _Elements&...>())
+        -:  974:	requires (__constructible<const _Elements&...>())
+        -:  975:	: _Inherited(__elements...)
+        -:  976:	{ }
+        -:  977:
+        -:  978:      template<typename... _UTypes>
+        -:  979:	requires (__disambiguating_constraint<_UTypes...>())
+        -:  980:	  && (__constructible<_UTypes...>())
+        -:  981:	  && (!__dangles<_UTypes...>())
+        -:  982:	constexpr explicit(!__convertible<_UTypes...>())
+        -:  983:	tuple(_UTypes&&... __u)
+        -:  984:	noexcept(__nothrow_constructible<_UTypes...>())
+        -:  985:	: _Inherited(std::forward<_UTypes>(__u)...)
+        -:  986:	{ }
+        -:  987:
+        -:  988:      template<typename... _UTypes>
+        -:  989:	requires (__disambiguating_constraint<_UTypes...>())
+        -:  990:	  && (__constructible<_UTypes...>())
+        -:  991:	  && (__dangles<_UTypes...>())
+        -:  992:	tuple(_UTypes&&...) = delete;
+        -:  993:
+        -:  994:      constexpr tuple(const tuple&) = default;
+        -:  995:
+        -:  996:      constexpr
+        -:  997:      tuple(tuple&&) requires (is_move_constructible_v<_Elements> && ...)
+        -:  998:	= default;
+        -:  999:
+        -: 1000:      template<typename... _UTypes>
+        -: 1001:	requires (__constructible<const _UTypes&...>())
+        -: 1002:	  && (!__use_other_ctor<const tuple<_UTypes...>&>())
+        -: 1003:	  && (!__dangles<const _UTypes&...>())
+        -: 1004:	constexpr explicit(!__convertible<const _UTypes&...>())
+        -: 1005:	tuple(const tuple<_UTypes...>& __u)
+        -: 1006:	noexcept(__nothrow_constructible<const _UTypes&...>())
+        -: 1007:	: _Inherited(static_cast<const _Tuple_impl<0, _UTypes...>&>(__u))
+        -: 1008:	{ }
+        -: 1009:
+        -: 1010:      template<typename... _UTypes>
+        -: 1011:	requires (__constructible<const _UTypes&...>())
+        -: 1012:	  && (!__use_other_ctor<const tuple<_UTypes...>&>())
+        -: 1013:	  && (__dangles<const _UTypes&...>())
+        -: 1014:	tuple(const tuple<_UTypes...>&) = delete;
+        -: 1015:
+        -: 1016:      template<typename... _UTypes>
+        -: 1017:	requires (__constructible<_UTypes...>())
+        -: 1018:	  && (!__use_other_ctor<tuple<_UTypes...>>())
+        -: 1019:	  && (!__dangles<_UTypes...>())
+        -: 1020:	constexpr explicit(!__convertible<_UTypes...>())
+        -: 1021:	tuple(tuple<_UTypes...>&& __u)
+        -: 1022:	noexcept(__nothrow_constructible<_UTypes...>())
+        -: 1023:	: _Inherited(static_cast<_Tuple_impl<0, _UTypes...>&&>(__u))
+        -: 1024:	{ }
+        -: 1025:
+        -: 1026:      template<typename... _UTypes>
+        -: 1027:	requires (__constructible<_UTypes...>())
+        -: 1028:	  && (!__use_other_ctor<tuple<_UTypes...>>())
+        -: 1029:	  && (__dangles<_UTypes...>())
+        -: 1030:	tuple(tuple<_UTypes...>&&) = delete;
+        -: 1031:
+        -: 1032:#if __cpp_lib_ranges_zip // >= C++23
+        -: 1033:      template<typename... _UTypes>
+        -: 1034:	requires (__constructible<_UTypes&...>())
+        -: 1035:	  && (!__use_other_ctor<tuple<_UTypes...>&>())
+        -: 1036:	  && (!__dangles<_UTypes&...>())
+        -: 1037:	constexpr explicit(!__convertible<_UTypes&...>())
+        -: 1038:	tuple(tuple<_UTypes...>& __u)
+        -: 1039:	noexcept(__nothrow_constructible<_UTypes&...>())
+        -: 1040:	: _Inherited(static_cast<_Tuple_impl<0, _UTypes...>&>(__u))
+        -: 1041:	{ }
+        -: 1042:
+        -: 1043:      template<typename... _UTypes>
+        -: 1044:	requires (__constructible<_UTypes&...>())
+        -: 1045:	  && (!__use_other_ctor<tuple<_UTypes...>&>())
+        -: 1046:	  && (__dangles<_UTypes&...>())
+        -: 1047:	tuple(tuple<_UTypes...>&) = delete;
+        -: 1048:
+        -: 1049:      template<typename... _UTypes>
+        -: 1050:	requires (__constructible<const _UTypes...>())
+        -: 1051:	  && (!__use_other_ctor<const tuple<_UTypes...>>())
+        -: 1052:	  && (!__dangles<const _UTypes...>())
+        -: 1053:	constexpr explicit(!__convertible<const _UTypes...>())
+        -: 1054:	tuple(const tuple<_UTypes...>&& __u)
+        -: 1055:	noexcept(__nothrow_constructible<const _UTypes...>())
+        -: 1056:	: _Inherited(static_cast<const _Tuple_impl<0, _UTypes...>&&>(__u))
+        -: 1057:	{ }
+        -: 1058:
+        -: 1059:      template<typename... _UTypes>
+        -: 1060:	requires (__constructible<const _UTypes...>())
+        -: 1061:	  && (!__use_other_ctor<const tuple<_UTypes...>>())
+        -: 1062:	  && (__dangles<const _UTypes...>())
+        -: 1063:	tuple(const tuple<_UTypes...>&&) = delete;
+        -: 1064:#endif // C++23
+        -: 1065:
+        -: 1066:      template<typename _U1, typename _U2>
+        -: 1067:	requires (sizeof...(_Elements) == 2)
+        -: 1068:	  && (__constructible<const _U1&, const _U2&>())
+        -: 1069:	  && (!__dangles<const _U1&, const _U2&>())
+        -: 1070:	constexpr explicit(!__convertible<const _U1&, const _U2&>())
+        -: 1071:	tuple(const pair<_U1, _U2>& __u)
+        -: 1072:	noexcept(__nothrow_constructible<const _U1&, const _U2&>())
+        -: 1073:	: _Inherited(__u.first, __u.second)
+        -: 1074:	{ }
+        -: 1075:
+        -: 1076:      template<typename _U1, typename _U2>
+        -: 1077:	requires (sizeof...(_Elements) == 2)
+        -: 1078:	  && (__constructible<const _U1&, const _U2&>())
+        -: 1079:	  && (__dangles<const _U1&, const _U2&>())
+        -: 1080:	tuple(const pair<_U1, _U2>&) = delete;
+        -: 1081:
+        -: 1082:      template<typename _U1, typename _U2>
+        -: 1083:	requires (sizeof...(_Elements) == 2)
+        -: 1084:	  && (__constructible<_U1, _U2>())
+        -: 1085:	  && (!__dangles<_U1, _U2>())
+        -: 1086:	constexpr explicit(!__convertible<_U1, _U2>())
+        -: 1087:	tuple(pair<_U1, _U2>&& __u)
+        -: 1088:	noexcept(__nothrow_constructible<_U1, _U2>())
+        -: 1089:	: _Inherited(std::forward<_U1>(__u.first),
+        -: 1090:		     std::forward<_U2>(__u.second))
+        -: 1091:	{ }
+        -: 1092:
+        -: 1093:      template<typename _U1, typename _U2>
+        -: 1094:	requires (sizeof...(_Elements) == 2)
+        -: 1095:	  && (__constructible<_U1, _U2>())
+        -: 1096:	  && (__dangles<_U1, _U2>())
+        -: 1097:	tuple(pair<_U1, _U2>&&) = delete;
+        -: 1098:
+        -: 1099:#if __cpp_lib_ranges_zip // >= C++23
+        -: 1100:      template<typename _U1, typename _U2>
+        -: 1101:	requires (sizeof...(_Elements) == 2)
+        -: 1102:	  && (__constructible<_U1&, _U2&>())
+        -: 1103:	  && (!__dangles<_U1&, _U2&>())
+        -: 1104:	constexpr explicit(!__convertible<_U1&, _U2&>())
+        -: 1105:	tuple(pair<_U1, _U2>& __u)
+        -: 1106:	noexcept(__nothrow_constructible<_U1&, _U2&>())
+        -: 1107:	: _Inherited(__u.first, __u.second)
+        -: 1108:	{ }
+        -: 1109:
+        -: 1110:      template<typename _U1, typename _U2>
+        -: 1111:	requires (sizeof...(_Elements) == 2)
+        -: 1112:	  && (__constructible<_U1&, _U2&>())
+        -: 1113:	  && (__dangles<_U1&, _U2&>())
+        -: 1114:	tuple(pair<_U1, _U2>&) = delete;
+        -: 1115:
+        -: 1116:      template<typename _U1, typename _U2>
+        -: 1117:	requires (sizeof...(_Elements) == 2)
+        -: 1118:	  && (__constructible<const _U1, const _U2>())
+        -: 1119:	  && (!__dangles<const _U1, const _U2>())
+        -: 1120:	constexpr explicit(!__convertible<const _U1, const _U2>())
+        -: 1121:	tuple(const pair<_U1, _U2>&& __u)
+        -: 1122:	noexcept(__nothrow_constructible<const _U1, const _U2>())
+        -: 1123:	: _Inherited(std::forward<const _U1>(__u.first),
+        -: 1124:		     std::forward<const _U2>(__u.second))
+        -: 1125:	{ }
+        -: 1126:
+        -: 1127:      template<typename _U1, typename _U2>
+        -: 1128:	requires (sizeof...(_Elements) == 2)
+        -: 1129:	  && (__constructible<const _U1, const _U2>())
+        -: 1130:	  && (__dangles<const _U1, const _U2>())
+        -: 1131:	tuple(const pair<_U1, _U2>&&) = delete;
+        -: 1132:#endif // C++23
+        -: 1133:
+        -: 1134:#if __cpp_lib_tuple_like // >= C++23
+        -: 1135:      template<__eligible_tuple_like<tuple> _UTuple>
+        -: 1136:	requires (__constructible_from_tuple_like<_UTuple>())
+        -: 1137:	  && (!__use_other_ctor<_UTuple>())
+        -: 1138:	  && (!__dangles_from_tuple_like<_UTuple>())
+        -: 1139:	constexpr explicit(!__convertible_from_tuple_like<_UTuple>())
+        -: 1140:	tuple(_UTuple&& __u)
+        -: 1141:	: _Inherited(__tuple_like_tag_t{},
+        -: 1142:		     std::forward<_UTuple>(__u),
+        -: 1143:		     index_sequence_for<_Elements...>{})
+        -: 1144:	{ }
+        -: 1145:
+        -: 1146:      template<__eligible_tuple_like<tuple> _UTuple>
+        -: 1147:	requires (__constructible_from_tuple_like<_UTuple>())
+        -: 1148:	  && (!__use_other_ctor<_UTuple>())
+        -: 1149:	  && (__dangles_from_tuple_like<_UTuple>())
+        -: 1150:	tuple(_UTuple&&) = delete;
+        -: 1151:#endif // C++23
+        -: 1152:
+        -: 1153:      // Allocator-extended constructors.
+        -: 1154:
+        -: 1155:      template<typename _Alloc>
+        -: 1156:	constexpr
+        -: 1157:	explicit(!(__is_implicitly_default_constructible_v<_Elements> && ...))
+        -: 1158:	tuple(allocator_arg_t __tag, const _Alloc& __a)
+        -: 1159:	requires (is_default_constructible_v<_Elements> && ...)
+        -: 1160:	: _Inherited(__tag, __a)
+        -: 1161:	{ }
+        -: 1162:
+        -: 1163:      template<typename _Alloc>
+        -: 1164:	constexpr explicit(!__convertible<const _Elements&...>())
+        -: 1165:	tuple(allocator_arg_t __tag, const _Alloc& __a,
+        -: 1166:	      const type_identity_t<_Elements>&... __elements)
+        -: 1167:	requires (__constructible<const _Elements&...>())
+        -: 1168:	: _Inherited(__tag, __a, __elements...)
+        -: 1169:	{ }
+        -: 1170:
+        -: 1171:      template<typename _Alloc, typename... _UTypes>
+        -: 1172:	requires (__disambiguating_constraint<_UTypes...>())
+        -: 1173:	  && (__constructible<_UTypes...>())
+        -: 1174:	  && (!__dangles<_UTypes...>())
+        -: 1175:	constexpr explicit(!__convertible<_UTypes...>())
+        -: 1176:	tuple(allocator_arg_t __tag, const _Alloc& __a, _UTypes&&... __u)
+        -: 1177:	: _Inherited(__tag, __a, std::forward<_UTypes>(__u)...)
+        -: 1178:	{ }
+        -: 1179:
+        -: 1180:      template<typename _Alloc, typename... _UTypes>
+        -: 1181:	requires (__disambiguating_constraint<_UTypes...>())
+        -: 1182:	  && (__constructible<_UTypes...>())
+        -: 1183:	  && (__dangles<_UTypes...>())
+        -: 1184:	tuple(allocator_arg_t, const _Alloc&, _UTypes&&...) = delete;
+        -: 1185:
+        -: 1186:      template<typename _Alloc>
+        -: 1187:	constexpr
+        -: 1188:	tuple(allocator_arg_t __tag, const _Alloc& __a, const tuple& __u)
+        -: 1189:	: _Inherited(__tag, __a, static_cast<const _Inherited&>(__u))
+        -: 1190:	{ }
+        -: 1191:
+        -: 1192:      template<typename _Alloc>
+        -: 1193:	requires (__constructible<_Elements...>())
+        -: 1194:	constexpr
+        -: 1195:	tuple(allocator_arg_t __tag, const _Alloc& __a, tuple&& __u)
+        -: 1196:	: _Inherited(__tag, __a, static_cast<_Inherited&&>(__u))
+        -: 1197:	{ }
+        -: 1198:
+        -: 1199:      template<typename _Alloc, typename... _UTypes>
+        -: 1200:	requires (__constructible<const _UTypes&...>())
+        -: 1201:	  && (!__use_other_ctor<const tuple<_UTypes...>&>())
+        -: 1202:	  && (!__dangles<const _UTypes&...>())
+        -: 1203:	constexpr explicit(!__convertible<const _UTypes&...>())
+        -: 1204:	tuple(allocator_arg_t __tag, const _Alloc& __a,
+        -: 1205:	      const tuple<_UTypes...>& __u)
+        -: 1206:	: _Inherited(__tag, __a,
+        -: 1207:		     static_cast<const _Tuple_impl<0, _UTypes...>&>(__u))
+        -: 1208:	{ }
+        -: 1209:
+        -: 1210:      template<typename _Alloc, typename... _UTypes>
+        -: 1211:	requires (__constructible<const _UTypes&...>())
+        -: 1212:	  && (!__use_other_ctor<const tuple<_UTypes...>&>())
+        -: 1213:	  && (__dangles<const _UTypes&...>())
+        -: 1214:	tuple(allocator_arg_t, const _Alloc&, const tuple<_UTypes...>&) = delete;
+        -: 1215:
+        -: 1216:      template<typename _Alloc, typename... _UTypes>
+        -: 1217:	requires (__constructible<_UTypes...>())
+        -: 1218:	  && (!__use_other_ctor<tuple<_UTypes...>>())
+        -: 1219:	  && (!__dangles<_UTypes...>())
+        -: 1220:	constexpr explicit(!__use_other_ctor<tuple<_UTypes...>>())
+        -: 1221:	tuple(allocator_arg_t __tag, const _Alloc& __a, tuple<_UTypes...>&& __u)
+        -: 1222:	: _Inherited(__tag, __a, static_cast<_Tuple_impl<0, _UTypes...>&&>(__u))
+        -: 1223:	{ }
+        -: 1224:
+        -: 1225:      template<typename _Alloc, typename... _UTypes>
+        -: 1226:	requires (__constructible<_UTypes...>())
+        -: 1227:	  && (!__use_other_ctor<tuple<_UTypes...>>())
+        -: 1228:	  && (__dangles<_UTypes...>())
+        -: 1229:	tuple(allocator_arg_t, const _Alloc&, tuple<_UTypes...>&&) = delete;
+        -: 1230:
+        -: 1231:#if __cpp_lib_ranges_zip // >= C++23
+        -: 1232:      template<typename _Alloc, typename... _UTypes>
+        -: 1233:	requires (__constructible<_UTypes&...>())
+        -: 1234:	  && (!__use_other_ctor<tuple<_UTypes...>&>())
+        -: 1235:	  && (!__dangles<_UTypes&...>())
+        -: 1236:	constexpr explicit(!__convertible<_UTypes&...>())
+        -: 1237:	tuple(allocator_arg_t __tag, const _Alloc& __a, tuple<_UTypes...>& __u)
+        -: 1238:	: _Inherited(__tag, __a, static_cast<_Tuple_impl<0, _UTypes...>&>(__u))
+        -: 1239:	{ }
+        -: 1240:
+        -: 1241:      template<typename _Alloc, typename... _UTypes>
+        -: 1242:	requires (__constructible<_UTypes&...>())
+        -: 1243:	  && (!__use_other_ctor<tuple<_UTypes...>&>())
+        -: 1244:	  && (__dangles<_UTypes&...>())
+        -: 1245:	tuple(allocator_arg_t, const _Alloc&, tuple<_UTypes...>&) = delete;
+        -: 1246:
+        -: 1247:      template<typename _Alloc, typename... _UTypes>
+        -: 1248:	requires (__constructible<const _UTypes...>())
+        -: 1249:	  && (!__use_other_ctor<const tuple<_UTypes...>>())
+        -: 1250:	  && (!__dangles<const _UTypes...>())
+        -: 1251:	constexpr explicit(!__convertible<const _UTypes...>())
+        -: 1252:	tuple(allocator_arg_t __tag, const _Alloc& __a,
+        -: 1253:	      const tuple<_UTypes...>&& __u)
+        -: 1254:	: _Inherited(__tag, __a,
+        -: 1255:		     static_cast<const _Tuple_impl<0, _UTypes...>&&>(__u))
+        -: 1256:	{ }
+        -: 1257:
+        -: 1258:      template<typename _Alloc, typename... _UTypes>
+        -: 1259:	requires (__constructible<const _UTypes...>())
+        -: 1260:	  && (!__use_other_ctor<const tuple<_UTypes...>>())
+        -: 1261:	  && (__dangles<const _UTypes...>())
+        -: 1262:	tuple(allocator_arg_t, const _Alloc&, const tuple<_UTypes...>&&) = delete;
+        -: 1263:#endif // C++23
+        -: 1264:
+        -: 1265:      template<typename _Alloc, typename _U1, typename _U2>
+        -: 1266:	requires (sizeof...(_Elements) == 2)
+        -: 1267:	  && (__constructible<const _U1&, const _U2&>())
+        -: 1268:	  && (!__dangles<const _U1&, const _U2&>())
+        -: 1269:	constexpr explicit(!__convertible<const _U1&, const _U2&>())
+        -: 1270:	tuple(allocator_arg_t __tag, const _Alloc& __a,
+        -: 1271:	      const pair<_U1, _U2>& __u)
+        -: 1272:	noexcept(__nothrow_constructible<const _U1&, const _U2&>())
+        -: 1273:	: _Inherited(__tag, __a, __u.first, __u.second)
+        -: 1274:	{ }
+        -: 1275:
+        -: 1276:      template<typename _Alloc, typename _U1, typename _U2>
+        -: 1277:	requires (sizeof...(_Elements) == 2)
+        -: 1278:	  && (__constructible<const _U1&, const _U2&>())
+        -: 1279:	  && (__dangles<const _U1&, const _U2&>())
+        -: 1280:	tuple(allocator_arg_t, const _Alloc&, const pair<_U1, _U2>&) = delete;
+        -: 1281:
+        -: 1282:      template<typename _Alloc, typename _U1, typename _U2>
+        -: 1283:	requires (sizeof...(_Elements) == 2)
+        -: 1284:	  && (__constructible<_U1, _U2>())
+        -: 1285:	  && (!__dangles<_U1, _U2>())
+        -: 1286:	constexpr explicit(!__convertible<_U1, _U2>())
+        -: 1287:	tuple(allocator_arg_t __tag, const _Alloc& __a, pair<_U1, _U2>&& __u)
+        -: 1288:	noexcept(__nothrow_constructible<_U1, _U2>())
+        -: 1289:	: _Inherited(__tag, __a, std::move(__u.first), std::move(__u.second))
+        -: 1290:	{ }
+        -: 1291:
+        -: 1292:      template<typename _Alloc, typename _U1, typename _U2>
+        -: 1293:	requires (sizeof...(_Elements) == 2)
+        -: 1294:	  && (__constructible<_U1, _U2>())
+        -: 1295:	  && (__dangles<_U1, _U2>())
+        -: 1296:	tuple(allocator_arg_t, const _Alloc&, pair<_U1, _U2>&&) = delete;
+        -: 1297:
+        -: 1298:#if __cpp_lib_ranges_zip // >= C++23
+        -: 1299:      template<typename _Alloc, typename _U1, typename _U2>
+        -: 1300:	requires (sizeof...(_Elements) == 2)
+        -: 1301:	  && (__constructible<_U1&, _U2&>())
+        -: 1302:	  && (!__dangles<_U1&, _U2&>())
+        -: 1303:	constexpr explicit(!__convertible<_U1&, _U2&>())
+        -: 1304:	tuple(allocator_arg_t __tag, const _Alloc& __a, pair<_U1, _U2>& __u)
+        -: 1305:	noexcept(__nothrow_constructible<_U1&, _U2&>())
+        -: 1306:	: _Inherited(__tag, __a, __u.first, __u.second)
+        -: 1307:	{ }
+        -: 1308:
+        -: 1309:      template<typename _Alloc, typename _U1, typename _U2>
+        -: 1310:	requires (sizeof...(_Elements) == 2)
+        -: 1311:	  && (__constructible<_U1&, _U2&>())
+        -: 1312:	  && (__dangles<_U1&, _U2&>())
+        -: 1313:	tuple(allocator_arg_t, const _Alloc&, pair<_U1, _U2>&) = delete;
+        -: 1314:
+        -: 1315:      template<typename _Alloc, typename _U1, typename _U2>
+        -: 1316:	requires (sizeof...(_Elements) == 2)
+        -: 1317:	  && (__constructible<const _U1, const _U2>())
+        -: 1318:	  && (!__dangles<const _U1, const _U2>())
+        -: 1319:	constexpr explicit(!__convertible<const _U1, const _U2>())
+        -: 1320:	tuple(allocator_arg_t __tag, const _Alloc& __a,
+        -: 1321:	const pair<_U1, _U2>&& __u)
+        -: 1322:	noexcept(__nothrow_constructible<const _U1, const _U2>())
+        -: 1323:	: _Inherited(__tag, __a, std::move(__u.first), std::move(__u.second))
+        -: 1324:	{ }
+        -: 1325:
+        -: 1326:      template<typename _Alloc, typename _U1, typename _U2>
+        -: 1327:	requires (sizeof...(_Elements) == 2)
+        -: 1328:	  && (__constructible<const _U1, const _U2>())
+        -: 1329:	  && (__dangles<const _U1, const _U2>())
+        -: 1330:	tuple(allocator_arg_t, const _Alloc&, const pair<_U1, _U2>&&) = delete;
+        -: 1331:#endif // C++23
+        -: 1332:
+        -: 1333:#if __cpp_lib_tuple_like // >= C++23
+        -: 1334:      template<typename _Alloc, __eligible_tuple_like<tuple> _UTuple>
+        -: 1335:	requires (__constructible_from_tuple_like<_UTuple>())
+        -: 1336:	  && (!__use_other_ctor<_UTuple>())
+        -: 1337:	  && (!__dangles_from_tuple_like<_UTuple>())
+        -: 1338:	constexpr explicit(!__convertible_from_tuple_like<_UTuple>())
+        -: 1339:	tuple(allocator_arg_t __tag, const _Alloc& __a, _UTuple&& __u)
+        -: 1340:	: _Inherited(__tuple_like_tag_t{},
+        -: 1341:		     __tag, __a, std::forward<_UTuple>(__u),
+        -: 1342:		     index_sequence_for<_Elements...>{})
+        -: 1343:	{ }
+        -: 1344:
+        -: 1345:      template<typename _Alloc, __eligible_tuple_like<tuple> _UTuple>
+        -: 1346:	requires (__constructible_from_tuple_like<_UTuple>())
+        -: 1347:	  && (!__use_other_ctor<_UTuple>())
+        -: 1348:	  && (__dangles_from_tuple_like<_UTuple>())
+        -: 1349:	tuple(allocator_arg_t, const _Alloc&, _UTuple&&) = delete;
+        -: 1350:#endif // C++23
+        -: 1351:
+        -: 1352:#else // !(concepts && conditional_explicit)
+        -: 1353:
+        -: 1354:      template<bool _Cond>
+        -: 1355:	using _TCC = _TupleConstraints<_Cond, _Elements...>;
+        -: 1356:
+        -: 1357:      // Constraint for non-explicit default constructor
+        -: 1358:      template<bool _Dummy>
+        -: 1359:	using _ImplicitDefaultCtor = __enable_if_t<
+        -: 1360:	  _TCC<_Dummy>::__is_implicitly_default_constructible(),
+        -: 1361:	  bool>;
+        -: 1362:
+        -: 1363:      // Constraint for explicit default constructor
+        -: 1364:      template<bool _Dummy>
+        -: 1365:	using _ExplicitDefaultCtor = __enable_if_t<
+        -: 1366:	  _TCC<_Dummy>::__is_explicitly_default_constructible(),
+        -: 1367:	  bool>;
+        -: 1368:
+        -: 1369:      // Constraint for non-explicit constructors
+        -: 1370:      template<bool _Cond, typename... _Args>
+        -: 1371:	using _ImplicitCtor = __enable_if_t<
+        -: 1372:	  _TCC<_Cond>::template __is_implicitly_constructible<_Args...>(),
+        -: 1373:	  bool>;
+        -: 1374:
+        -: 1375:      // Constraint for non-explicit constructors
+        -: 1376:      template<bool _Cond, typename... _Args>
+        -: 1377:	using _ExplicitCtor = __enable_if_t<
+        -: 1378:	  _TCC<_Cond>::template __is_explicitly_constructible<_Args...>(),
+        -: 1379:	  bool>;
+        -: 1380:
+        -: 1381:      // Condition for noexcept-specifier of a constructor.
+        -: 1382:      template<typename... _UElements>
+        -: 1383:	static constexpr bool __nothrow_constructible()
+        -: 1384:	{
+        -: 1385:	  return
+        -: 1386:	    __and_<is_nothrow_constructible<_Elements, _UElements>...>::value;
+        -: 1387:	}
+        -: 1388:
+        -: 1389:      // Constraint for tuple(_UTypes&&...) where sizeof...(_UTypes) == 1.
+        -: 1390:      template<typename _Up>
+        -: 1391:	static constexpr bool __valid_args()
+        -: 1392:	{
+        -: 1393:	  return sizeof...(_Elements) == 1
+        -: 1394:	    && !is_same<tuple, __remove_cvref_t<_Up>>::value;
+        -: 1395:	}
+        -: 1396:
+        -: 1397:      // Constraint for tuple(_UTypes&&...) where sizeof...(_UTypes) > 1.
+        -: 1398:      template<typename, typename, typename... _Tail>
+        -: 1399:	static constexpr bool __valid_args()
+        -: 1400:	{ return (sizeof...(_Tail) + 2) == sizeof...(_Elements); }
+        -: 1401:
+        -: 1402:      /* Constraint for constructors with a tuple<UTypes...> parameter ensures
+        -: 1403:       * that the constructor is only viable when it would not interfere with
+        -: 1404:       * tuple(UTypes&&...) or tuple(const tuple&) or tuple(tuple&&).
+        -: 1405:       * Such constructors are only viable if:
+        -: 1406:       * either sizeof...(Types) != 1,
+        -: 1407:       * or (when Types... expands to T and UTypes... expands to U)
+        -: 1408:       * is_convertible_v<TUPLE, T>, is_constructible_v<T, TUPLE>,
+        -: 1409:       * and is_same_v<T, U> are all false.
+        -: 1410:       */
+        -: 1411:      template<typename _Tuple, typename = tuple,
+        -: 1412:	       typename = __remove_cvref_t<_Tuple>>
+        -: 1413:	struct _UseOtherCtor
+        -: 1414:	: false_type
+        -: 1415:	{ };
+        -: 1416:      // If TUPLE is convertible to the single element in *this,
+        -: 1417:      // then TUPLE should match tuple(UTypes&&...) instead.
+        -: 1418:      template<typename _Tuple, typename _Tp, typename _Up>
+        -: 1419:	struct _UseOtherCtor<_Tuple, tuple<_Tp>, tuple<_Up>>
+        -: 1420:	: __or_<is_convertible<_Tuple, _Tp>, is_constructible<_Tp, _Tuple>>::type
+        -: 1421:	{ };
+        -: 1422:      // If TUPLE and *this each have a single element of the same type,
+        -: 1423:      // then TUPLE should match a copy/move constructor instead.
+        -: 1424:      template<typename _Tuple, typename _Tp>
+        -: 1425:	struct _UseOtherCtor<_Tuple, tuple<_Tp>, tuple<_Tp>>
+        -: 1426:	: true_type
+        -: 1427:	{ };
+        -: 1428:
+        -: 1429:      // Return true iff sizeof...(Types) == 1 && tuple_size_v<TUPLE> == 1
+        -: 1430:      // and the single element in Types can be initialized from TUPLE,
+        -: 1431:      // or is the same type as tuple_element_t<0, TUPLE>.
+        -: 1432:      template<typename _Tuple>
+        -: 1433:	static constexpr bool __use_other_ctor()
+        -: 1434:	{ return _UseOtherCtor<_Tuple>::value; }
+        -: 1435:
+        -: 1436:      /// @cond undocumented
+        -: 1437:#undef __glibcxx_no_dangling_refs
+        -: 1438:#if __has_builtin(__reference_constructs_from_temporary) \
+        -: 1439:      && defined _GLIBCXX_DEBUG
+        -: 1440:      // Error if construction from U... would create a dangling ref.
+        -: 1441:# if __cpp_fold_expressions
+        -: 1442:#  define __glibcxx_dangling_refs(U) \
+        -: 1443:  (__reference_constructs_from_temporary(_Elements, U) || ...)
+        -: 1444:# else
+        -: 1445:#  define __glibcxx_dangling_refs(U) \
+        -: 1446:  __or_<__bool_constant<__reference_constructs_from_temporary(_Elements, U) \
+        -: 1447:       >...>::value
+        -: 1448:# endif
+        -: 1449:# define __glibcxx_no_dangling_refs(U) \
+        -: 1450:  static_assert(!__glibcxx_dangling_refs(U), \
+        -: 1451:		"std::tuple constructor creates a dangling reference")
+        -: 1452:#else
+        -: 1453:# define __glibcxx_no_dangling_refs(U)
+        -: 1454:#endif
+        -: 1455:      /// @endcond
+        -: 1456:
+        -: 1457:    public:
+        -: 1458:      template<typename _Dummy = void,
+        -: 1459:	       _ImplicitDefaultCtor<is_void<_Dummy>::value> = true>
+        -: 1460:	constexpr
+        -: 1461:	tuple()
+        -: 1462:	noexcept(__and_<is_nothrow_default_constructible<_Elements>...>::value)
+        -: 1463:	: _Inherited() { }
+        -: 1464:
+        -: 1465:      template<typename _Dummy = void,
+        -: 1466:	       _ExplicitDefaultCtor<is_void<_Dummy>::value> = false>
+        -: 1467:	explicit constexpr
+        -: 1468:	tuple()
+        -: 1469:	noexcept(__and_<is_nothrow_default_constructible<_Elements>...>::value)
+        -: 1470:	: _Inherited() { }
+        -: 1471:
+        -: 1472:      template<bool _NotEmpty = (sizeof...(_Elements) >= 1),
+        -: 1473:	       _ImplicitCtor<_NotEmpty, const _Elements&...> = true>
+        -: 1474:	constexpr
+      238: 1475:	tuple(const __type_identity_t<_Elements>&... __elements)
+        -: 1476:	noexcept(__nothrow_constructible<const _Elements&...>())
+      238: 1477:	: _Inherited(__elements...) { }
+        -: 1478:
+        -: 1479:      template<bool _NotEmpty = (sizeof...(_Elements) >= 1),
+        -: 1480:	       _ExplicitCtor<_NotEmpty, const _Elements&...> = false>
+        -: 1481:	explicit constexpr
+        -: 1482:	tuple(const __type_identity_t<_Elements>&... __elements)
+        -: 1483:	noexcept(__nothrow_constructible<const _Elements&...>())
+        -: 1484:	: _Inherited(__elements...) { }
+        -: 1485:
+        -: 1486:      template<typename... _UElements,
+        -: 1487:	       bool _Valid = __valid_args<_UElements...>(),
+        -: 1488:	       _ImplicitCtor<_Valid, _UElements...> = true>
+        -: 1489:	constexpr
+      264: 1490:	tuple(_UElements&&... __elements)
+        -: 1491:	noexcept(__nothrow_constructible<_UElements...>())
+      528: 1492:	: _Inherited(std::forward<_UElements>(__elements)...)
+      264: 1493:	{ __glibcxx_no_dangling_refs(_UElements&&); }
+        -: 1494:
+        -: 1495:      template<typename... _UElements,
+        -: 1496:	       bool _Valid = __valid_args<_UElements...>(),
+        -: 1497:	       _ExplicitCtor<_Valid, _UElements...> = false>
+        -: 1498:	explicit constexpr
+        -: 1499:	tuple(_UElements&&... __elements)
+        -: 1500:	noexcept(__nothrow_constructible<_UElements...>())
+        -: 1501:	: _Inherited(std::forward<_UElements>(__elements)...)
+        -: 1502:	{ __glibcxx_no_dangling_refs(_UElements&&); }
+        -: 1503:
+        -: 1504:      constexpr tuple(const tuple&) = default;
+        -: 1505:
+      502: 1506:      constexpr tuple(tuple&&) = default;
+------------------
+_ZNSt5tupleIJRKN12ThemeManager7ElementEEEC2EOS4_:
+      238: 1506:      constexpr tuple(tuple&&) = default;
+------------------
+_ZNSt5tupleIJON12ThemeManager7ElementEEEC2EOS3_:
+      264: 1506:      constexpr tuple(tuple&&) = default;
+------------------
+        -: 1507:
+        -: 1508:      template<typename... _UElements,
+        -: 1509:	       bool _Valid = (sizeof...(_Elements) == sizeof...(_UElements))
+        -: 1510:			   && !__use_other_ctor<const tuple<_UElements...>&>(),
+        -: 1511:	       _ImplicitCtor<_Valid, const _UElements&...> = true>
+        -: 1512:	constexpr
+        -: 1513:	tuple(const tuple<_UElements...>& __in)
+        -: 1514:	noexcept(__nothrow_constructible<const _UElements&...>())
+        -: 1515:	: _Inherited(static_cast<const _Tuple_impl<0, _UElements...>&>(__in))
+        -: 1516:	{ __glibcxx_no_dangling_refs(const _UElements&); }
+        -: 1517:
+        -: 1518:      template<typename... _UElements,
+        -: 1519:	       bool _Valid = (sizeof...(_Elements) == sizeof...(_UElements))
+        -: 1520:			   && !__use_other_ctor<const tuple<_UElements...>&>(),
+        -: 1521:	       _ExplicitCtor<_Valid, const _UElements&...> = false>
+        -: 1522:	explicit constexpr
+        -: 1523:	tuple(const tuple<_UElements...>& __in)
+        -: 1524:	noexcept(__nothrow_constructible<const _UElements&...>())
+        -: 1525:	: _Inherited(static_cast<const _Tuple_impl<0, _UElements...>&>(__in))
+        -: 1526:	{ __glibcxx_no_dangling_refs(const _UElements&); }
+        -: 1527:
+        -: 1528:      template<typename... _UElements,
+        -: 1529:	       bool _Valid = (sizeof...(_Elements) == sizeof...(_UElements))
+        -: 1530:			     && !__use_other_ctor<tuple<_UElements...>&&>(),
+        -: 1531:	       _ImplicitCtor<_Valid, _UElements...> = true>
+        -: 1532:	constexpr
+        -: 1533:	tuple(tuple<_UElements...>&& __in)
+        -: 1534:	noexcept(__nothrow_constructible<_UElements...>())
+        -: 1535:	: _Inherited(static_cast<_Tuple_impl<0, _UElements...>&&>(__in))
+        -: 1536:	{ __glibcxx_no_dangling_refs(_UElements&&); }
+        -: 1537:
+        -: 1538:      template<typename... _UElements,
+        -: 1539:	       bool _Valid = (sizeof...(_Elements) == sizeof...(_UElements))
+        -: 1540:			     && !__use_other_ctor<tuple<_UElements...>&&>(),
+        -: 1541:	       _ExplicitCtor<_Valid, _UElements...> = false>
+        -: 1542:	explicit constexpr
+        -: 1543:	tuple(tuple<_UElements...>&& __in)
+        -: 1544:	noexcept(__nothrow_constructible<_UElements...>())
+        -: 1545:	: _Inherited(static_cast<_Tuple_impl<0, _UElements...>&&>(__in))
+        -: 1546:	{ __glibcxx_no_dangling_refs(_UElements&&); }
+        -: 1547:
+        -: 1548:      // Allocator-extended constructors.
+        -: 1549:
+        -: 1550:      template<typename _Alloc,
+        -: 1551:	       _ImplicitDefaultCtor<is_object<_Alloc>::value> = true>
+        -: 1552:	_GLIBCXX20_CONSTEXPR
+        -: 1553:	tuple(allocator_arg_t __tag, const _Alloc& __a)
+        -: 1554:	: _Inherited(__tag, __a) { }
+        -: 1555:
+        -: 1556:      template<typename _Alloc,
+        -: 1557:	       _ExplicitDefaultCtor<is_object<_Alloc>::value> = false>
+        -: 1558:	_GLIBCXX20_CONSTEXPR
+        -: 1559:	explicit
+        -: 1560:	tuple(allocator_arg_t __tag, const _Alloc& __a)
+        -: 1561:	: _Inherited(__tag, __a) { }
+        -: 1562:
+        -: 1563:      template<typename _Alloc, bool _NotEmpty = (sizeof...(_Elements) >= 1),
+        -: 1564:	       _ImplicitCtor<_NotEmpty, const _Elements&...> = true>
+        -: 1565:	_GLIBCXX20_CONSTEXPR
+        -: 1566:	tuple(allocator_arg_t __tag, const _Alloc& __a,
+        -: 1567:	      const __type_identity_t<_Elements>&... __elements)
+        -: 1568:	: _Inherited(__tag, __a, __elements...) { }
+        -: 1569:
+        -: 1570:      template<typename _Alloc, bool _NotEmpty = (sizeof...(_Elements) >= 1),
+        -: 1571:	       _ExplicitCtor<_NotEmpty, const _Elements&...> = false>
+        -: 1572:	_GLIBCXX20_CONSTEXPR
+        -: 1573:	explicit
+        -: 1574:	tuple(allocator_arg_t __tag, const _Alloc& __a,
+        -: 1575:	      const __type_identity_t<_Elements>&... __elements)
+        -: 1576:	: _Inherited(__tag, __a, __elements...) { }
+        -: 1577:
+        -: 1578:      template<typename _Alloc, typename... _UElements,
+        -: 1579:	       bool _Valid = __valid_args<_UElements...>(),
+        -: 1580:	       _ImplicitCtor<_Valid, _UElements...> = true>
+        -: 1581:	_GLIBCXX20_CONSTEXPR
+        -: 1582:	tuple(allocator_arg_t __tag, const _Alloc& __a,
+        -: 1583:	      _UElements&&... __elements)
+        -: 1584:	: _Inherited(__tag, __a, std::forward<_UElements>(__elements)...)
+        -: 1585:	{ __glibcxx_no_dangling_refs(_UElements&&); }
+        -: 1586:
+        -: 1587:      template<typename _Alloc, typename... _UElements,
+        -: 1588:		 bool _Valid = __valid_args<_UElements...>(),
+        -: 1589:	       _ExplicitCtor<_Valid, _UElements...> = false>
+        -: 1590:	_GLIBCXX20_CONSTEXPR
+        -: 1591:	explicit
+        -: 1592:	tuple(allocator_arg_t __tag, const _Alloc& __a,
+        -: 1593:	      _UElements&&... __elements)
+        -: 1594:	: _Inherited(__tag, __a, std::forward<_UElements>(__elements)...)
+        -: 1595:	{ __glibcxx_no_dangling_refs(_UElements&&); }
+        -: 1596:
+        -: 1597:      template<typename _Alloc>
+        -: 1598:	_GLIBCXX20_CONSTEXPR
+        -: 1599:	tuple(allocator_arg_t __tag, const _Alloc& __a, const tuple& __in)
+        -: 1600:	: _Inherited(__tag, __a, static_cast<const _Inherited&>(__in)) { }
+        -: 1601:
+        -: 1602:      template<typename _Alloc>
+        -: 1603:	_GLIBCXX20_CONSTEXPR
+        -: 1604:	tuple(allocator_arg_t __tag, const _Alloc& __a, tuple&& __in)
+        -: 1605:	: _Inherited(__tag, __a, static_cast<_Inherited&&>(__in)) { }
+        -: 1606:
+        -: 1607:      template<typename _Alloc, typename... _UElements,
+        -: 1608:	       bool _Valid = (sizeof...(_Elements) == sizeof...(_UElements))
+        -: 1609:			     && !__use_other_ctor<const tuple<_UElements...>&>(),
+        -: 1610:	       _ImplicitCtor<_Valid, const _UElements&...> = true>
+        -: 1611:	_GLIBCXX20_CONSTEXPR
+        -: 1612:	tuple(allocator_arg_t __tag, const _Alloc& __a,
+        -: 1613:	      const tuple<_UElements...>& __in)
+        -: 1614:	: _Inherited(__tag, __a,
+        -: 1615:		     static_cast<const _Tuple_impl<0, _UElements...>&>(__in))
+        -: 1616:	{ __glibcxx_no_dangling_refs(const _UElements&); }
+        -: 1617:
+        -: 1618:      template<typename _Alloc, typename... _UElements,
+        -: 1619:	       bool _Valid = (sizeof...(_Elements) == sizeof...(_UElements))
+        -: 1620:			     && !__use_other_ctor<const tuple<_UElements...>&>(),
+        -: 1621:	       _ExplicitCtor<_Valid, const _UElements&...> = false>
+        -: 1622:	_GLIBCXX20_CONSTEXPR
+        -: 1623:	explicit
+        -: 1624:	tuple(allocator_arg_t __tag, const _Alloc& __a,
+        -: 1625:	      const tuple<_UElements...>& __in)
+        -: 1626:	: _Inherited(__tag, __a,
+        -: 1627:		     static_cast<const _Tuple_impl<0, _UElements...>&>(__in))
+        -: 1628:	{ __glibcxx_no_dangling_refs(const _UElements&); }
+        -: 1629:
+        -: 1630:      template<typename _Alloc, typename... _UElements,
+        -: 1631:	       bool _Valid = (sizeof...(_Elements) == sizeof...(_UElements))
+        -: 1632:			     && !__use_other_ctor<tuple<_UElements...>&&>(),
+        -: 1633:	       _ImplicitCtor<_Valid, _UElements...> = true>
+        -: 1634:	_GLIBCXX20_CONSTEXPR
+        -: 1635:	tuple(allocator_arg_t __tag, const _Alloc& __a,
+        -: 1636:	      tuple<_UElements...>&& __in)
+        -: 1637:	: _Inherited(__tag, __a,
+        -: 1638:		     static_cast<_Tuple_impl<0, _UElements...>&&>(__in))
+        -: 1639:	{ __glibcxx_no_dangling_refs(_UElements&&); }
+        -: 1640:
+        -: 1641:      template<typename _Alloc, typename... _UElements,
+        -: 1642:	       bool _Valid = (sizeof...(_Elements) == sizeof...(_UElements))
+        -: 1643:			     && !__use_other_ctor<tuple<_UElements...>&&>(),
+        -: 1644:	       _ExplicitCtor<_Valid, _UElements...> = false>
+        -: 1645:	_GLIBCXX20_CONSTEXPR
+        -: 1646:	explicit
+        -: 1647:	tuple(allocator_arg_t __tag, const _Alloc& __a,
+        -: 1648:	      tuple<_UElements...>&& __in)
+        -: 1649:	: _Inherited(__tag, __a,
+        -: 1650:		     static_cast<_Tuple_impl<0, _UElements...>&&>(__in))
+        -: 1651:	{ __glibcxx_no_dangling_refs(_UElements&&); }
+        -: 1652:#endif // concepts && conditional_explicit
+        -: 1653:
+        -: 1654:      // tuple assignment
+        -: 1655:
+        -: 1656:#if __cpp_concepts && __cpp_consteval // >= C++20
+        -: 1657:    private:
+        -: 1658:      template<typename... _UTypes>
+        -: 1659:	static consteval bool
+        -: 1660:	__assignable()
+        -: 1661:	{
+        -: 1662:	  if constexpr (sizeof...(_UTypes) == sizeof...(_Elements))
+        -: 1663:	    return __and_v<is_assignable<_Elements&, _UTypes>...>;
+        -: 1664:	  else
+        -: 1665:	    return false;
+        -: 1666:	}
+        -: 1667:
+        -: 1668:      template<typename... _UTypes>
+        -: 1669:	static consteval bool
+        -: 1670:	__nothrow_assignable()
+        -: 1671:	{
+        -: 1672:	  if constexpr (sizeof...(_UTypes) == sizeof...(_Elements))
+        -: 1673:	    return __and_v<is_nothrow_assignable<_Elements&, _UTypes>...>;
+        -: 1674:	  else
+        -: 1675:	    return false;
+        -: 1676:	}
+        -: 1677:
+        -: 1678:#if __cpp_lib_ranges_zip // >= C++23
+        -: 1679:      template<typename... _UTypes>
+        -: 1680:	static consteval bool
+        -: 1681:	__const_assignable()
+        -: 1682:	{
+        -: 1683:	  if constexpr (sizeof...(_UTypes) == sizeof...(_Elements))
+        -: 1684:	    return __and_v<is_assignable<const _Elements&, _UTypes>...>;
+        -: 1685:	  else
+        -: 1686:	    return false;
+        -: 1687:	}
+        -: 1688:#endif // C++23
+        -: 1689:
+        -: 1690:#if __cpp_lib_tuple_like // >= C++23
+        -: 1691:      template<typename _UTuple>
+        -: 1692:	static consteval bool
+        -: 1693:	__assignable_from_tuple_like()
+        -: 1694:	{
+        -: 1695:	  return []<size_t... _Is>(index_sequence<_Is...>) {
+        -: 1696:	    return __assignable<decltype(std::get<_Is>(std::declval<_UTuple>()))...>();
+        -: 1697:	  }(index_sequence_for<_Elements...>{});
+        -: 1698:	}
+        -: 1699:
+        -: 1700:      template<typename _UTuple>
+        -: 1701:	static consteval bool
+        -: 1702:	__const_assignable_from_tuple_like()
+        -: 1703:	{
+        -: 1704:	  return []<size_t... _Is>(index_sequence<_Is...>) {
+        -: 1705:	    return __const_assignable<decltype(std::get<_Is>(std::declval<_UTuple>()))...>();
+        -: 1706:	  }(index_sequence_for<_Elements...>{});
+        -: 1707:	}
+        -: 1708:#endif // C++23
+        -: 1709:
+        -: 1710:    public:
+        -: 1711:
+        -: 1712:      tuple& operator=(const tuple& __u) = delete;
+        -: 1713:
+        -: 1714:      constexpr tuple&
+        -: 1715:      operator=(const tuple& __u)
+        -: 1716:      noexcept(__nothrow_assignable<const _Elements&...>())
+        -: 1717:      requires (__assignable<const _Elements&...>())
+        -: 1718:      {
+        -: 1719:	this->_M_assign(__u);
+        -: 1720:	return *this;
+        -: 1721:      }
+        -: 1722:
+        -: 1723:      constexpr tuple&
+        -: 1724:      operator=(tuple&& __u)
+        -: 1725:      noexcept(__nothrow_assignable<_Elements...>())
+        -: 1726:      requires (__assignable<_Elements...>())
+        -: 1727:      {
+        -: 1728:	this->_M_assign(std::move(__u));
+        -: 1729:	return *this;
+        -: 1730:      }
+        -: 1731:
+        -: 1732:      template<typename... _UTypes>
+        -: 1733:	requires (__assignable<const _UTypes&...>())
+        -: 1734:	constexpr tuple&
+        -: 1735:	operator=(const tuple<_UTypes...>& __u)
+        -: 1736:	noexcept(__nothrow_assignable<const _UTypes&...>())
+        -: 1737:	{
+        -: 1738:	  this->_M_assign(__u);
+        -: 1739:	  return *this;
+        -: 1740:	}
+        -: 1741:
+        -: 1742:      template<typename... _UTypes>
+        -: 1743:	requires (__assignable<_UTypes...>())
+        -: 1744:	constexpr tuple&
+        -: 1745:	operator=(tuple<_UTypes...>&& __u)
+        -: 1746:	noexcept(__nothrow_assignable<_UTypes...>())
+        -: 1747:	{
+        -: 1748:	  this->_M_assign(std::move(__u));
+        -: 1749:	  return *this;
+        -: 1750:	}
+        -: 1751:
+        -: 1752:#if __cpp_lib_ranges_zip // >= C++23
+        -: 1753:      constexpr const tuple&
+        -: 1754:      operator=(const tuple& __u) const
+        -: 1755:      requires (__const_assignable<const _Elements&...>())
+        -: 1756:      {
+        -: 1757:	this->_M_assign(__u);
+        -: 1758:	return *this;
+        -: 1759:      }
+        -: 1760:
+        -: 1761:      constexpr const tuple&
+        -: 1762:      operator=(tuple&& __u) const
+        -: 1763:      requires (__const_assignable<_Elements...>())
+        -: 1764:      {
+        -: 1765:	this->_M_assign(std::move(__u));
+        -: 1766:	return *this;
+        -: 1767:      }
+        -: 1768:
+        -: 1769:      template<typename... _UTypes>
+        -: 1770:	constexpr const tuple&
+        -: 1771:	operator=(const tuple<_UTypes...>& __u) const
+        -: 1772:	requires (__const_assignable<const _UTypes&...>())
+        -: 1773:	{
+        -: 1774:	  this->_M_assign(__u);
+        -: 1775:	  return *this;
+        -: 1776:	}
+        -: 1777:
+        -: 1778:      template<typename... _UTypes>
+        -: 1779:	constexpr const tuple&
+        -: 1780:	operator=(tuple<_UTypes...>&& __u) const
+        -: 1781:	requires (__const_assignable<_UTypes...>())
+        -: 1782:	{
+        -: 1783:	  this->_M_assign(std::move(__u));
+        -: 1784:	  return *this;
+        -: 1785:	}
+        -: 1786:#endif // C++23
+        -: 1787:
+        -: 1788:      template<typename _U1, typename _U2>
+        -: 1789:	requires (__assignable<const _U1&, const _U2&>())
+        -: 1790:	constexpr tuple&
+        -: 1791:	operator=(const pair<_U1, _U2>& __u)
+        -: 1792:	noexcept(__nothrow_assignable<const _U1&, const _U2&>())
+        -: 1793:	{
+        -: 1794:	  this->_M_head(*this) = __u.first;
+        -: 1795:	  this->_M_tail(*this)._M_head(*this) = __u.second;
+        -: 1796:	  return *this;
+        -: 1797:	}
+        -: 1798:
+        -: 1799:      template<typename _U1, typename _U2>
+        -: 1800:	requires (__assignable<_U1, _U2>())
+        -: 1801:	constexpr tuple&
+        -: 1802:	operator=(pair<_U1, _U2>&& __u)
+        -: 1803:	noexcept(__nothrow_assignable<_U1, _U2>())
+        -: 1804:	{
+        -: 1805:	  this->_M_head(*this) = std::forward<_U1>(__u.first);
+        -: 1806:	  this->_M_tail(*this)._M_head(*this) = std::forward<_U2>(__u.second);
+        -: 1807:	  return *this;
+        -: 1808:	}
+        -: 1809:
+        -: 1810:#if __cpp_lib_ranges_zip // >= C++23
+        -: 1811:      template<typename _U1, typename _U2>
+        -: 1812:	requires (__const_assignable<const _U1&, const _U2>())
+        -: 1813:	constexpr const tuple&
+        -: 1814:	operator=(const pair<_U1, _U2>& __u) const
+        -: 1815:	{
+        -: 1816:	  this->_M_head(*this) = __u.first;
+        -: 1817:	  this->_M_tail(*this)._M_head(*this) = __u.second;
+        -: 1818:	  return *this;
+        -: 1819:	}
+        -: 1820:
+        -: 1821:      template<typename _U1, typename _U2>
+        -: 1822:	requires (__const_assignable<_U1, _U2>())
+        -: 1823:	constexpr const tuple&
+        -: 1824:	operator=(pair<_U1, _U2>&& __u) const
+        -: 1825:	{
+        -: 1826:	  this->_M_head(*this) = std::forward<_U1>(__u.first);
+        -: 1827:	  this->_M_tail(*this)._M_head(*this) = std::forward<_U2>(__u.second);
+        -: 1828:	  return *this;
+        -: 1829:	}
+        -: 1830:#endif // C++23
+        -: 1831:
+        -: 1832:#if __cpp_lib_tuple_like // >= C++23
+        -: 1833:      template<__eligible_tuple_like<tuple> _UTuple>
+        -: 1834:	requires (__assignable_from_tuple_like<_UTuple>())
+        -: 1835:	constexpr tuple&
+        -: 1836:	operator=(_UTuple&& __u)
+        -: 1837:	{
+        -: 1838:	  this->_M_assign(__tuple_like_tag_t{}, std::forward<_UTuple>(__u));
+        -: 1839:	  return *this;
+        -: 1840:	}
+        -: 1841:
+        -: 1842:      template<__eligible_tuple_like<tuple> _UTuple>
+        -: 1843:	requires (__const_assignable_from_tuple_like<_UTuple>())
+        -: 1844:	constexpr const tuple&
+        -: 1845:	operator=(_UTuple&& __u) const
+        -: 1846:	{
+        -: 1847:	  this->_M_assign(__tuple_like_tag_t{}, std::forward<_UTuple>(__u));
+        -: 1848:	  return *this;
+        -: 1849:	}
+        -: 1850:
+        -: 1851:      template<__tuple_like _UTuple>
+        -: 1852:	requires (!__is_tuple_v<_UTuple>)
+        -: 1853:	friend constexpr bool
+        -: 1854:	operator== [[nodiscard]] (const tuple& __t, const _UTuple& __u)
+        -: 1855:	{
+        -: 1856:	  static_assert(sizeof...(_Elements) == tuple_size_v<_UTuple>,
+        -: 1857:	      "tuple objects can only be compared if they have equal sizes.");
+        -: 1858:	  return [&]<size_t... _Is>(index_sequence<_Is...>) {
+        -: 1859:	    return (bool(std::get<_Is>(__t) == std::get<_Is>(__u))
+        -: 1860:		    && ...);
+        -: 1861:	  }(index_sequence_for<_Elements...>{});
+        -: 1862:	}
+        -: 1863:
+        -: 1864:      template<__tuple_like _UTuple,
+        -: 1865:	       typename = make_index_sequence<tuple_size_v<_UTuple>>>
+        -: 1866:	struct __tuple_like_common_comparison_category;
+        -: 1867:
+        -: 1868:      template<__tuple_like _UTuple, size_t... _Is>
+        -: 1869:	requires requires
+        -: 1870:	  { typename void_t<__detail::__synth3way_t<_Elements, tuple_element_t<_Is, _UTuple>>...>; }
+        -: 1871:	struct __tuple_like_common_comparison_category<_UTuple, index_sequence<_Is...>>
+        -: 1872:	{
+        -: 1873:	  using type = common_comparison_category_t
+        -: 1874:	    <__detail::__synth3way_t<_Elements, tuple_element_t<_Is, _UTuple>>...>;
+        -: 1875:	};
+        -: 1876:
+        -: 1877:      template<__tuple_like _UTuple>
+        -: 1878:	requires (!__is_tuple_v<_UTuple>)
+        -: 1879:	friend constexpr typename __tuple_like_common_comparison_category<_UTuple>::type
+        -: 1880:	operator<=>(const tuple& __t, const _UTuple& __u)
+        -: 1881:	{
+        -: 1882:	  using _Cat = typename __tuple_like_common_comparison_category<_UTuple>::type;
+        -: 1883:	  return std::__tuple_cmp<_Cat>(__t, __u, index_sequence_for<_Elements...>());
+        -: 1884:	}
+        -: 1885:#endif // C++23
+        -: 1886:
+        -: 1887:#else // ! (concepts && consteval)
+        -: 1888:
+        -: 1889:    private:
+        -: 1890:      template<typename... _UElements>
+        -: 1891:	static constexpr
+        -: 1892:	__enable_if_t<sizeof...(_UElements) == sizeof...(_Elements), bool>
+        -: 1893:	__assignable()
+        -: 1894:	{ return __and_<is_assignable<_Elements&, _UElements>...>::value; }
+        -: 1895:
+        -: 1896:      // Condition for noexcept-specifier of an assignment operator.
+        -: 1897:      template<typename... _UElements>
+        -: 1898:	static constexpr bool __nothrow_assignable()
+        -: 1899:	{
+        -: 1900:	  return
+        -: 1901:	    __and_<is_nothrow_assignable<_Elements&, _UElements>...>::value;
+        -: 1902:	}
+        -: 1903:
+        -: 1904:    public:
+        -: 1905:
+        -: 1906:      _GLIBCXX20_CONSTEXPR
+        -: 1907:      tuple&
+        -: 1908:      operator=(__conditional_t<__assignable<const _Elements&...>(),
+        -: 1909:				const tuple&,
+        -: 1910:				const __nonesuch&> __in)
+        -: 1911:      noexcept(__nothrow_assignable<const _Elements&...>())
+        -: 1912:      {
+        -: 1913:	this->_M_assign(__in);
+        -: 1914:	return *this;
+        -: 1915:      }
+        -: 1916:
+        -: 1917:      _GLIBCXX20_CONSTEXPR
+        -: 1918:      tuple&
+        -: 1919:      operator=(__conditional_t<__assignable<_Elements...>(),
+        -: 1920:				tuple&&,
+        -: 1921:				__nonesuch&&> __in)
+        -: 1922:      noexcept(__nothrow_assignable<_Elements...>())
+        -: 1923:      {
+        -: 1924:	this->_M_assign(std::move(__in));
+        -: 1925:	return *this;
+        -: 1926:      }
+        -: 1927:
+        -: 1928:      template<typename... _UElements>
+        -: 1929:	_GLIBCXX20_CONSTEXPR
+        -: 1930:	__enable_if_t<__assignable<const _UElements&...>(), tuple&>
+        -: 1931:	operator=(const tuple<_UElements...>& __in)
+        -: 1932:	noexcept(__nothrow_assignable<const _UElements&...>())
+        -: 1933:	{
+        -: 1934:	  this->_M_assign(__in);
+        -: 1935:	  return *this;
+        -: 1936:	}
+        -: 1937:
+        -: 1938:      template<typename... _UElements>
+        -: 1939:	_GLIBCXX20_CONSTEXPR
+        -: 1940:	__enable_if_t<__assignable<_UElements...>(), tuple&>
+        -: 1941:	operator=(tuple<_UElements...>&& __in)
+        -: 1942:	noexcept(__nothrow_assignable<_UElements...>())
+        -: 1943:	{
+        -: 1944:	  this->_M_assign(std::move(__in));
+        -: 1945:	  return *this;
+        -: 1946:	}
+        -: 1947:#endif // concepts && consteval
+        -: 1948:
+        -: 1949:      // tuple swap
+        -: 1950:      _GLIBCXX20_CONSTEXPR
+        -: 1951:      void
+        -: 1952:      swap(tuple& __in)
+        -: 1953:      noexcept(__and_<__is_nothrow_swappable<_Elements>...>::value)
+        -: 1954:      { _Inherited::_M_swap(__in); }
+        -: 1955:
+        -: 1956:#if __cpp_lib_ranges_zip // >= C++23
+        -: 1957:      // As an extension, we constrain the const swap member function in order
+        -: 1958:      // to continue accepting explicit instantiation of tuples whose elements
+        -: 1959:      // are not all const swappable.  Without this constraint, such an
+        -: 1960:      // explicit instantiation would also instantiate the ill-formed body of
+        -: 1961:      // this function and yield a hard error.  This constraint shouldn't
+        -: 1962:      // affect the behavior of valid programs.
+        -: 1963:      constexpr void
+        -: 1964:      swap(const tuple& __in) const
+        -: 1965:      noexcept(__and_v<__is_nothrow_swappable<const _Elements>...>)
+        -: 1966:      requires (is_swappable_v<const _Elements> && ...)
+        -: 1967:      { _Inherited::_M_swap(__in); }
+        -: 1968:#endif // C++23
+        -: 1969:    };
+        -: 1970:
+        -: 1971:#if __cpp_deduction_guides >= 201606
+        -: 1972:  template<typename... _UTypes>
+        -: 1973:    tuple(_UTypes...) -> tuple<_UTypes...>;
+        -: 1974:  template<typename _T1, typename _T2>
+        -: 1975:    tuple(pair<_T1, _T2>) -> tuple<_T1, _T2>;
+        -: 1976:  template<typename _Alloc, typename... _UTypes>
+        -: 1977:    tuple(allocator_arg_t, _Alloc, _UTypes...) -> tuple<_UTypes...>;
+        -: 1978:  template<typename _Alloc, typename _T1, typename _T2>
+        -: 1979:    tuple(allocator_arg_t, _Alloc, pair<_T1, _T2>) -> tuple<_T1, _T2>;
+        -: 1980:  template<typename _Alloc, typename... _UTypes>
+        -: 1981:    tuple(allocator_arg_t, _Alloc, tuple<_UTypes...>) -> tuple<_UTypes...>;
+        -: 1982:#endif
+        -: 1983:
+        -: 1984:  // Explicit specialization, zero-element tuple.
+        -: 1985:  template<>
+        -: 1986:    class tuple<>
+        -: 1987:    {
+        -: 1988:    public:
+        -: 1989:      // We need the default since we're going to define no-op
+        -: 1990:      // allocator constructors.
+        -: 1991:      tuple() = default;
+        -: 1992:      // Defaulted copy operations to maintain trivial copyability.
+        -: 1993:      // and support non-const assignment expressions.
+        -: 1994:      tuple(const tuple&) = default;
+        -: 1995:      tuple& operator=(const tuple&) = default;
+        -: 1996:
+        -: 1997:      _GLIBCXX20_CONSTEXPR
+        -: 1998:      void swap(tuple&) noexcept { /* no-op */ }
+        -: 1999:
+        -: 2000:#if __cpp_lib_ranges_zip // >= C++23
+        -: 2001:      template<same_as<tuple> _Tuple = tuple>
+        -: 2002:      constexpr const tuple&
+        -: 2003:      operator=(const _Tuple&) const noexcept
+        -: 2004:      { return *this; }
+        -: 2005:
+        -: 2006:      constexpr void swap(const tuple&) const noexcept
+        -: 2007:      { /* no-op */ }
+        -: 2008:#endif
+        -: 2009:
+        -: 2010:      // No-op allocator constructors.
+        -: 2011:      template<typename _Alloc>
+        -: 2012:	_GLIBCXX20_CONSTEXPR
+        -: 2013:	tuple(allocator_arg_t, const _Alloc&) noexcept { }
+        -: 2014:      template<typename _Alloc>
+        -: 2015:	_GLIBCXX20_CONSTEXPR
+        -: 2016:	tuple(allocator_arg_t, const _Alloc&, const tuple&) noexcept { }
+        -: 2017:
+        -: 2018:#if __cpp_lib_tuple_like // >= C++23
+        -: 2019:      template<__tuple_like _UTuple>
+        -: 2020:	requires (!is_same_v<remove_cvref_t<_UTuple>, tuple>)
+        -: 2021:		  && (!is_same_v<remove_cvref_t<_UTuple>, allocator_arg_t>)
+        -: 2022:		  && (tuple_size_v<remove_cvref_t<_UTuple>> == 0)
+        -: 2023:      constexpr
+        -: 2024:      tuple(_UTuple&&) noexcept { }
+        -: 2025:
+        -: 2026:      template<typename _Alloc, __tuple_like _UTuple>
+        -: 2027:	requires (!is_same_v<remove_cvref_t<_UTuple>, tuple>)
+        -: 2028:		  && (tuple_size_v<remove_cvref_t<_UTuple>> == 0)
+        -: 2029:      constexpr
+        -: 2030:      tuple(allocator_arg_t, const _Alloc&, _UTuple&&) noexcept { }
+        -: 2031:
+        -: 2032:      template<__tuple_like _UTuple>
+        -: 2033:	requires (!is_same_v<remove_cvref_t<_UTuple>, tuple>)
+        -: 2034:		  && (tuple_size_v<remove_cvref_t<_UTuple>> == 0)
+        -: 2035:      constexpr tuple&
+        -: 2036:      operator=(_UTuple&&) noexcept
+        -: 2037:      { return *this; }
+        -: 2038:
+        -: 2039:      template<__tuple_like _UTuple>
+        -: 2040:	requires (!is_same_v<remove_cvref_t<_UTuple>, tuple>)
+        -: 2041:		  && (tuple_size_v<remove_cvref_t<_UTuple>> == 0)
+        -: 2042:      constexpr const tuple&
+        -: 2043:      operator=(_UTuple&&) const noexcept
+        -: 2044:      { return *this; }
+        -: 2045:
+        -: 2046:      template<__tuple_like _UTuple>
+        -: 2047:	requires (!__is_tuple_v<_UTuple>) && (tuple_size_v<_UTuple> == 0)
+        -: 2048:      [[nodiscard]]
+        -: 2049:      friend constexpr bool
+        -: 2050:      operator==(const tuple&, const _UTuple&) noexcept
+        -: 2051:      { return true; }
+        -: 2052:
+        -: 2053:      template<__tuple_like _UTuple>
+        -: 2054:	requires (!__is_tuple_v<_UTuple>) && (tuple_size_v<_UTuple> == 0)
+        -: 2055:      friend constexpr strong_ordering
+        -: 2056:      operator<=>(const tuple&, const _UTuple&) noexcept
+        -: 2057:      { return strong_ordering::equal; }
+        -: 2058:#endif // C++23
+        -: 2059:    };
+        -: 2060:
+        -: 2061:#if !(__cpp_concepts && __cpp_consteval && __cpp_conditional_explicit) // !C++20
+        -: 2062:  /// Partial specialization, 2-element tuple.
+        -: 2063:  /// Includes construction and assignment from a pair.
+        -: 2064:  template<typename _T1, typename _T2>
+        -: 2065:    class tuple<_T1, _T2> : public _Tuple_impl<0, _T1, _T2>
+        -: 2066:    {
+        -: 2067:      typedef _Tuple_impl<0, _T1, _T2> _Inherited;
+        -: 2068:
+        -: 2069:      // Constraint for non-explicit default constructor
+        -: 2070:      template<bool _Dummy, typename _U1, typename _U2>
+        -: 2071:	using _ImplicitDefaultCtor = __enable_if_t<
+        -: 2072:	  _TupleConstraints<_Dummy, _U1, _U2>::
+        -: 2073:	    __is_implicitly_default_constructible(),
+        -: 2074:	  bool>;
+        -: 2075:
+        -: 2076:      // Constraint for explicit default constructor
+        -: 2077:      template<bool _Dummy, typename _U1, typename _U2>
+        -: 2078:	using _ExplicitDefaultCtor = __enable_if_t<
+        -: 2079:	  _TupleConstraints<_Dummy, _U1, _U2>::
+        -: 2080:	    __is_explicitly_default_constructible(),
+        -: 2081:	  bool>;
+        -: 2082:
+        -: 2083:      template<bool _Dummy>
+        -: 2084:	using _TCC = _TupleConstraints<_Dummy, _T1, _T2>;
+        -: 2085:
+        -: 2086:      // Constraint for non-explicit constructors
+        -: 2087:      template<bool _Cond, typename _U1, typename _U2>
+        -: 2088:	using _ImplicitCtor = __enable_if_t<
+        -: 2089:	  _TCC<_Cond>::template __is_implicitly_constructible<_U1, _U2>(),
+        -: 2090:	  bool>;
+        -: 2091:
+        -: 2092:      // Constraint for non-explicit constructors
+        -: 2093:      template<bool _Cond, typename _U1, typename _U2>
+        -: 2094:	using _ExplicitCtor = __enable_if_t<
+        -: 2095:	  _TCC<_Cond>::template __is_explicitly_constructible<_U1, _U2>(),
+        -: 2096:	  bool>;
+        -: 2097:
+        -: 2098:      template<typename _U1, typename _U2>
+        -: 2099:	static constexpr bool __assignable()
+        -: 2100:	{
+        -: 2101:	  return __and_<is_assignable<_T1&, _U1>,
+        -: 2102:			is_assignable<_T2&, _U2>>::value;
+        -: 2103:	}
+        -: 2104:
+        -: 2105:      template<typename _U1, typename _U2>
+        -: 2106:	static constexpr bool __nothrow_assignable()
+        -: 2107:	{
+        -: 2108:	  return __and_<is_nothrow_assignable<_T1&, _U1>,
+        -: 2109:			is_nothrow_assignable<_T2&, _U2>>::value;
+        -: 2110:	}
+        -: 2111:
+        -: 2112:      template<typename _U1, typename _U2>
+        -: 2113:	static constexpr bool __nothrow_constructible()
+        -: 2114:	{
+        -: 2115:	  return __and_<is_nothrow_constructible<_T1, _U1>,
+        -: 2116:			    is_nothrow_constructible<_T2, _U2>>::value;
+        -: 2117:	}
+        -: 2118:
+        -: 2119:      static constexpr bool __nothrow_default_constructible()
+        -: 2120:      {
+        -: 2121:	return __and_<is_nothrow_default_constructible<_T1>,
+        -: 2122:		      is_nothrow_default_constructible<_T2>>::value;
+        -: 2123:      }
+        -: 2124:
+        -: 2125:      template<typename _U1>
+        -: 2126:	static constexpr bool __is_alloc_arg()
+        -: 2127:	{ return is_same<__remove_cvref_t<_U1>, allocator_arg_t>::value; }
+        -: 2128:
+        -: 2129:      /// @cond undocumented
+        -: 2130:#undef __glibcxx_no_dangling_refs
+        -: 2131:      // Error if construction from _U1 and _U2 would create a dangling ref.
+        -: 2132:#if __has_builtin(__reference_constructs_from_temporary) \
+        -: 2133:      && defined _GLIBCXX_DEBUG
+        -: 2134:# define __glibcxx_no_dangling_refs(_U1, _U2) \
+        -: 2135:  static_assert(!__reference_constructs_from_temporary(_T1, _U1) \
+        -: 2136:	       && !__reference_constructs_from_temporary(_T2, _U2), \
+        -: 2137:		"std::tuple constructor creates a dangling reference")
+        -: 2138:#else
+        -: 2139:# define __glibcxx_no_dangling_refs(_U1, _U2)
+        -: 2140:#endif
+        -: 2141:      /// @endcond
+        -: 2142:
+        -: 2143:    public:
+        -: 2144:      template<bool _Dummy = true,
+        -: 2145:	       _ImplicitDefaultCtor<_Dummy, _T1, _T2> = true>
+        -: 2146:	constexpr
+        -: 2147:	tuple()
+        -: 2148:	noexcept(__nothrow_default_constructible())
+        -: 2149:	: _Inherited() { }
+        -: 2150:
+        -: 2151:      template<bool _Dummy = true,
+        -: 2152:	       _ExplicitDefaultCtor<_Dummy, _T1, _T2> = false>
+        -: 2153:	explicit constexpr
+        -: 2154:	tuple()
+        -: 2155:	noexcept(__nothrow_default_constructible())
+        -: 2156:	: _Inherited() { }
+        -: 2157:
+        -: 2158:      template<bool _Dummy = true,
+        -: 2159:	       _ImplicitCtor<_Dummy, const _T1&, const _T2&> = true>
+        -: 2160:	constexpr
+        -: 2161:	tuple(const _T1& __a1, const _T2& __a2)
+        -: 2162:	noexcept(__nothrow_constructible<const _T1&, const _T2&>())
+        -: 2163:	: _Inherited(__a1, __a2) { }
+        -: 2164:
+        -: 2165:      template<bool _Dummy = true,
+        -: 2166:	       _ExplicitCtor<_Dummy, const _T1&, const _T2&> = false>
+        -: 2167:	explicit constexpr
+        -: 2168:	tuple(const _T1& __a1, const _T2& __a2)
+        -: 2169:	noexcept(__nothrow_constructible<const _T1&, const _T2&>())
+        -: 2170:	: _Inherited(__a1, __a2) { }
+        -: 2171:
+        -: 2172:      template<typename _U1, typename _U2,
+        -: 2173:	       _ImplicitCtor<!__is_alloc_arg<_U1>(), _U1, _U2> = true>
+        -: 2174:	constexpr
+        -: 2175:	tuple(_U1&& __a1, _U2&& __a2)
+        -: 2176:	noexcept(__nothrow_constructible<_U1, _U2>())
+        -: 2177:	: _Inherited(std::forward<_U1>(__a1), std::forward<_U2>(__a2))
+        -: 2178:	{ __glibcxx_no_dangling_refs(_U1&&, _U2&&); }
+        -: 2179:
+        -: 2180:      template<typename _U1, typename _U2,
+        -: 2181:	       _ExplicitCtor<!__is_alloc_arg<_U1>(), _U1, _U2> = false>
+        -: 2182:	explicit constexpr
+        -: 2183:	tuple(_U1&& __a1, _U2&& __a2)
+        -: 2184:	noexcept(__nothrow_constructible<_U1, _U2>())
+        -: 2185:	: _Inherited(std::forward<_U1>(__a1), std::forward<_U2>(__a2))
+        -: 2186:	{ __glibcxx_no_dangling_refs(_U1&&, _U2&&); }
+        -: 2187:
+        -: 2188:      constexpr tuple(const tuple&) = default;
+        -: 2189:
+        -: 2190:      constexpr tuple(tuple&&) = default;
+        -: 2191:
+        -: 2192:      template<typename _U1, typename _U2,
+        -: 2193:	       _ImplicitCtor<true, const _U1&, const _U2&> = true>
+        -: 2194:	constexpr
+        -: 2195:	tuple(const tuple<_U1, _U2>& __in)
+        -: 2196:	noexcept(__nothrow_constructible<const _U1&, const _U2&>())
+        -: 2197:	: _Inherited(static_cast<const _Tuple_impl<0, _U1, _U2>&>(__in))
+        -: 2198:	{ __glibcxx_no_dangling_refs(const _U1&, const _U2&); }
+        -: 2199:
+        -: 2200:      template<typename _U1, typename _U2,
+        -: 2201:	       _ExplicitCtor<true, const _U1&, const _U2&> = false>
+        -: 2202:	explicit constexpr
+        -: 2203:	tuple(const tuple<_U1, _U2>& __in)
+        -: 2204:	noexcept(__nothrow_constructible<const _U1&, const _U2&>())
+        -: 2205:	: _Inherited(static_cast<const _Tuple_impl<0, _U1, _U2>&>(__in))
+        -: 2206:	{ __glibcxx_no_dangling_refs(const _U1&, const _U2&); }
+        -: 2207:
+        -: 2208:      template<typename _U1, typename _U2,
+        -: 2209:	       _ImplicitCtor<true, _U1, _U2> = true>
+        -: 2210:	constexpr
+        -: 2211:	tuple(tuple<_U1, _U2>&& __in)
+        -: 2212:	noexcept(__nothrow_constructible<_U1, _U2>())
+        -: 2213:	: _Inherited(static_cast<_Tuple_impl<0, _U1, _U2>&&>(__in))
+        -: 2214:	{ __glibcxx_no_dangling_refs(_U1&&, _U2&&); }
+        -: 2215:
+        -: 2216:      template<typename _U1, typename _U2,
+        -: 2217:	       _ExplicitCtor<true, _U1, _U2> = false>
+        -: 2218:	explicit constexpr
+        -: 2219:	tuple(tuple<_U1, _U2>&& __in)
+        -: 2220:	noexcept(__nothrow_constructible<_U1, _U2>())
+        -: 2221:	: _Inherited(static_cast<_Tuple_impl<0, _U1, _U2>&&>(__in))
+        -: 2222:	{ __glibcxx_no_dangling_refs(_U1&&, _U2&&); }
+        -: 2223:
+        -: 2224:      template<typename _U1, typename _U2,
+        -: 2225:	       _ImplicitCtor<true, const _U1&, const _U2&> = true>
+        -: 2226:	constexpr
+        -: 2227:	tuple(const pair<_U1, _U2>& __in)
+        -: 2228:	noexcept(__nothrow_constructible<const _U1&, const _U2&>())
+        -: 2229:	: _Inherited(__in.first, __in.second)
+        -: 2230:	{ __glibcxx_no_dangling_refs(const _U1&, const _U2&); }
+        -: 2231:
+        -: 2232:      template<typename _U1, typename _U2,
+        -: 2233:	       _ExplicitCtor<true, const _U1&, const _U2&> = false>
+        -: 2234:	explicit constexpr
+        -: 2235:	tuple(const pair<_U1, _U2>& __in)
+        -: 2236:	noexcept(__nothrow_constructible<const _U1&, const _U2&>())
+        -: 2237:	: _Inherited(__in.first, __in.second)
+        -: 2238:	{ __glibcxx_no_dangling_refs(const _U1&, const _U2&); }
+        -: 2239:
+        -: 2240:      template<typename _U1, typename _U2,
+        -: 2241:	       _ImplicitCtor<true, _U1, _U2> = true>
+        -: 2242:	constexpr
+        -: 2243:	tuple(pair<_U1, _U2>&& __in)
+        -: 2244:	noexcept(__nothrow_constructible<_U1, _U2>())
+        -: 2245:	: _Inherited(std::forward<_U1>(__in.first),
+        -: 2246:		     std::forward<_U2>(__in.second))
+        -: 2247:	{ __glibcxx_no_dangling_refs(_U1&&, _U2&&); }
+        -: 2248:
+        -: 2249:      template<typename _U1, typename _U2,
+        -: 2250:	       _ExplicitCtor<true, _U1, _U2> = false>
+        -: 2251:	explicit constexpr
+        -: 2252:	tuple(pair<_U1, _U2>&& __in)
+        -: 2253:	noexcept(__nothrow_constructible<_U1, _U2>())
+        -: 2254:	: _Inherited(std::forward<_U1>(__in.first),
+        -: 2255:		     std::forward<_U2>(__in.second))
+        -: 2256:	{ __glibcxx_no_dangling_refs(_U1&&, _U2&&); }
+        -: 2257:
+        -: 2258:      // Allocator-extended constructors.
+        -: 2259:
+        -: 2260:      template<typename _Alloc,
+        -: 2261:	       _ImplicitDefaultCtor<is_object<_Alloc>::value, _T1, _T2> = true>
+        -: 2262:	_GLIBCXX20_CONSTEXPR
+        -: 2263:	tuple(allocator_arg_t __tag, const _Alloc& __a)
+        -: 2264:	: _Inherited(__tag, __a) { }
+        -: 2265:
+        -: 2266:      template<typename _Alloc,
+        -: 2267:	       _ExplicitDefaultCtor<is_object<_Alloc>::value, _T1, _T2> = false>
+        -: 2268:	_GLIBCXX20_CONSTEXPR
+        -: 2269:	explicit
+        -: 2270:	tuple(allocator_arg_t __tag, const _Alloc& __a)
+        -: 2271:	: _Inherited(__tag, __a) { }
+        -: 2272:
+        -: 2273:      template<typename _Alloc, bool _Dummy = true,
+        -: 2274:	       _ImplicitCtor<_Dummy, const _T1&, const _T2&> = true>
+        -: 2275:	_GLIBCXX20_CONSTEXPR
+        -: 2276:	tuple(allocator_arg_t __tag, const _Alloc& __a,
+        -: 2277:	      const _T1& __a1, const _T2& __a2)
+        -: 2278:	: _Inherited(__tag, __a, __a1, __a2) { }
+        -: 2279:
+        -: 2280:      template<typename _Alloc, bool _Dummy = true,
+        -: 2281:	       _ExplicitCtor<_Dummy, const _T1&, const _T2&> = false>
+        -: 2282:	explicit
+        -: 2283:	_GLIBCXX20_CONSTEXPR
+        -: 2284:	tuple(allocator_arg_t __tag, const _Alloc& __a,
+        -: 2285:	      const _T1& __a1, const _T2& __a2)
+        -: 2286:	: _Inherited(__tag, __a, __a1, __a2) { }
+        -: 2287:
+        -: 2288:      template<typename _Alloc, typename _U1, typename _U2,
+        -: 2289:	       _ImplicitCtor<true, _U1, _U2> = true>
+        -: 2290:	_GLIBCXX20_CONSTEXPR
+        -: 2291:	tuple(allocator_arg_t __tag, const _Alloc& __a, _U1&& __a1, _U2&& __a2)
+        -: 2292:	: _Inherited(__tag, __a, std::forward<_U1>(__a1),
+        -: 2293:		     std::forward<_U2>(__a2))
+        -: 2294:	{ __glibcxx_no_dangling_refs(_U1&&, _U2&&); }
+        -: 2295:
+        -: 2296:      template<typename _Alloc, typename _U1, typename _U2,
+        -: 2297:	       _ExplicitCtor<true, _U1, _U2> = false>
+        -: 2298:	explicit
+        -: 2299:	_GLIBCXX20_CONSTEXPR
+        -: 2300:	tuple(allocator_arg_t __tag, const _Alloc& __a,
+        -: 2301:	      _U1&& __a1, _U2&& __a2)
+        -: 2302:	: _Inherited(__tag, __a, std::forward<_U1>(__a1),
+        -: 2303:		     std::forward<_U2>(__a2))
+        -: 2304:	{ __glibcxx_no_dangling_refs(_U1&&, _U2&&); }
+        -: 2305:
+        -: 2306:      template<typename _Alloc>
+        -: 2307:	_GLIBCXX20_CONSTEXPR
+        -: 2308:	tuple(allocator_arg_t __tag, const _Alloc& __a, const tuple& __in)
+        -: 2309:	: _Inherited(__tag, __a, static_cast<const _Inherited&>(__in)) { }
+        -: 2310:
+        -: 2311:      template<typename _Alloc>
+        -: 2312:	_GLIBCXX20_CONSTEXPR
+        -: 2313:	tuple(allocator_arg_t __tag, const _Alloc& __a, tuple&& __in)
+        -: 2314:	: _Inherited(__tag, __a, static_cast<_Inherited&&>(__in)) { }
+        -: 2315:
+        -: 2316:      template<typename _Alloc, typename _U1, typename _U2,
+        -: 2317:	       _ImplicitCtor<true, const _U1&, const _U2&> = true>
+        -: 2318:	_GLIBCXX20_CONSTEXPR
+        -: 2319:	tuple(allocator_arg_t __tag, const _Alloc& __a,
+        -: 2320:	      const tuple<_U1, _U2>& __in)
+        -: 2321:	: _Inherited(__tag, __a,
+        -: 2322:		     static_cast<const _Tuple_impl<0, _U1, _U2>&>(__in))
+        -: 2323:	{ __glibcxx_no_dangling_refs(const _U1&, const _U2&); }
+        -: 2324:
+        -: 2325:      template<typename _Alloc, typename _U1, typename _U2,
+        -: 2326:	       _ExplicitCtor<true, const _U1&, const _U2&> = false>
+        -: 2327:	explicit
+        -: 2328:	_GLIBCXX20_CONSTEXPR
+        -: 2329:	tuple(allocator_arg_t __tag, const _Alloc& __a,
+        -: 2330:	      const tuple<_U1, _U2>& __in)
+        -: 2331:	: _Inherited(__tag, __a,
+        -: 2332:		     static_cast<const _Tuple_impl<0, _U1, _U2>&>(__in))
+        -: 2333:	{ __glibcxx_no_dangling_refs(const _U1&, const _U2&); }
+        -: 2334:
+        -: 2335:      template<typename _Alloc, typename _U1, typename _U2,
+        -: 2336:	       _ImplicitCtor<true, _U1, _U2> = true>
+        -: 2337:	_GLIBCXX20_CONSTEXPR
+        -: 2338:	tuple(allocator_arg_t __tag, const _Alloc& __a, tuple<_U1, _U2>&& __in)
+        -: 2339:	: _Inherited(__tag, __a, static_cast<_Tuple_impl<0, _U1, _U2>&&>(__in))
+        -: 2340:	{ __glibcxx_no_dangling_refs(_U1&&, _U2&&); }
+        -: 2341:
+        -: 2342:      template<typename _Alloc, typename _U1, typename _U2,
+        -: 2343:	       _ExplicitCtor<true, _U1, _U2> = false>
+        -: 2344:	explicit
+        -: 2345:	_GLIBCXX20_CONSTEXPR
+        -: 2346:	tuple(allocator_arg_t __tag, const _Alloc& __a, tuple<_U1, _U2>&& __in)
+        -: 2347:	: _Inherited(__tag, __a, static_cast<_Tuple_impl<0, _U1, _U2>&&>(__in))
+        -: 2348:	{ __glibcxx_no_dangling_refs(_U1&&, _U2&&); }
+        -: 2349:
+        -: 2350:      template<typename _Alloc, typename _U1, typename _U2,
+        -: 2351:	       _ImplicitCtor<true, const _U1&, const _U2&> = true>
+        -: 2352:	_GLIBCXX20_CONSTEXPR
+        -: 2353:	tuple(allocator_arg_t __tag, const _Alloc& __a,
+        -: 2354:	      const pair<_U1, _U2>& __in)
+        -: 2355:	: _Inherited(__tag, __a, __in.first, __in.second)
+        -: 2356:	{ __glibcxx_no_dangling_refs(const _U1&, const _U2&); }
+        -: 2357:
+        -: 2358:      template<typename _Alloc, typename _U1, typename _U2,
+        -: 2359:	       _ExplicitCtor<true, const _U1&, const _U2&> = false>
+        -: 2360:	explicit
+        -: 2361:	_GLIBCXX20_CONSTEXPR
+        -: 2362:	tuple(allocator_arg_t __tag, const _Alloc& __a,
+        -: 2363:	      const pair<_U1, _U2>& __in)
+        -: 2364:	: _Inherited(__tag, __a, __in.first, __in.second)
+        -: 2365:	{ __glibcxx_no_dangling_refs(const _U1&, const _U2&); }
+        -: 2366:
+        -: 2367:      template<typename _Alloc, typename _U1, typename _U2,
+        -: 2368:	       _ImplicitCtor<true, _U1, _U2> = true>
+        -: 2369:	_GLIBCXX20_CONSTEXPR
+        -: 2370:	tuple(allocator_arg_t __tag, const _Alloc& __a, pair<_U1, _U2>&& __in)
+        -: 2371:	: _Inherited(__tag, __a, std::forward<_U1>(__in.first),
+        -: 2372:		     std::forward<_U2>(__in.second))
+        -: 2373:	{ __glibcxx_no_dangling_refs(_U1&&, _U2&&); }
+        -: 2374:
+        -: 2375:      template<typename _Alloc, typename _U1, typename _U2,
+        -: 2376:	       _ExplicitCtor<true, _U1, _U2> = false>
+        -: 2377:	explicit
+        -: 2378:	_GLIBCXX20_CONSTEXPR
+        -: 2379:	tuple(allocator_arg_t __tag, const _Alloc& __a, pair<_U1, _U2>&& __in)
+        -: 2380:	: _Inherited(__tag, __a, std::forward<_U1>(__in.first),
+        -: 2381:		     std::forward<_U2>(__in.second))
+        -: 2382:	{ __glibcxx_no_dangling_refs(_U1&&, _U2&&); }
+        -: 2383:
+        -: 2384:      // Tuple assignment.
+        -: 2385:
+        -: 2386:      _GLIBCXX20_CONSTEXPR
+        -: 2387:      tuple&
+        -: 2388:      operator=(__conditional_t<__assignable<const _T1&, const _T2&>(),
+        -: 2389:				const tuple&,
+        -: 2390:				const __nonesuch&> __in)
+        -: 2391:      noexcept(__nothrow_assignable<const _T1&, const _T2&>())
+        -: 2392:      {
+        -: 2393:	this->_M_assign(__in);
+        -: 2394:	return *this;
+        -: 2395:      }
+        -: 2396:
+        -: 2397:      _GLIBCXX20_CONSTEXPR
+        -: 2398:      tuple&
+        -: 2399:      operator=(__conditional_t<__assignable<_T1, _T2>(),
+        -: 2400:				tuple&&,
+        -: 2401:				__nonesuch&&> __in)
+        -: 2402:      noexcept(__nothrow_assignable<_T1, _T2>())
+        -: 2403:      {
+        -: 2404:	this->_M_assign(std::move(__in));
+        -: 2405:	return *this;
+        -: 2406:      }
+        -: 2407:
+        -: 2408:      template<typename _U1, typename _U2>
+        -: 2409:	_GLIBCXX20_CONSTEXPR
+        -: 2410:	__enable_if_t<__assignable<const _U1&, const _U2&>(), tuple&>
+        -: 2411:	operator=(const tuple<_U1, _U2>& __in)
+        -: 2412:	noexcept(__nothrow_assignable<const _U1&, const _U2&>())
+        -: 2413:	{
+        -: 2414:	  this->_M_assign(__in);
+        -: 2415:	  return *this;
+        -: 2416:	}
+        -: 2417:
+        -: 2418:      template<typename _U1, typename _U2>
+        -: 2419:	_GLIBCXX20_CONSTEXPR
+        -: 2420:	__enable_if_t<__assignable<_U1, _U2>(), tuple&>
+        -: 2421:	operator=(tuple<_U1, _U2>&& __in)
+        -: 2422:	noexcept(__nothrow_assignable<_U1, _U2>())
+        -: 2423:	{
+        -: 2424:	  this->_M_assign(std::move(__in));
+        -: 2425:	  return *this;
+        -: 2426:	}
+        -: 2427:
+        -: 2428:      template<typename _U1, typename _U2>
+        -: 2429:	_GLIBCXX20_CONSTEXPR
+        -: 2430:	__enable_if_t<__assignable<const _U1&, const _U2&>(), tuple&>
+        -: 2431:	operator=(const pair<_U1, _U2>& __in)
+        -: 2432:	noexcept(__nothrow_assignable<const _U1&, const _U2&>())
+        -: 2433:	{
+        -: 2434:	  this->_M_head(*this) = __in.first;
+        -: 2435:	  this->_M_tail(*this)._M_head(*this) = __in.second;
+        -: 2436:	  return *this;
+        -: 2437:	}
+        -: 2438:
+        -: 2439:      template<typename _U1, typename _U2>
+        -: 2440:	_GLIBCXX20_CONSTEXPR
+        -: 2441:	__enable_if_t<__assignable<_U1, _U2>(), tuple&>
+        -: 2442:	operator=(pair<_U1, _U2>&& __in)
+        -: 2443:	noexcept(__nothrow_assignable<_U1, _U2>())
+        -: 2444:	{
+        -: 2445:	  this->_M_head(*this) = std::forward<_U1>(__in.first);
+        -: 2446:	  this->_M_tail(*this)._M_head(*this) = std::forward<_U2>(__in.second);
+        -: 2447:	  return *this;
+        -: 2448:	}
+        -: 2449:
+        -: 2450:      _GLIBCXX20_CONSTEXPR
+        -: 2451:      void
+        -: 2452:      swap(tuple& __in)
+        -: 2453:      noexcept(__and_<__is_nothrow_swappable<_T1>,
+        -: 2454:		      __is_nothrow_swappable<_T2>>::value)
+        -: 2455:      { _Inherited::_M_swap(__in); }
+        -: 2456:    };
+        -: 2457:#endif // concepts && conditional_explicit
+        -: 2458:
+        -: 2459:  /// class tuple_size
+        -: 2460:  template<typename... _Elements>
+        -: 2461:    struct tuple_size<tuple<_Elements...>>
+        -: 2462:    : public integral_constant<size_t, sizeof...(_Elements)> { };
+        -: 2463:
+        -: 2464:#if __cplusplus >= 201703L
+        -: 2465:  template<typename... _Types>
+        -: 2466:    inline constexpr size_t tuple_size_v<tuple<_Types...>>
+        -: 2467:      = sizeof...(_Types);
+        -: 2468:
+        -: 2469:  template<typename... _Types>
+        -: 2470:    inline constexpr size_t tuple_size_v<const tuple<_Types...>>
+        -: 2471:      = sizeof...(_Types);
+        -: 2472:#endif
+        -: 2473:
+        -: 2474:  /// Trait to get the Ith element type from a tuple.
+        -: 2475:  template<size_t __i, typename... _Types>
+        -: 2476:    struct tuple_element<__i, tuple<_Types...>>
+        -: 2477:    {
+        -: 2478:      static_assert(__i < sizeof...(_Types), "tuple index must be in range");
+        -: 2479:
+        -: 2480:      using type = typename _Nth_type<__i, _Types...>::type;
+        -: 2481:    };
+        -: 2482:
+        -: 2483:  template<size_t __i, typename _Head, typename... _Tail>
+        -: 2484:    constexpr _Head&
+      502: 2485:    __get_helper(_Tuple_impl<__i, _Head, _Tail...>& __t) noexcept
+      502: 2486:    { return _Tuple_impl<__i, _Head, _Tail...>::_M_head(__t); }
+------------------
+_ZSt12__get_helperILm0ERKN12ThemeManager7ElementEJEERT0_RSt11_Tuple_implIXT_EJS4_DpT1_EE:
+      238: 2485:    __get_helper(_Tuple_impl<__i, _Head, _Tail...>& __t) noexcept
+      238: 2486:    { return _Tuple_impl<__i, _Head, _Tail...>::_M_head(__t); }
+------------------
+_ZSt12__get_helperILm0EON12ThemeManager7ElementEJEERT0_RSt11_Tuple_implIXT_EJS3_DpT1_EE:
+      264: 2485:    __get_helper(_Tuple_impl<__i, _Head, _Tail...>& __t) noexcept
+      264: 2486:    { return _Tuple_impl<__i, _Head, _Tail...>::_M_head(__t); }
+------------------
+        -: 2487:
+        -: 2488:  template<size_t __i, typename _Head, typename... _Tail>
+        -: 2489:    constexpr const _Head&
+        -: 2490:    __get_helper(const _Tuple_impl<__i, _Head, _Tail...>& __t) noexcept
+        -: 2491:    { return _Tuple_impl<__i, _Head, _Tail...>::_M_head(__t); }
+        -: 2492:
+        -: 2493:  // Deleted overload to improve diagnostics for invalid indices
+        -: 2494:  template<size_t __i, typename... _Types>
+        -: 2495:    __enable_if_t<(__i >= sizeof...(_Types))>
+        -: 2496:    __get_helper(const tuple<_Types...>&) = delete;
+        -: 2497:
+        -: 2498:  /// Return a reference to the ith element of a tuple.
+        -: 2499:  template<size_t __i, typename... _Elements>
+        -: 2500:    constexpr __tuple_element_t<__i, tuple<_Elements...>>&
+      502: 2501:    get(tuple<_Elements...>& __t) noexcept
+      502: 2502:    { return std::__get_helper<__i>(__t); }
+------------------
+_ZSt3getILm0EJRKN12ThemeManager7ElementEEERNSt13tuple_elementIXT_ESt5tupleIJDpT0_EEE4typeERS8_:
+      238: 2501:    get(tuple<_Elements...>& __t) noexcept
+      238: 2502:    { return std::__get_helper<__i>(__t); }
+------------------
+_ZSt3getILm0EJON12ThemeManager7ElementEEERNSt13tuple_elementIXT_ESt5tupleIJDpT0_EEE4typeERS7_:
+      264: 2501:    get(tuple<_Elements...>& __t) noexcept
+      264: 2502:    { return std::__get_helper<__i>(__t); }
+------------------
+        -: 2503:
+        -: 2504:  /// Return a const reference to the ith element of a const tuple.
+        -: 2505:  template<size_t __i, typename... _Elements>
+        -: 2506:    constexpr const __tuple_element_t<__i, tuple<_Elements...>>&
+        -: 2507:    get(const tuple<_Elements...>& __t) noexcept
+        -: 2508:    { return std::__get_helper<__i>(__t); }
+        -: 2509:
+        -: 2510:  /// Return an rvalue reference to the ith element of a tuple rvalue.
+        -: 2511:  template<size_t __i, typename... _Elements>
+        -: 2512:    constexpr __tuple_element_t<__i, tuple<_Elements...>>&&
+        -: 2513:    get(tuple<_Elements...>&& __t) noexcept
+        -: 2514:    {
+        -: 2515:      typedef __tuple_element_t<__i, tuple<_Elements...>> __element_type;
+        -: 2516:      return std::forward<__element_type>(std::__get_helper<__i>(__t));
+        -: 2517:    }
+        -: 2518:
+        -: 2519:  /// Return a const rvalue reference to the ith element of a const tuple rvalue.
+        -: 2520:  template<size_t __i, typename... _Elements>
+        -: 2521:    constexpr const __tuple_element_t<__i, tuple<_Elements...>>&&
+        -: 2522:    get(const tuple<_Elements...>&& __t) noexcept
+        -: 2523:    {
+        -: 2524:      typedef __tuple_element_t<__i, tuple<_Elements...>> __element_type;
+        -: 2525:      return std::forward<const __element_type>(std::__get_helper<__i>(__t));
+        -: 2526:    }
+        -: 2527:
+        -: 2528:  /// @cond undocumented
+        -: 2529:  // Deleted overload chosen for invalid indices.
+        -: 2530:  template<size_t __i, typename... _Elements>
+        -: 2531:    constexpr __enable_if_t<(__i >= sizeof...(_Elements))>
+        -: 2532:    get(const tuple<_Elements...>&) = delete;
+        -: 2533:  /// @endcond
+        -: 2534:
+        -: 2535:#ifdef __cpp_lib_tuples_by_type // C++ >= 14
+        -: 2536:  /// Return a reference to the unique element of type _Tp of a tuple.
+        -: 2537:  template <typename _Tp, typename... _Types>
+        -: 2538:    constexpr _Tp&
+        -: 2539:    get(tuple<_Types...>& __t) noexcept
+        -: 2540:    {
+        -: 2541:      constexpr size_t __idx = __find_uniq_type_in_pack<_Tp, _Types...>();
+        -: 2542:      static_assert(__idx < sizeof...(_Types),
+        -: 2543:	  "the type T in std::get<T> must occur exactly once in the tuple");
+        -: 2544:      return std::__get_helper<__idx>(__t);
+        -: 2545:    }
+        -: 2546:
+        -: 2547:  /// Return a reference to the unique element of type _Tp of a tuple rvalue.
+        -: 2548:  template <typename _Tp, typename... _Types>
+        -: 2549:    constexpr _Tp&&
+        -: 2550:    get(tuple<_Types...>&& __t) noexcept
+        -: 2551:    {
+        -: 2552:      constexpr size_t __idx = __find_uniq_type_in_pack<_Tp, _Types...>();
+        -: 2553:      static_assert(__idx < sizeof...(_Types),
+        -: 2554:	  "the type T in std::get<T> must occur exactly once in the tuple");
+        -: 2555:      return std::forward<_Tp>(std::__get_helper<__idx>(__t));
+        -: 2556:    }
+        -: 2557:
+        -: 2558:  /// Return a const reference to the unique element of type _Tp of a tuple.
+        -: 2559:  template <typename _Tp, typename... _Types>
+        -: 2560:    constexpr const _Tp&
+        -: 2561:    get(const tuple<_Types...>& __t) noexcept
+        -: 2562:    {
+        -: 2563:      constexpr size_t __idx = __find_uniq_type_in_pack<_Tp, _Types...>();
+        -: 2564:      static_assert(__idx < sizeof...(_Types),
+        -: 2565:	  "the type T in std::get<T> must occur exactly once in the tuple");
+        -: 2566:      return std::__get_helper<__idx>(__t);
+        -: 2567:    }
+        -: 2568:
+        -: 2569:  /// Return a const reference to the unique element of type _Tp of
+        -: 2570:  /// a const tuple rvalue.
+        -: 2571:  template <typename _Tp, typename... _Types>
+        -: 2572:    constexpr const _Tp&&
+        -: 2573:    get(const tuple<_Types...>&& __t) noexcept
+        -: 2574:    {
+        -: 2575:      constexpr size_t __idx = __find_uniq_type_in_pack<_Tp, _Types...>();
+        -: 2576:      static_assert(__idx < sizeof...(_Types),
+        -: 2577:	  "the type T in std::get<T> must occur exactly once in the tuple");
+        -: 2578:      return std::forward<const _Tp>(std::__get_helper<__idx>(__t));
+        -: 2579:    }
+        -: 2580:#endif
+        -: 2581:
+        -: 2582:#if __cpp_lib_three_way_comparison
+        -: 2583:  template<typename... _Tps, typename... _Ups>
+        -: 2584:    requires (sizeof...(_Tps) == sizeof...(_Ups))
+        -: 2585:      && (requires (const _Tps& __t, const _Ups& __u) {
+        -: 2586:	{ __t == __u } -> __detail::__boolean_testable;
+        -: 2587:      } && ...)
+        -: 2588:    constexpr bool
+        -: 2589:    operator== [[nodiscard]] (const tuple<_Tps...>& __t,
+        -: 2590:			      const tuple<_Ups...>& __u)
+        -: 2591:    {
+        -: 2592:      return [&]<size_t... _Inds>(index_sequence<_Inds...>) {
+        -: 2593:	// Fold == over the tuples until non-equal elements are found.
+        -: 2594:	return (bool(std::get<_Inds>(__t) == std::get<_Inds>(__u)) && ...);
+        -: 2595:      }(index_sequence_for<_Tps...>{});
+        -: 2596:    }
+        -: 2597:
+        -: 2598:  template<typename _Cat, typename _Tp, typename _Up, typename _IndexSeq>
+        -: 2599:    [[nodiscard]]
+        -: 2600:    constexpr _Cat
+        -: 2601:    __tuple_cmp(const _Tp& __t, const _Up& __u, _IndexSeq __indices)
+        -: 2602:    {
+        -: 2603:      _Cat __c = _Cat::equivalent;
+        -: 2604:
+        -: 2605:      // Set __c to the comparison result of two corresponding elements.
+        -: 2606:      // Return true they are equivalent.
+        -: 2607:      auto __cmp = [&]<size_t _Ind>(integral_constant<size_t, _Ind>) {
+        -: 2608:	__c = __detail::__synth3way(std::get<_Ind>(__t), std::get<_Ind>(__u));
+        -: 2609:	return __c == 0;
+        -: 2610:      };
+        -: 2611:
+        -: 2612:      [&]<size_t... _Inds>(index_sequence<_Inds...>) {
+        -: 2613:	// Fold __cmp over the tuples until non-equivalent elements are found.
+        -: 2614:	(void)(__cmp(integral_constant<size_t, _Inds>{}) && ...);
+        -: 2615:      }(__indices);
+        -: 2616:
+        -: 2617:      return __c;
+        -: 2618:    }
+        -: 2619:
+        -: 2620:  template<typename... _Tps, typename... _Ups>
+        -: 2621:    requires (sizeof...(_Tps) == sizeof...(_Ups))
+        -: 2622:      && (requires { typename __detail::__synth3way_t<_Tps, _Ups>; } && ...)
+        -: 2623:    constexpr
+        -: 2624:    common_comparison_category_t<__detail::__synth3way_t<_Tps, _Ups>...>
+        -: 2625:    operator<=> [[nodiscard]] (const tuple<_Tps...>& __t,
+        -: 2626:			       const tuple<_Ups...>& __u)
+        -: 2627:    {
+        -: 2628:      using _Cat
+        -: 2629:	= common_comparison_category_t<__detail::__synth3way_t<_Tps, _Ups>...>;
+        -: 2630:      return std::__tuple_cmp<_Cat>(__t, __u, index_sequence_for<_Tps...>());
+        -: 2631:    }
+        -: 2632:#else
+        -: 2633:
+        -: 2634:  // This class performs the comparison operations on tuples
+        -: 2635:  template<typename _Tp, typename _Up, size_t __i, size_t __size>
+        -: 2636:    struct __tuple_compare
+        -: 2637:    {
+        -: 2638:      static constexpr bool
+        -: 2639:      __eq(const _Tp& __t, const _Up& __u)
+        -: 2640:      {
+        -: 2641:	return bool(std::get<__i>(__t) == std::get<__i>(__u))
+        -: 2642:	  && __tuple_compare<_Tp, _Up, __i + 1, __size>::__eq(__t, __u);
+        -: 2643:      }
+        -: 2644:
+        -: 2645:      static constexpr bool
+        -: 2646:      __less(const _Tp& __t, const _Up& __u)
+        -: 2647:      {
+        -: 2648:	return bool(std::get<__i>(__t) < std::get<__i>(__u))
+        -: 2649:	  || (!bool(std::get<__i>(__u) < std::get<__i>(__t))
+        -: 2650:	      && __tuple_compare<_Tp, _Up, __i + 1, __size>::__less(__t, __u));
+        -: 2651:      }
+        -: 2652:    };
+        -: 2653:
+        -: 2654:  template<typename _Tp, typename _Up, size_t __size>
+        -: 2655:    struct __tuple_compare<_Tp, _Up, __size, __size>
+        -: 2656:    {
+        -: 2657:      static constexpr bool
+        -: 2658:      __eq(const _Tp&, const _Up&) { return true; }
+        -: 2659:
+        -: 2660:      static constexpr bool
+        -: 2661:      __less(const _Tp&, const _Up&) { return false; }
+        -: 2662:    };
+        -: 2663:
+        -: 2664:  template<typename... _TElements, typename... _UElements>
+        -: 2665:    _GLIBCXX_NODISCARD
+        -: 2666:    constexpr bool
+        -: 2667:    operator==(const tuple<_TElements...>& __t,
+        -: 2668:	       const tuple<_UElements...>& __u)
+        -: 2669:    {
+        -: 2670:      static_assert(sizeof...(_TElements) == sizeof...(_UElements),
+        -: 2671:	  "tuple objects can only be compared if they have equal sizes.");
+        -: 2672:      using __compare = __tuple_compare<tuple<_TElements...>,
+        -: 2673:					tuple<_UElements...>,
+        -: 2674:					0, sizeof...(_TElements)>;
+        -: 2675:      return __compare::__eq(__t, __u);
+        -: 2676:    }
+        -: 2677:
+        -: 2678:  template<typename... _TElements, typename... _UElements>
+        -: 2679:    _GLIBCXX_NODISCARD
+        -: 2680:    constexpr bool
+        -: 2681:    operator<(const tuple<_TElements...>& __t,
+        -: 2682:	      const tuple<_UElements...>& __u)
+        -: 2683:    {
+        -: 2684:      static_assert(sizeof...(_TElements) == sizeof...(_UElements),
+        -: 2685:	  "tuple objects can only be compared if they have equal sizes.");
+        -: 2686:      using __compare = __tuple_compare<tuple<_TElements...>,
+        -: 2687:					tuple<_UElements...>,
+        -: 2688:					0, sizeof...(_TElements)>;
+        -: 2689:      return __compare::__less(__t, __u);
+        -: 2690:    }
+        -: 2691:
+        -: 2692:  template<typename... _TElements, typename... _UElements>
+        -: 2693:    _GLIBCXX_NODISCARD
+        -: 2694:    constexpr bool
+        -: 2695:    operator!=(const tuple<_TElements...>& __t,
+        -: 2696:	       const tuple<_UElements...>& __u)
+        -: 2697:    { return !(__t == __u); }
+        -: 2698:
+        -: 2699:  template<typename... _TElements, typename... _UElements>
+        -: 2700:    _GLIBCXX_NODISCARD
+        -: 2701:    constexpr bool
+        -: 2702:    operator>(const tuple<_TElements...>& __t,
+        -: 2703:	      const tuple<_UElements...>& __u)
+        -: 2704:    { return __u < __t; }
+        -: 2705:
+        -: 2706:  template<typename... _TElements, typename... _UElements>
+        -: 2707:    _GLIBCXX_NODISCARD
+        -: 2708:    constexpr bool
+        -: 2709:    operator<=(const tuple<_TElements...>& __t,
+        -: 2710:	       const tuple<_UElements...>& __u)
+        -: 2711:    { return !(__u < __t); }
+        -: 2712:
+        -: 2713:  template<typename... _TElements, typename... _UElements>
+        -: 2714:    _GLIBCXX_NODISCARD
+        -: 2715:    constexpr bool
+        -: 2716:    operator>=(const tuple<_TElements...>& __t,
+        -: 2717:	       const tuple<_UElements...>& __u)
+        -: 2718:    { return !(__t < __u); }
+        -: 2719:#endif // three_way_comparison
+        -: 2720:
+        -: 2721:  // NB: DR 705.
+        -: 2722:  /// Create a tuple containing copies of the arguments
+        -: 2723:  template<typename... _Elements>
+        -: 2724:    constexpr tuple<typename __decay_and_strip<_Elements>::__type...>
+        -: 2725:    make_tuple(_Elements&&... __args)
+        -: 2726:    {
+        -: 2727:      typedef tuple<typename __decay_and_strip<_Elements>::__type...>
+        -: 2728:	__result_type;
+        -: 2729:      return __result_type(std::forward<_Elements>(__args)...);
+        -: 2730:    }
+        -: 2731:
+        -: 2732:  // _GLIBCXX_RESOLVE_LIB_DEFECTS
+        -: 2733:  // 2275. Why is forward_as_tuple not constexpr?
+        -: 2734:  /// Create a tuple of lvalue or rvalue references to the arguments
+        -: 2735:  template<typename... _Elements>
+        -: 2736:    constexpr tuple<_Elements&&...>
+      264: 2737:    forward_as_tuple(_Elements&&... __args) noexcept
+      264: 2738:    { return tuple<_Elements&&...>(std::forward<_Elements>(__args)...); }
+        -: 2739:
+        -: 2740:  /// @cond undocumented
+        -: 2741:  template<typename _Tuple, typename _Idx_tuple>
+        -: 2742:    struct __do_make_tuple;
+        -: 2743:
+        -: 2744:  template<typename _Tuple, size_t... _Idx>
+        -: 2745:    struct __do_make_tuple<_Tuple, _Index_tuple<_Idx...>>
+        -: 2746:    {
+        -: 2747:      using __type = tuple<__tuple_element_t<_Idx, _Tuple>...>;
+        -: 2748:    };
+        -: 2749:
+        -: 2750:  // Returns the std::tuple equivalent of a tuple-like type.
+        -: 2751:  template<typename _Tuple,
+        -: 2752:	   typename _Tup = __remove_cvref_t<_Tuple>,
+        -: 2753:	   typename _Indices = _Build_index_tuple<tuple_size<_Tup>::value>>
+        -: 2754:    struct __make_tuple
+        -: 2755:    : __do_make_tuple<_Tup, typename _Indices::__type>
+        -: 2756:    { };
+        -: 2757:
+        -: 2758:  // Combines several std::tuple types into a single one.
+        -: 2759:  template<typename...>
+        -: 2760:    struct __combine_tuples;
+        -: 2761:
+        -: 2762:  template<>
+        -: 2763:    struct __combine_tuples<>
+        -: 2764:    {
+        -: 2765:      using __type = tuple<>;
+        -: 2766:    };
+        -: 2767:
+        -: 2768:  template<typename... _Ts>
+        -: 2769:    struct __combine_tuples<tuple<_Ts...>>
+        -: 2770:    {
+        -: 2771:      using __type = tuple<_Ts...>;
+        -: 2772:    };
+        -: 2773:
+        -: 2774:  template<typename... _T1s, typename... _T2s>
+        -: 2775:    struct __combine_tuples<tuple<_T1s...>, tuple<_T2s...>>
+        -: 2776:    {
+        -: 2777:      using __type = tuple<_T1s..., _T2s...>;
+        -: 2778:    };
+        -: 2779:
+        -: 2780:  template<typename... _T1s, typename... _T2s, typename... _T3s,
+        -: 2781:	   typename... _Rem>
+        -: 2782:    struct __combine_tuples<tuple<_T1s...>, tuple<_T2s...>, tuple<_T3s...>,
+        -: 2783:			    _Rem...>
+        -: 2784:    {
+        -: 2785:      using _First = tuple<_T1s..., _T2s..., _T3s...>;
+        -: 2786:      using _Second = typename __combine_tuples<_Rem...>::__type;
+        -: 2787:      using __type = typename __combine_tuples<_First, _Second>::__type;
+        -: 2788:    };
+        -: 2789:
+        -: 2790:  // Computes the result type of tuple_cat given a set of tuple-like types.
+        -: 2791:  template<typename... _Tpls>
+        -: 2792:    struct __tuple_cat_result
+        -: 2793:    {
+        -: 2794:      typedef typename __combine_tuples
+        -: 2795:        <typename __make_tuple<_Tpls>::__type...>::__type __type;
+        -: 2796:    };
+        -: 2797:
+        -: 2798:  // Helper to determine the index set for the first tuple-like
+        -: 2799:  // type of a given set.
+        -: 2800:  template<typename...>
+        -: 2801:    struct __make_1st_indices;
+        -: 2802:
+        -: 2803:  template<>
+        -: 2804:    struct __make_1st_indices<>
+        -: 2805:    {
+        -: 2806:      typedef _Index_tuple<> __type;
+        -: 2807:    };
+        -: 2808:
+        -: 2809:  template<typename _Tp, typename... _Tpls>
+        -: 2810:    struct __make_1st_indices<_Tp, _Tpls...>
+        -: 2811:    {
+        -: 2812:      typedef typename _Build_index_tuple<tuple_size<
+        -: 2813:	typename remove_reference<_Tp>::type>::value>::__type __type;
+        -: 2814:    };
+        -: 2815:
+        -: 2816:  // Performs the actual concatenation by step-wise expanding tuple-like
+        -: 2817:  // objects into the elements,  which are finally forwarded into the
+        -: 2818:  // result tuple.
+        -: 2819:  template<typename _Ret, typename _Indices, typename... _Tpls>
+        -: 2820:    struct __tuple_concater;
+        -: 2821:
+        -: 2822:  template<typename _Ret, size_t... _Is, typename _Tp, typename... _Tpls>
+        -: 2823:    struct __tuple_concater<_Ret, _Index_tuple<_Is...>, _Tp, _Tpls...>
+        -: 2824:    {
+        -: 2825:      template<typename... _Us>
+        -: 2826:        static constexpr _Ret
+        -: 2827:        _S_do(_Tp&& __tp, _Tpls&&... __tps, _Us&&... __us)
+        -: 2828:        {
+        -: 2829:	  typedef typename __make_1st_indices<_Tpls...>::__type __idx;
+        -: 2830:	  typedef __tuple_concater<_Ret, __idx, _Tpls...>      __next;
+        -: 2831:	  return __next::_S_do(std::forward<_Tpls>(__tps)...,
+        -: 2832:			       std::forward<_Us>(__us)...,
+        -: 2833:			       std::get<_Is>(std::forward<_Tp>(__tp))...);
+        -: 2834:	}
+        -: 2835:    };
+        -: 2836:
+        -: 2837:  template<typename _Ret>
+        -: 2838:    struct __tuple_concater<_Ret, _Index_tuple<>>
+        -: 2839:    {
+        -: 2840:      template<typename... _Us>
+        -: 2841:	static constexpr _Ret
+        -: 2842:	_S_do(_Us&&... __us)
+        -: 2843:        {
+        -: 2844:	  return _Ret(std::forward<_Us>(__us)...);
+        -: 2845:	}
+        -: 2846:    };
+        -: 2847:
+        -: 2848:  template<typename... _Tps>
+        -: 2849:    struct __is_tuple_like_impl<tuple<_Tps...>> : true_type
+        -: 2850:    { };
+        -: 2851:  /// @endcond
+        -: 2852:
+        -: 2853:  /// Create a `tuple` containing all elements from multiple tuple-like objects
+        -: 2854:#if __cpp_lib_tuple_like // >= C++23
+        -: 2855:  template<__tuple_like... _Tpls>
+        -: 2856:#else
+        -: 2857:  template<typename... _Tpls, typename = typename
+        -: 2858:           enable_if<__and_<__is_tuple_like<_Tpls>...>::value>::type>
+        -: 2859:#endif
+        -: 2860:    constexpr auto
+        -: 2861:    tuple_cat(_Tpls&&... __tpls)
+        -: 2862:    -> typename __tuple_cat_result<_Tpls...>::__type
+        -: 2863:    {
+        -: 2864:      typedef typename __tuple_cat_result<_Tpls...>::__type __ret;
+        -: 2865:      typedef typename __make_1st_indices<_Tpls...>::__type __idx;
+        -: 2866:      typedef __tuple_concater<__ret, __idx, _Tpls...> __concater;
+        -: 2867:      return __concater::_S_do(std::forward<_Tpls>(__tpls)...);
+        -: 2868:    }
+        -: 2869:
+        -: 2870:  // _GLIBCXX_RESOLVE_LIB_DEFECTS
+        -: 2871:  // 2301. Why is tie not constexpr?
+        -: 2872:  /// Return a tuple of lvalue references bound to the arguments
+        -: 2873:  template<typename... _Elements>
+        -: 2874:    constexpr tuple<_Elements&...>
+        -: 2875:    tie(_Elements&... __args) noexcept
+        -: 2876:    { return tuple<_Elements&...>(__args...); }
+        -: 2877:
+        -: 2878:  /// Exchange the values of two tuples
+        -: 2879:  template<typename... _Elements>
+        -: 2880:    _GLIBCXX20_CONSTEXPR
+        -: 2881:    inline
+        -: 2882:#if __cplusplus > 201402L || !defined(__STRICT_ANSI__) // c++1z or gnu++11
+        -: 2883:    // Constrained free swap overload, see p0185r1
+        -: 2884:    typename enable_if<__and_<__is_swappable<_Elements>...>::value
+        -: 2885:      >::type
+        -: 2886:#else
+        -: 2887:    void
+        -: 2888:#endif
+        -: 2889:    swap(tuple<_Elements...>& __x, tuple<_Elements...>& __y)
+        -: 2890:    noexcept(noexcept(__x.swap(__y)))
+        -: 2891:    { __x.swap(__y); }
+        -: 2892:
+        -: 2893:#if __cpp_lib_ranges_zip // >= C++23
+        -: 2894:  /// Exchange the values of two const tuples (if const elements can be swapped)
+        -: 2895:  template<typename... _Elements>
+        -: 2896:    requires (is_swappable_v<const _Elements> && ...)
+        -: 2897:    constexpr void
+        -: 2898:    swap(const tuple<_Elements...>& __x, const tuple<_Elements...>& __y)
+        -: 2899:    noexcept(noexcept(__x.swap(__y)))
+        -: 2900:    { __x.swap(__y); }
+        -: 2901:#endif // C++23
+        -: 2902:
+        -: 2903:#if __cplusplus > 201402L || !defined(__STRICT_ANSI__) // c++1z or gnu++11
+        -: 2904:  // _GLIBCXX_RESOLVE_LIB_DEFECTS
+        -: 2905:  // 2766. Swapping non-swappable types
+        -: 2906:  template<typename... _Elements>
+        -: 2907:    _GLIBCXX20_CONSTEXPR
+        -: 2908:    typename enable_if<!__and_<__is_swappable<_Elements>...>::value>::type
+        -: 2909:    swap(tuple<_Elements...>&, tuple<_Elements...>&) = delete;
+        -: 2910:#endif
+        -: 2911:
+        -: 2912:  /// Partial specialization for tuples
+        -: 2913:  template<typename... _Types, typename _Alloc>
+        -: 2914:    struct uses_allocator<tuple<_Types...>, _Alloc> : true_type { };
+        -: 2915:
+        -: 2916:  // See stl_pair.h...
+        -: 2917:  /** "piecewise construction" using a tuple of arguments for each member.
+        -: 2918:   *
+        -: 2919:   * @param __first Arguments for the first member of the pair.
+        -: 2920:   * @param __second Arguments for the second member of the pair.
+        -: 2921:   *
+        -: 2922:   * The elements of each tuple will be used as the constructor arguments
+        -: 2923:   * for the data members of the pair.
+        -: 2924:  */
+        -: 2925:  template<class _T1, class _T2>
+        -: 2926:    template<typename... _Args1, typename... _Args2>
+        -: 2927:      _GLIBCXX20_CONSTEXPR
+        -: 2928:      inline
+     502*: 2929:      pair<_T1, _T2>::
+        -: 2930:      pair(piecewise_construct_t,
+        -: 2931:	   tuple<_Args1...> __first, tuple<_Args2...> __second)
+        -: 2932:      : pair(__first, __second,
+        -: 2933:	     typename _Build_index_tuple<sizeof...(_Args1)>::__type(),
+     502*: 2934:	     typename _Build_index_tuple<sizeof...(_Args2)>::__type())
+     502*: 2935:      { }
+------------------
+_ZNSt4pairIKN12ThemeManager7ElementESt6vectorIN5Theme5StyleESaIS5_EEEC2IJRS2_EJEEESt21piecewise_construct_tSt5tupleIJDpT_EESC_IJDpT0_EE:
+      238: 2929:      pair<_T1, _T2>::
+        -: 2930:      pair(piecewise_construct_t,
+        -: 2931:	   tuple<_Args1...> __first, tuple<_Args2...> __second)
+        -: 2932:      : pair(__first, __second,
+        -: 2933:	     typename _Build_index_tuple<sizeof...(_Args1)>::__type(),
+      238: 2934:	     typename _Build_index_tuple<sizeof...(_Args2)>::__type())
+      238: 2935:      { }
+------------------
+_ZNSt4pairIKN12ThemeManager7ElementEN5Theme5ColorEEC2IJRS2_EJEEESt21piecewise_construct_tSt5tupleIJDpT_EES9_IJDpT0_EE:
+    #####: 2929:      pair<_T1, _T2>::
+        -: 2930:      pair(piecewise_construct_t,
+        -: 2931:	   tuple<_Args1...> __first, tuple<_Args2...> __second)
+        -: 2932:      : pair(__first, __second,
+        -: 2933:	     typename _Build_index_tuple<sizeof...(_Args1)>::__type(),
+    #####: 2934:	     typename _Build_index_tuple<sizeof...(_Args2)>::__type())
+    #####: 2935:      { }
+------------------
+_ZNSt4pairIKN12ThemeManager7ElementEN5Theme5ColorEEC2IJOS1_EJEEESt21piecewise_construct_tSt5tupleIJDpT_EES9_IJDpT0_EE:
+      264: 2929:      pair<_T1, _T2>::
+        -: 2930:      pair(piecewise_construct_t,
+        -: 2931:	   tuple<_Args1...> __first, tuple<_Args2...> __second)
+        -: 2932:      : pair(__first, __second,
+        -: 2933:	     typename _Build_index_tuple<sizeof...(_Args1)>::__type(),
+      264: 2934:	     typename _Build_index_tuple<sizeof...(_Args2)>::__type())
+      264: 2935:      { }
+------------------
+        -: 2936:
+        -: 2937:  template<class _T1, class _T2>
+        -: 2938:    template<typename... _Args1, size_t... _Indexes1,
+        -: 2939:	     typename... _Args2, size_t... _Indexes2>
+        -: 2940:      _GLIBCXX20_CONSTEXPR inline
+     502*: 2941:      pair<_T1, _T2>::
+        -: 2942:      pair(tuple<_Args1...>& __tuple1, tuple<_Args2...>& __tuple2,
+        -: 2943:	   _Index_tuple<_Indexes1...>, _Index_tuple<_Indexes2...>)
+     502*: 2944:      : first(std::forward<_Args1>(std::get<_Indexes1>(__tuple1))...),
+     502*: 2945:	second(std::forward<_Args2>(std::get<_Indexes2>(__tuple2))...)
+     502*: 2946:      { }
+------------------
+_ZNSt4pairIKN12ThemeManager7ElementESt6vectorIN5Theme5StyleESaIS5_EEEC2IJRS2_EJLm0EEJEJEEERSt5tupleIJDpT_EERSB_IJDpT1_EESt12_Index_tupleIJXspT0_EEESK_IJXspT2_EEE:
+      238: 2941:      pair<_T1, _T2>::
+        -: 2942:      pair(tuple<_Args1...>& __tuple1, tuple<_Args2...>& __tuple2,
+        -: 2943:	   _Index_tuple<_Indexes1...>, _Index_tuple<_Indexes2...>)
+      238: 2944:      : first(std::forward<_Args1>(std::get<_Indexes1>(__tuple1))...),
+      238: 2945:	second(std::forward<_Args2>(std::get<_Indexes2>(__tuple2))...)
+      238: 2946:      { }
+------------------
+_ZNSt4pairIKN12ThemeManager7ElementEN5Theme5ColorEEC2IJRS2_EJLm0EEJEJEEERSt5tupleIJDpT_EERS8_IJDpT1_EESt12_Index_tupleIJXspT0_EEESH_IJXspT2_EEE:
+    #####: 2941:      pair<_T1, _T2>::
+        -: 2942:      pair(tuple<_Args1...>& __tuple1, tuple<_Args2...>& __tuple2,
+        -: 2943:	   _Index_tuple<_Indexes1...>, _Index_tuple<_Indexes2...>)
+    #####: 2944:      : first(std::forward<_Args1>(std::get<_Indexes1>(__tuple1))...),
+    #####: 2945:	second(std::forward<_Args2>(std::get<_Indexes2>(__tuple2))...)
+    #####: 2946:      { }
+------------------
+_ZNSt4pairIKN12ThemeManager7ElementEN5Theme5ColorEEC2IJOS1_EJLm0EEJEJEEERSt5tupleIJDpT_EERS8_IJDpT1_EESt12_Index_tupleIJXspT0_EEESH_IJXspT2_EEE:
+      264: 2941:      pair<_T1, _T2>::
+        -: 2942:      pair(tuple<_Args1...>& __tuple1, tuple<_Args2...>& __tuple2,
+        -: 2943:	   _Index_tuple<_Indexes1...>, _Index_tuple<_Indexes2...>)
+      264: 2944:      : first(std::forward<_Args1>(std::get<_Indexes1>(__tuple1))...),
+      264: 2945:	second(std::forward<_Args2>(std::get<_Indexes2>(__tuple2))...)
+      264: 2946:      { }
+------------------
+        -: 2947:
+        -: 2948:#if defined(__cpp_lib_apply) || defined(__cpp_lib_make_from_tuple) // C++ >= 17
+        -: 2949:  // Unpack a std::tuple into a type trait and use its value.
+        -: 2950:  // For cv std::tuple<_Up> the result is _Trait<_Tp, cv _Up...>::value.
+        -: 2951:  // For cv std::tuple<_Up>& the result is _Trait<_Tp, cv _Up&...>::value.
+        -: 2952:  // Otherwise the result is false (because we don't know if std::get throws).
+        -: 2953:  template<template<typename...> class _Trait, typename _Tp, typename _Tuple>
+        -: 2954:    inline constexpr bool __unpack_std_tuple = false;
+        -: 2955:
+        -: 2956:  template<template<typename...> class _Trait, typename _Tp, typename... _Up>
+        -: 2957:    inline constexpr bool __unpack_std_tuple<_Trait, _Tp, tuple<_Up...>>
+        -: 2958:      = _Trait<_Tp, _Up...>::value;
+        -: 2959:
+        -: 2960:  template<template<typename...> class _Trait, typename _Tp, typename... _Up>
+        -: 2961:    inline constexpr bool __unpack_std_tuple<_Trait, _Tp, tuple<_Up...>&>
+        -: 2962:      = _Trait<_Tp, _Up&...>::value;
+        -: 2963:
+        -: 2964:  template<template<typename...> class _Trait, typename _Tp, typename... _Up>
+        -: 2965:    inline constexpr bool __unpack_std_tuple<_Trait, _Tp, const tuple<_Up...>>
+        -: 2966:      = _Trait<_Tp, const _Up...>::value;
+        -: 2967:
+        -: 2968:  template<template<typename...> class _Trait, typename _Tp, typename... _Up>
+        -: 2969:    inline constexpr bool __unpack_std_tuple<_Trait, _Tp, const tuple<_Up...>&>
+        -: 2970:      = _Trait<_Tp, const _Up&...>::value;
+        -: 2971:#endif
+        -: 2972:
+        -: 2973:#ifdef __cpp_lib_apply // C++ >= 17
+        -: 2974:  template <typename _Fn, typename _Tuple, size_t... _Idx>
+        -: 2975:    constexpr decltype(auto)
+        -: 2976:    __apply_impl(_Fn&& __f, _Tuple&& __t, index_sequence<_Idx...>)
+        -: 2977:    {
+        -: 2978:      return std::__invoke(std::forward<_Fn>(__f),
+        -: 2979:			   std::get<_Idx>(std::forward<_Tuple>(__t))...);
+        -: 2980:    }
+        -: 2981:
+        -: 2982:#if __cpp_lib_tuple_like // >= C++23
+        -: 2983:  template <typename _Fn, __tuple_like _Tuple>
+        -: 2984:#else
+        -: 2985:  template <typename _Fn, typename _Tuple>
+        -: 2986:#endif
+        -: 2987:    constexpr decltype(auto)
+        -: 2988:    apply(_Fn&& __f, _Tuple&& __t)
+        -: 2989:    noexcept(__unpack_std_tuple<is_nothrow_invocable, _Fn, _Tuple>)
+        -: 2990:    {
+        -: 2991:      using _Indices
+        -: 2992:	= make_index_sequence<tuple_size_v<remove_reference_t<_Tuple>>>;
+        -: 2993:      return std::__apply_impl(std::forward<_Fn>(__f),
+        -: 2994:			       std::forward<_Tuple>(__t),
+        -: 2995:			       _Indices{});
+        -: 2996:    }
+        -: 2997:#endif
+        -: 2998:
+        -: 2999:#ifdef __cpp_lib_make_from_tuple // C++ >= 17
+        -: 3000:  template <typename _Tp, typename _Tuple, typename _Seq
+        -: 3001:	      = make_index_sequence<tuple_size_v<remove_reference_t<_Tuple>>>>
+        -: 3002:    constexpr bool __can_make_from_tuple = false;
+        -: 3003:
+        -: 3004:  // _GLIBCXX_RESOLVE_LIB_DEFECTS
+        -: 3005:  // 3528. make_from_tuple can perform (the equivalent of) a C-style cast
+        -: 3006:  template <typename _Tp, typename _Tuple, size_t... _Idx>
+        -: 3007:    constexpr bool __can_make_from_tuple<_Tp, _Tuple, index_sequence<_Idx...>>
+        -: 3008:      = is_constructible_v<_Tp,
+        -: 3009:			   decltype(std::get<_Idx>(std::declval<_Tuple>()))...>;
+        -: 3010:
+        -: 3011:  template <typename _Tp, typename _Tuple, size_t... _Idx>
+        -: 3012:    constexpr _Tp
+        -: 3013:    __make_from_tuple_impl(_Tuple&& __t, index_sequence<_Idx...>)
+        -: 3014:    {
+        -: 3015:      static_assert(__can_make_from_tuple<_Tp, _Tuple, index_sequence<_Idx...>>);
+        -: 3016:      return _Tp(std::get<_Idx>(std::forward<_Tuple>(__t))...);
+        -: 3017:    }
+        -: 3018:
+        -: 3019:#if __cpp_lib_tuple_like // >= C++23
+        -: 3020:  template <typename _Tp, __tuple_like _Tuple>
+        -: 3021:#else
+        -: 3022:  template <typename _Tp, typename _Tuple>
+        -: 3023:#endif
+        -: 3024:    constexpr auto
+        -: 3025:    make_from_tuple(_Tuple&& __t)
+        -: 3026:    noexcept(__unpack_std_tuple<is_nothrow_constructible, _Tp, _Tuple>)
+        -: 3027:#ifdef __cpp_concepts // >= C++20
+        -: 3028:    -> _Tp
+        -: 3029:    requires __can_make_from_tuple<_Tp, _Tuple>
+        -: 3030:#else
+        -: 3031:    -> __enable_if_t<__can_make_from_tuple<_Tp, _Tuple>, _Tp>
+        -: 3032:#endif
+        -: 3033:    {
+        -: 3034:      constexpr size_t __n = tuple_size_v<remove_reference_t<_Tuple>>;
+        -: 3035:#if __has_builtin(__reference_constructs_from_temporary)
+        -: 3036:      if constexpr (__n == 1)
+        -: 3037:	{
+        -: 3038:	  using _Elt = decltype(std::get<0>(std::declval<_Tuple>()));
+        -: 3039:	  static_assert(!__reference_constructs_from_temporary(_Tp, _Elt));
+        -: 3040:	}
+        -: 3041:#endif
+        -: 3042:      return __make_from_tuple_impl<_Tp>(std::forward<_Tuple>(__t),
+        -: 3043:					 make_index_sequence<__n>{});
+        -: 3044:    }
+        -: 3045:#endif
+        -: 3046:
+        -: 3047:#if __cpp_lib_tuple_like // >= C++23
+        -: 3048:  template<__tuple_like _TTuple, __tuple_like _UTuple,
+        -: 3049:	   template<typename> class _TQual, template<typename> class _UQual,
+        -: 3050:	   typename = make_index_sequence<tuple_size_v<_TTuple>>>
+        -: 3051:  struct __tuple_like_common_reference;
+        -: 3052:
+        -: 3053:  template<__tuple_like _TTuple, __tuple_like _UTuple,
+        -: 3054:	   template<typename> class _TQual, template<typename> class _UQual,
+        -: 3055:	   size_t... _Is>
+        -: 3056:    requires requires
+        -: 3057:      { typename tuple<common_reference_t<_TQual<tuple_element_t<_Is, _TTuple>>,
+        -: 3058:					  _UQual<tuple_element_t<_Is, _UTuple>>>...>; }
+        -: 3059:  struct __tuple_like_common_reference<_TTuple, _UTuple, _TQual, _UQual, index_sequence<_Is...>>
+        -: 3060:  {
+        -: 3061:    using type = tuple<common_reference_t<_TQual<tuple_element_t<_Is, _TTuple>>,
+        -: 3062:					  _UQual<tuple_element_t<_Is, _UTuple>>>...>;
+        -: 3063:  };
+        -: 3064:
+        -: 3065:  template<__tuple_like _TTuple, __tuple_like _UTuple,
+        -: 3066:	   template<typename> class _TQual, template<typename> class _UQual>
+        -: 3067:    requires (__is_tuple_v<_TTuple> || __is_tuple_v<_UTuple>)
+        -: 3068:      && is_same_v<_TTuple, decay_t<_TTuple>>
+        -: 3069:      && is_same_v<_UTuple, decay_t<_UTuple>>
+        -: 3070:      && (tuple_size_v<_TTuple> == tuple_size_v<_UTuple>)
+        -: 3071:      && requires { typename __tuple_like_common_reference<_TTuple, _UTuple, _TQual, _UQual>::type; }
+        -: 3072:  struct basic_common_reference<_TTuple, _UTuple, _TQual, _UQual>
+        -: 3073:  {
+        -: 3074:    using type = typename __tuple_like_common_reference<_TTuple, _UTuple, _TQual, _UQual>::type;
+        -: 3075:  };
+        -: 3076:
+        -: 3077:  template<__tuple_like _TTuple, __tuple_like _UTuple,
+        -: 3078:	   typename = make_index_sequence<tuple_size_v<_TTuple>>>
+        -: 3079:  struct __tuple_like_common_type;
+        -: 3080:
+        -: 3081:  template<__tuple_like _TTuple, __tuple_like _UTuple, size_t... _Is>
+        -: 3082:    requires requires
+        -: 3083:      { typename tuple<common_type_t<tuple_element_t<_Is, _TTuple>,
+        -: 3084:				   tuple_element_t<_Is, _UTuple>>...>; }
+        -: 3085:  struct __tuple_like_common_type<_TTuple, _UTuple, index_sequence<_Is...>>
+        -: 3086:  {
+        -: 3087:    using type = tuple<common_type_t<tuple_element_t<_Is, _TTuple>,
+        -: 3088:				     tuple_element_t<_Is, _UTuple>>...>;
+        -: 3089:  };
+        -: 3090:
+        -: 3091:  template<__tuple_like _TTuple, __tuple_like _UTuple>
+        -: 3092:    requires (__is_tuple_v<_TTuple> || __is_tuple_v<_UTuple>)
+        -: 3093:      && is_same_v<_TTuple, decay_t<_TTuple>>
+        -: 3094:      && is_same_v<_UTuple, decay_t<_UTuple>>
+        -: 3095:      && (tuple_size_v<_TTuple> == tuple_size_v<_UTuple>)
+        -: 3096:      && requires { typename __tuple_like_common_type<_TTuple, _UTuple>::type; }
+        -: 3097:  struct common_type<_TTuple, _UTuple>
+        -: 3098:  {
+        -: 3099:    using type = typename __tuple_like_common_type<_TTuple, _UTuple>::type;
+        -: 3100:  };
+        -: 3101:#endif // C++23
+        -: 3102:
+        -: 3103:  /// @}
+        -: 3104:
+        -: 3105:#undef __glibcxx_no_dangling_refs
+        -: 3106:
+        -: 3107:_GLIBCXX_END_NAMESPACE_VERSION
+        -: 3108:} // namespace std
+        -: 3109:
+        -: 3110:#endif // C++11
+        -: 3111:
+        -: 3112:#endif // _GLIBCXX_TUPLE

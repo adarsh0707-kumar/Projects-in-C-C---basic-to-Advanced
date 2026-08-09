@@ -84,7 +84,11 @@ $(TARGET): $(CORE_OBJECTS) $(MAIN_OBJECT) | $(BUILDDIR)
 	$(CXX) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 	@echo "Built $@"
 
-$(TEST_TARGET): $(CORE_OBJECTS) $(TEST_OBJECTS) | $(BUILDDIR)
+# The plugins are an order-only prerequisite of the test binary rather
+# than of the `test` target alone: `make coverage` builds $(TEST_TARGET)
+# directly, and without this the plugin cases failed for want of their
+# fixtures and took the coverage job down with them.
+$(TEST_TARGET): $(CORE_OBJECTS) $(TEST_OBJECTS) | $(BUILDDIR) plugins
 	$(CXX) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 	@echo "Built $@"
 
@@ -119,7 +123,7 @@ $(BUILDDIR)/badabi.so: Tests/fixtures/badabi.c Inc/Plugin.h | $(BUILDDIR)
 $(BUILDDIR)/notaplugin.so: Tests/fixtures/notaplugin.c | $(BUILDDIR)
 	$(CC) $(PLUGIN_CFLAGS) -o $@ $<
 
-test: $(TEST_TARGET) plugins
+test: $(TEST_TARGET)
 	./$(TEST_TARGET)
 
 debug: OPTIMIZE = -O0 -g

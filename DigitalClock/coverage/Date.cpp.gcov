@@ -1,0 +1,216 @@
+        -:    0:Source:/run/media/mahakal108/Servers/Skills/C Langagues/Projects/DigitalClock/Src/Date.cpp
+        -:    0:Graph:../Obj/Date.gcno
+        -:    0:Data:../Obj/Date.gcda
+        -:    0:Runs:1
+        -:    1:#include "Date.hpp"
+        -:    2:
+        -:    3:#include <chrono>
+        -:    4:
+        -:    5:#include "Utility.hpp"
+        -:    6:
+        -:    7:namespace
+        -:    8:{
+        -:    9:    const char *const WEEKDAY_NAMES[] = {
+        -:   10:        "Sunday",
+        -:   11:        "Monday",
+        -:   12:        "Tuesday",
+        -:   13:        "Wednesday",
+        -:   14:        "Thursday",
+        -:   15:        "Friday",
+        -:   16:        "Saturday"};
+        -:   17:
+        -:   18:    const char *const MONTH_NAMES[] = {
+        -:   19:        "January",
+        -:   20:        "February",
+        -:   21:        "March",
+        -:   22:        "April",
+        -:   23:        "May",
+        -:   24:        "June",
+        -:   25:        "July",
+        -:   26:        "August",
+        -:   27:        "September",
+        -:   28:        "October",
+        -:   29:        "November",
+        -:   30:        "December"};
+        -:   31:
+        -:   32:    /**
+        -:   33:     * Sakamoto's algorithm: returns 0 (Sunday) - 6 (Saturday) for a date in
+        -:   34:     * the proleptic Gregorian calendar.
+        -:   35:     */
+       20:   36:    int weekdayFor(int year, int month, int day)
+        -:   37:    {
+        -:   38:        static const int OFFSETS[] = {
+        -:   39:            0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4};
+        -:   40:
+       20:   41:        int adjusted = year;
+        -:   42:
+       20:   43:        if (month < 3)
+        3:   44:            adjusted -= 1;
+        -:   45:
+       20:   46:        return (adjusted +
+       20:   47:                adjusted / 4 -
+       20:   48:                adjusted / 100 +
+       20:   49:                adjusted / 400 +
+       20:   50:                OFFSETS[month - 1] +
+        -:   51:                day) %
+       20:   52:               7;
+        -:   53:    }
+        -:   54:}
+        -:   55:
+       41:   56:Date::Date()
+       41:   57:    : day(1),
+       41:   58:      month(1),
+       41:   59:      year(1970),
+       41:   60:      weekday(4),
+       41:   61:      valid(false)
+        -:   62:{
+       41:   63:    update();
+       41:   64:}
+        -:   65:
+      228:   66:bool Date::update()
+        -:   67:{
+      228:   68:    const auto now = std::chrono::system_clock::now();
+      228:   69:    const std::time_t raw = std::chrono::system_clock::to_time_t(now);
+        -:   70:
+      228:   71:    std::tm local{};
+        -:   72:
+        -:   73:#ifdef _WIN32
+        -:   74:    const bool converted = (localtime_s(&local, &raw) == 0);
+        -:   75:#else
+      228:   76:    const bool converted = (localtime_r(&raw, &local) != nullptr);
+        -:   77:#endif
+        -:   78:
+      228:   79:    if (!converted)
+        -:   80:    {
+    #####:   81:        valid = false;
+    #####:   82:        return false;
+        -:   83:    }
+        -:   84:
+      228:   85:    day = local.tm_mday;
+      228:   86:    month = local.tm_mon + 1;
+      228:   87:    year = local.tm_year + 1900;
+      228:   88:    weekday = local.tm_wday;
+      228:   89:    valid = true;
+        -:   90:
+      228:   91:    return true;
+        -:   92:}
+        -:   93:
+        1:   94:std::string Date::getCurrentDate() const
+        -:   95:{
+        1:   96:    return getDateLong();
+        -:   97:}
+        -:   98:
+       87:   99:int Date::getDay() const
+        -:  100:{
+       87:  101:    return day;
+        -:  102:}
+        -:  103:
+       87:  104:int Date::getMonth() const
+        -:  105:{
+       87:  106:    return month;
+        -:  107:}
+        -:  108:
+       88:  109:int Date::getYear() const
+        -:  110:{
+       88:  111:    return year;
+        -:  112:}
+        -:  113:
+      125:  114:int Date::getWeekday() const
+        -:  115:{
+      125:  116:    return weekday;
+        -:  117:}
+        -:  118:
+       75:  119:std::string Date::getWeekdayName() const
+        -:  120:{
+       75:  121:    if (weekday < 0 || weekday > 6)
+    #####:  122:        return "";
+        -:  123:
+      150:  124:    return WEEKDAY_NAMES[weekday];
+        -:  125:}
+        -:  126:
+       73:  127:std::string Date::getMonthName() const
+        -:  128:{
+       73:  129:    if (month < 1 || month > 12)
+    #####:  130:        return "";
+        -:  131:
+      146:  132:    return MONTH_NAMES[month - 1];
+        -:  133:}
+        -:  134:
+       71:  135:std::string Date::getDateLong() const
+        -:  136:{
+      142:  137:    return getWeekdayName() + ", " +
+      284:  138:           Utility::padZero(day) + " " +
+      284:  139:           getMonthName() + " " +
+      213:  140:           std::to_string(year);
+        -:  141:}
+        -:  142:
+        3:  143:std::string Date::getDateDayFirst() const
+        -:  144:{
+        6:  145:    return Utility::padZero(day) + "-" +
+       12:  146:           Utility::padZero(month) + "-" +
+        9:  147:           std::to_string(year);
+        -:  148:}
+        -:  149:
+        2:  150:std::string Date::getDateMonthFirst() const
+        -:  151:{
+        4:  152:    return Utility::padZero(month) + "-" +
+        8:  153:           Utility::padZero(day) + "-" +
+        6:  154:           std::to_string(year);
+        -:  155:}
+        -:  156:
+        5:  157:std::string Date::getDateIso() const
+        -:  158:{
+       10:  159:    return std::to_string(year) + "-" +
+       20:  160:           Utility::padZero(month) + "-" +
+       15:  161:           Utility::padZero(day);
+        -:  162:}
+        -:  163:
+       11:  164:bool Date::isLeapYear(int year)
+        -:  165:{
+       11:  166:    if (year % 400 == 0)
+        2:  167:        return true;
+        -:  168:
+        9:  169:    if (year % 100 == 0)
+        2:  170:        return false;
+        -:  171:
+        7:  172:    return year % 4 == 0;
+        -:  173:}
+        -:  174:
+       29:  175:int Date::daysInMonth(int year, int month)
+        -:  176:{
+        -:  177:    static const int DAYS[] = {
+        -:  178:        31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+        -:  179:
+       29:  180:    if (month < 1 || month > 12)
+        2:  181:        return 0;
+        -:  182:
+       27:  183:    if (month == 2 && isLeapYear(year))
+        2:  184:        return 29;
+        -:  185:
+       25:  186:    return DAYS[month - 1];
+        -:  187:}
+        -:  188:
+       26:  189:bool Date::setDate(int newYear, int newMonth, int newDay)
+        -:  190:{
+       26:  191:    if (newYear < 1900)
+        1:  192:        return false;
+        -:  193:
+       25:  194:    if (newMonth < 1 || newMonth > 12)
+        2:  195:        return false;
+        -:  196:
+       23:  197:    if (newDay < 1 || newDay > daysInMonth(newYear, newMonth))
+        3:  198:        return false;
+        -:  199:
+       20:  200:    year = newYear;
+       20:  201:    month = newMonth;
+       20:  202:    day = newDay;
+       20:  203:    weekday = weekdayFor(newYear, newMonth, newDay);
+       20:  204:    valid = true;
+        -:  205:
+       20:  206:    return true;
+        -:  207:}
+        -:  208:
+        1:  209:bool Date::isValid() const
+        -:  210:{
+        1:  211:    return valid;
+        -:  212:}
