@@ -17,7 +17,25 @@ namespace
     void *openLibrary(const std::string &path)
     {
 #if defined(_WIN32)
-        return static_cast<void *>(LoadLibraryA(path.c_str()));
+        /*
+        Without this, a LoadLibrary that fails can raise a modal error
+        dialog -- "bad image", a missing dependency -- and on a machine
+        with nobody to dismiss it the process simply stops. That is not
+        hypothetical: the Windows CI job hung indefinitely on the test
+        that deliberately tries to load a text file, while every other
+        platform finished in seconds.
+
+        The previous mode is restored, because this is process-wide and
+        the application has no business changing it permanently.
+        */
+        const UINT previousMode =
+            SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX);
+
+        void *handle = static_cast<void *>(LoadLibraryA(path.c_str()));
+
+        SetErrorMode(previousMode);
+
+        return handle;
 #else
         /*
         RTLD_LOCAL so a plugin's symbols do not join the global namespace,

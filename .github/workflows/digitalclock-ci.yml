@@ -42,6 +42,11 @@ jobs:
   cross-platform:
     name: CMake (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    # The suite takes well under a minute. This is not a performance
+    # budget, it is a hang detector: a failed LoadLibrary on Windows once
+    # raised a modal dialog nobody was there to dismiss, and the job would
+    # otherwise have sat there until the six-hour default killed it.
+    timeout-minutes: 15
 
     strategy:
       fail-fast: false
@@ -127,6 +132,7 @@ jobs:
   gui:
     name: Graphical interface
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -202,6 +208,7 @@ jobs:
   build-and-test:
     name: Make (${{ matrix.build }})
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     strategy:
       fail-fast: false
@@ -248,6 +255,7 @@ jobs:
   warnings:
     name: Warnings as errors
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -269,6 +277,7 @@ jobs:
   coverage:
     name: Line coverage
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -283,6 +292,7 @@ jobs:
   sanitizers:
     name: Sanitizer (${{ matrix.sanitizer }})
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     strategy:
       fail-fast: false
