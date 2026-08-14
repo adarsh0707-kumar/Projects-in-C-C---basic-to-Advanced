@@ -1,0 +1,15 @@
+# Build artifacts
+build/
+
+# Runtime data (do not commit real user data or logs)
+data/*.dat
+log/*.log
+
+# Keep directory structure in git
+!data/.gitkeep
+!log/.gitkeep
+
+# OS/editor cruft
+*.o
+*.swp
+.DS_Store
