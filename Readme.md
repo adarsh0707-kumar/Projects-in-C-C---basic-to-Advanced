@@ -7,6 +7,7 @@ independently.
 ![Language](https://img.shields.io/badge/Language-C%20%7C%20C%2B%2B17-blue)
 ![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-green)
 ![License](https://img.shields.io/badge/License-MIT-brightgreen)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?logo=buy-me-a-coffee\&logoColor=white)](https://buymeacoffee.com/adarsh12kumar)
 
 | Project | What it is | Version | Tests |
 | ------- | ---------- | ------- | ----- |
