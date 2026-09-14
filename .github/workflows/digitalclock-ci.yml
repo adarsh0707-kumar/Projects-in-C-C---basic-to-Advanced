@@ -9,6 +9,9 @@
 
 name: DigitalClock CI
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [ main ]
