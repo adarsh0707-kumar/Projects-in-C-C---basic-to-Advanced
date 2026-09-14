@@ -21,6 +21,9 @@ on:
       - '.github/workflows/guessthenumber-ci.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 defaults:
   run:
     working-directory: GuessTheNumber
