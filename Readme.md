@@ -1,147 +1,234 @@
-# Projects in C / C++
+# C / C++ Systems & Application Projects
 
-Three self-contained programs in C and C++17, from a small terminal game to a
-clock with two interfaces and a plugin system. Each builds, tests and releases
-independently.
+> A collection of self-contained C and C++ projects built to practice systems programming, native application design, testing, persistence, and cross-platform build engineering.
 
-![Language](https://img.shields.io/badge/Language-C%20%7C%20C%2B%2B17-blue)
-![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-green)
-![License](https://img.shields.io/badge/License-MIT-brightgreen)
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?logo=buy-me-a-coffee\&logoColor=white)](https://buymeacoffee.com/adarsh12kumar)
-
-| Project | What it is | Version | Tests |
-| ------- | ---------- | ------- | ----- |
-| [**Digital Clock**](DigitalClock/) | A clock in a terminal *or* a window: alarms, stopwatch, countdown, world clock, themes, plugins | 2.1.0 | 136 |
-| [**Calculator**](Calculator/) | Scientific calculator: expression parsing, variables, statistics, unit and base conversion, complex numbers, matrices, plotting | 1.1.2 | 493 |
-| [**Guess The Number**](GuessTheNumber/) | A small terminal game | 1.0.0 | 50 checks |
-
-[![DigitalClock CI](https://github.com/adarsh0707-kumar/Projects-in-C-C---basic-to-Advanced/actions/workflows/digitalclock-ci.yml/badge.svg)](https://github.com/adarsh0707-kumar/Projects-in-C-C---basic-to-Advanced/actions/workflows/digitalclock-ci.yml)
-[![Calculator CI](https://github.com/adarsh0707-kumar/Projects-in-C-C---basic-to-Advanced/actions/workflows/ci.yml/badge.svg)](https://github.com/adarsh0707-kumar/Projects-in-C-C---basic-to-Advanced/actions/workflows/ci.yml)
-[![GuessTheNumber CI](https://github.com/adarsh0707-kumar/Projects-in-C-C---basic-to-Advanced/actions/workflows/guessthenumber-ci.yml/badge.svg)](https://github.com/adarsh0707-kumar/Projects-in-C-C---basic-to-Advanced/actions/workflows/guessthenumber-ci.yml)
+> **Status:** Active learning / portfolio repository. Each project is independent and has its own build and documentation.
 
 ---
 
-## Download
+## Projects
 
-Prebuilt archives are attached to each
-[release](https://github.com/adarsh0707-kumar/Projects-in-C-C---basic-to-Advanced/releases)
-for Linux, macOS and Windows. Extract and run — the command-line programs
-depend on nothing but the standard library.
+| Project | Language | Focus | Status |
+|---|---|---|---|
+| [DigitalClock](DigitalClock/) | C++17 | Terminal + optional Qt GUI, alarms, timers, world clock, themes, plugins | Active |
+| [Calculator](Calculator/) | C / C++ | Scientific calculation, expression parsing, statistics, conversions, complex numbers, matrices, plotting | Active |
+| [GuessTheNumber](GuessTheNumber/) | C11 | Input handling, game logic, regression testing | Complete |
+| [UserManagement](UserManagement/) | C11 | Authentication, password hashing, lockout, binary persistence, audit logging | Complete / educational |
 
-The graphical builds are larger because they bundle the Qt runtime, which is
-the point: there is still nothing to install.
+### Recommended starting points
 
-Every archive is built on its own platform, then extracted somewhere
-unrelated and actually run before the release is drafted. A build that works
-only in the directory it was built in is not a release.
+- **DigitalClock** — the most substantial project in this repository, with layered architecture, an optional Qt frontend, plugins, configuration, testing, and cross-platform packaging.
+- **UserManagement** — the strongest C systems example, covering manual storage, authentication logic, fixed-size records, lockout state, and audit logging.
+- **Calculator** — broader application logic and parsing work.
+- **GuessTheNumber** — deliberately small, but useful as an example of turning an input-handling bug into a regression-tested implementation.
 
 ---
 
-## Building
+## What this repository is for
 
-Any project builds on its own. Nothing here depends on anything else here.
+This repository is a progression through native development rather than a single application:
 
-```bash
-cd DigitalClock          # or Calculator, or GuessTheNumber
+~~~text
+Small CLI programs
+      ↓
+Structured application logic
+      ↓
+Parsing / state / persistence
+      ↓
+Testing and failure handling
+      ↓
+Layered C++ application architecture
+      ↓
+Optional GUI + plugins + packaging
+~~~
 
-make                     # build
-make test                # build and run the test suite
-make help                # list the targets
-```
+The projects are intentionally independent. A change in one project does not require the others to build or run.
 
-Or with CMake, which is what the Windows and macOS builds use:
+---
 
-```bash
+## Engineering themes
+
+Across the repository, the projects explore:
+
+- C11 and C++17 development
+- POSIX terminal and system APIs
+- file-based persistence and fixed-size records
+- input validation and failure handling
+- authentication and account lockout design
+- hashing and per-user salts
+- layered application architecture
+- C ABI boundaries for plugins
+- optional Qt-based graphical interfaces
+- unit / functional / regression testing
+- sanitizers and compiler warnings
+- Make and CMake build systems
+- cross-platform build and release workflows
+
+These are learning and portfolio projects. They should not be interpreted as production-ready security, database, or financial infrastructure.
+
+---
+
+## Project details
+
+### DigitalClock
+
+DigitalClock is a C++17 clock application with both a terminal interface and an optional Qt6 graphical interface.
+
+Implemented capabilities include:
+
+- live clock and date display
+- 12/24-hour formatting
+- alarms with recurrence, snooze, and dismissal
+- stopwatch with laps
+- countdown timer
+- configurable world clock
+- runtime theme switching
+- configuration reload without restart
+- file-based logging
+- optional plugin modes through a C ABI
+- shared core logic between console and GUI frontends
+
+See the [DigitalClock README](DigitalClock/README.md) for the architecture, configuration format, tests, plugins, and build instructions.
+
+### Calculator
+
+Calculator is a scientific-calculator project focused on expression evaluation and numerical application logic.
+
+The repository documentation covers functionality including:
+
+- expression parsing
+- variables
+- statistics
+- unit and base conversion
+- complex numbers
+- matrices
+- plotting
+- automated testing
+
+Build and test it independently from the [Calculator](Calculator/) directory.
+
+### GuessTheNumber
+
+A small C11 terminal game that became a useful input-validation and regression-testing exercise.
+
+The implementation reads complete input lines instead of relying on `scanf("%d", ...)`, allowing invalid input and EOF to be handled without leaving the program stuck on the same character.
+
+The project includes automated tests and a regression case for the original invalid-input hang.
+
+See [GuessTheNumber/README.md](GuessTheNumber/README.md).
+
+### UserManagement
+
+A CLI-based user management system written in C11 with no external runtime dependencies.
+
+Implemented capabilities include:
+
+- user registration and listing
+- role updates
+- password changes
+- soft deletion
+- per-user random salts
+- SHA-256 hashing implemented in the project
+- login lockout after repeated failures
+- hidden terminal password input through `termios`
+- fixed-size binary records in `data/users.dat`
+- timestamped audit logging
+
+Binary records are directly addressable by ID, so updating a record does not require rewriting the complete file.
+
+See the [UserManagement README](UserManagement/README.md) and its [architecture documentation](UserManagement/docs/ARCHITECTURE.md).
+
+**Security note:** UserManagement is an educational authentication exercise, not a production authentication service. It uses a single SHA-256 pass rather than an adaptive password-hashing scheme such as Argon2id or bcrypt, and it has no multi-process file locking or network-layer rate limiting.
+
+---
+
+## Build and test
+
+Each project has its own build instructions. Start by entering the project directory:
+
+~~~bash
+cd DigitalClock
+make
+make test
+~~~
+
+For projects that provide CMake support:
+
+~~~bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ctest --test-dir build --output-on-failure
-```
+~~~
 
-Requires a C11 / C++17 compiler — GCC 8+, Clang 7+ or MSVC 2019+ — and
-optionally Qt 6.2+ for the graphical builds, which are skipped without it
-rather than failing.
+Check the individual README before assuming that the same target names or optional dependencies apply to every project.
 
----
+### Requirements
 
-## What these projects have in common
-
-Each one is held to the same standard, and CI enforces it rather than the
-README claiming it:
-
-- **Three platforms**, built *and run*. Compiling on Windows is not evidence
-  that it works on Windows.
-- **Zero warnings** under `-Wall -Wextra -Wpedantic -Wshadow -Wconversion`,
-  with `-Werror` in CI. Two real defects in this repository were found by
-  turning the last three of those on.
-- **AddressSanitizer and UndefinedBehaviorSanitizer** on every change, plus
-  ThreadSanitizer where threads are involved.
-- **Measured line coverage** with an enforced floor, not a claim that
-  "everything is tested". The floor guards against backsliding; it sits just
-  below the current figure.
-- **Hang detectors.** Two of the three programs once span forever on input
-  that simply ran out. Both now have a CI job that feeds the real binary
-  exhausted input under a timeout and requires it to stop.
-- **Documentation kept in step with the code**, in the same commit as the
-  behaviour it describes, with claims tied to runs that actually happened.
+- C11 compiler for the C projects
+- C++17 compiler for the C++ projects
+- Make and/or CMake depending on the project
+- Qt6 only for the optional DigitalClock GUI
+- Linux/POSIX APIs are used by parts of the native applications
 
 ---
 
-## Repository layout
+## Repository structure
 
-```text
+~~~text
 .
-├── Calculator/          Scientific calculator (C, with an optional Qt GUI)
-├── DigitalClock/        Console + graphical clock (C++17, optional Qt GUI)
-├── GuessTheNumber/      Terminal game (C11)
-└── .github/workflows/   CI and release pipelines for all three
-```
+├── Calculator/
+├── DigitalClock/
+├── GuessTheNumber/
+├── UserManagement/
+├── .github/workflows/
+├── CONTRIBUTING.md
+├── SECURITY.md
+└── LICENSE
+~~~
 
-**Every workflow lives at the repository root.** GitHub Actions only reads
-`<repo-root>/.github/workflows/`, never a subdirectory's own, so each
-workflow sets `working-directory:` and uses path filters to stay in its own
-lane. A Calculator change does not run the clock's CI.
-
----
-
-## Releases and tags
-
-Tags are namespaced, because one repository holds several projects and a bare
-`v1.0.0` would be ambiguous:
-
-```text
-calculator-v1.1.2
-digitalclock-v2.1.0
-guessthenumber-v1.0.0
-```
-
-Pushing such a tag builds the archives, verifies each by extracting and
-running it, and opens a **draft** release. Nothing becomes public until
-somebody reviews the draft and publishes it, so a broken pipeline cannot ship
-a broken download.
+Each project owns its source, tests, build files, and documentation. The root repository provides the shared entry point rather than a shared application framework.
 
 ---
 
-## Documentation
+## Testing philosophy
 
-Each project carries its own README. Digital Clock additionally has a full
-document set in [`DigitalClock/Docs/`](DigitalClock/Docs/) — requirements,
-design, architecture, API, user manual, testing report, change log and a UAT
-plan.
+The goal is not to claim that every line is tested. The projects use tests where they provide useful protection against real defects:
 
-Two of those are worth singling out, because they record what has *not* been
-done as carefully as what has:
+- parser and calculation behavior in the calculator
+- clock and application behavior in DigitalClock
+- invalid-input regression coverage in GuessTheNumber
+- functional authentication, CRUD, storage, and lockout scenarios in UserManagement
 
-- [`Testing_Report.md`](DigitalClock/Docs/Testing_Report.md) — every defect
-  found and closed, the measured coverage, and the gaps that remain open.
-- [`UAT_Plan.md`](DigitalClock/Docs/UAT_Plan.md) — sixty scenarios for a
-  person at a terminal. Written, ready, and deliberately still unsigned: a
-  plan is a set of questions, and it closes when somebody answers them.
+Where a project has a known limitation, its project-level documentation should state it explicitly.
+
+---
+
+## Limitations
+
+This repository contains progressively more advanced learning projects, not a unified production software suite.
+
+Some projects intentionally use simplified designs:
+
+- local file persistence instead of a database
+- terminal applications instead of network services
+- educational authentication implementations
+- optional GUI dependencies
+- no shared deployment platform
+
+The README for each project is the source of truth for its current implementation and limitations.
+
+---
+
+## Roadmap
+
+- [ ] Continue expanding native systems projects.
+- [ ] Add more focused data-structure and systems exercises.
+- [ ] Improve automated test coverage where it adds meaningful protection.
+- [ ] Add measured benchmarks to projects where performance is a relevant engineering question.
+- [ ] Keep project documentation synchronized with implementation.
 
 ---
 
 ## License
 
-MIT. See the LICENSE file in each project.
-
----
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?logo=buy-me-a-coffee\&logoColor=white)](https://buymeacoffee.com/adarsh12kumar)
+MIT — see [LICENSE](LICENSE).
